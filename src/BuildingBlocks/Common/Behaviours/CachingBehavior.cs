@@ -24,7 +24,7 @@ public class CachingBehavior<TRequest, TResponse>(
     {
         if (request is not ICachedQuery cachedRequest)
         {
-            return await next(ct);
+            return await next();
         }
 
         _logger.LogInformation("Checking cache for {RequestName}", typeof(TRequest).Name);
@@ -40,7 +40,7 @@ public class CachingBehavior<TRequest, TResponse>(
 
         if (result is null)
         {
-            result = await next(ct);
+            result = await next();
 
             if (result is IResult res && res.IsSuccess)
             {

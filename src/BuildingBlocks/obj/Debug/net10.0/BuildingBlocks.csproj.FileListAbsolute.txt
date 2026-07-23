@@ -10,3 +10,4 @@
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/obj/Debug/net10.0/refint/BuildingBlocks.dll
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/obj/Debug/net10.0/BuildingBlocks.pdb
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/obj/Debug/net10.0/ref/BuildingBlocks.dll
+/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/obj/Debug/net10.0/BuildingBlocks.csproj.AssemblyReference.cache

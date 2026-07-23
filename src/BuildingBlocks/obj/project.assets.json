@@ -125,10 +125,10 @@
           "buildTransitive/net8.0/_._": {}
         }
       },
-      "Microsoft.Extensions.Logging.Abstractions/9.0.0": {
+      "Microsoft.Extensions.Logging.Abstractions/9.0.3": {
         "type": "package",
         "dependencies": {
-          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.0"
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "9.0.3"
         },
         "compile": {
           "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.dll": {
@@ -350,10 +350,10 @@
         "useSharedDesignerContext.txt"
       ]
     },
-    "Microsoft.Extensions.Logging.Abstractions/9.0.0": {
-      "sha512": "g0UfujELzlLbHoVG8kPKVBaW470Ewi+jnptGS9KUi6jcb+k2StujtK3m26DFSGGwQ/+bVgZfsWqNzlP6YOejvw==",
+    "Microsoft.Extensions.Logging.Abstractions/9.0.3": {
+      "sha512": "H/MBMLt9A/69Ux4OrV7oCKt3DcMT04o5SCqDolulzQA66TLFEpYYb4qedMs/uwrLtyHXGuDGWKZse/oa8W9AZw==",
       "type": "package",
-      "path": "microsoft.extensions.logging.abstractions/9.0.0",
+      "path": "microsoft.extensions.logging.abstractions/9.0.3",
       "files": [
         ".nupkg.metadata",
         ".signature.p7s",
@@ -416,7 +416,7 @@
         "lib/net9.0/Microsoft.Extensions.Logging.Abstractions.xml",
         "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.dll",
         "lib/netstandard2.0/Microsoft.Extensions.Logging.Abstractions.xml",
-        "microsoft.extensions.logging.abstractions.9.0.0.nupkg.sha512",
+        "microsoft.extensions.logging.abstractions.9.0.3.nupkg.sha512",
         "microsoft.extensions.logging.abstractions.nuspec",
         "useSharedDesignerContext.txt"
       ]
@@ -499,8 +499,8 @@
     "net10.0": [
       "FluentValidation >= 11.11.0",
       "MediatR >= 12.4.1",
-      "Microsoft.Extensions.Caching.Hybrid >= 9.0.0",
-      "Microsoft.Extensions.Logging.Abstractions >= 9.0.0"
+      "Microsoft.Extensions.Caching.Hybrid >= 9.3.0",
+      "Microsoft.Extensions.Logging.Abstractions >= 9.0.3"
     ]
   },
   "packageFolders": {
@@ -556,11 +556,11 @@
           },
           "Microsoft.Extensions.Caching.Hybrid": {
             "target": "Package",
-            "version": "[9.0.0, )"
+            "version": "[9.3.0, )"
           },
           "Microsoft.Extensions.Logging.Abstractions": {
             "target": "Package",
-            "version": "[9.0.0, )"
+            "version": "[9.0.3, )"
           }
         },
         "imports": [
@@ -856,26 +856,5 @@
         }
       }
     }
-  },
-  "logs": [
-    {
-      "code": "NU1603",
-      "level": "Warning",
-      "warningLevel": 1,
-      "message": "BuildingBlocks depends on Microsoft.Extensions.Caching.Hybrid (>= 9.0.0) but Microsoft.Extensions.Caching.Hybrid 9.0.0 was not found. Microsoft.Extensions.Caching.Hybrid 9.3.0 was resolved instead.",
-      "libraryId": "Microsoft.Extensions.Caching.Hybrid",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    },
-    {
-      "code": "NU1605",
-      "level": "Error",
-      "message": "Warning As Error: Detected package downgrade: Microsoft.Extensions.Logging.Abstractions from 9.0.3 to 9.0.0. Reference the package directly from the project to select a different version. \n BuildingBlocks -> Microsoft.Extensions.Caching.Hybrid 9.3.0 -> Microsoft.Extensions.Logging.Abstractions (>= 9.0.3) \n BuildingBlocks -> Microsoft.Extensions.Logging.Abstractions (>= 9.0.0)",
-      "libraryId": "Microsoft.Extensions.Logging.Abstractions",
-      "targetGraphs": [
-        "net10.0"
-      ]
-    }
-  ]
+  }
 }
