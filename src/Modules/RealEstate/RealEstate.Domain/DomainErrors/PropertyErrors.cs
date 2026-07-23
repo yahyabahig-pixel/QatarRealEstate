@@ -1,5 +1,5 @@
-using BuildingBlocks.Common.Results;
-using BuildingBlocks.Common.Results.Errors;
+using BuildingBlocks.Domain.Common.Results;
+using BuildingBlocks.Domain.Common.Results.Errors;
 
 namespace RealEstate.Domain.DomainErros;
 

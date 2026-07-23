@@ -1,4 +1,4 @@
-using BuildingBlocks.Common.Results.Errors;
+using BuildingBlocks.Domain.Common.Results.Errors;
 
 namespace RealEstate.Domain.DomainErros;
 

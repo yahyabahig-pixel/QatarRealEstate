@@ -1,5 +1,5 @@
 using System;
-using BuildingBlocks.Common.Results;
+using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Domain.DomainErros;
 using RealEstate.Domain.Enums;
 

@@ -1,7 +1,11 @@
 <Solution>
-  <Folder Name="/src/">
-    <Project Path="src/BuildingBlocks/BuildingBlocks.csproj" />
+  <Folder Name="/src/BuildingBlocks/">
+    <Project Path="src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
+    <Project Path="src/BuildingBlocks/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
+    <Project Path="src/BuildingBlocks/BuildingBlocks.Presentation/BuildingBlocks.Presentation.csproj" />
+
   </Folder>
+
   <Folder Name="/src/Modules/" />
   <Folder Name="/src/Modules/RealEstate/">
     <Project Path="src/Modules/RealEstate/RealEstate.Application/RealEstate.Application.csproj" />

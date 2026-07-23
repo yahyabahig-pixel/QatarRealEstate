@@ -11,6 +11,6 @@
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/obj/Debug/net10.0/RealEstate.Domain.pdb
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/obj/Debug/net10.0/ref/RealEstate.Domain.dll
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/obj/Debug/net10.0/RealEstate.Domain.csproj.AssemblyReference.cache
-/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/bin/Debug/net10.0/BuildingBlocks.dll
-/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/bin/Debug/net10.0/BuildingBlocks.pdb
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/obj/Debug/net10.0/RealEsta.245A85DF.Up2Date
+/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/bin/Debug/net10.0/BuildingBlocks.Domain.dll
+/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Domain/bin/Debug/net10.0/BuildingBlocks.Domain.pdb

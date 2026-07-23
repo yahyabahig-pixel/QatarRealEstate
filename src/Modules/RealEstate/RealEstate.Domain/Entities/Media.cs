@@ -1,7 +1,7 @@
 using System.Data.Common;
 using System.Drawing;
-using BuildingBlocks.Common;
-using BuildingBlocks.Common.Results;
+using BuildingBlocks.Domain.Common;
+using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Domain.DomainErros;
 
 namespace RealEstate.Domain.Entities;

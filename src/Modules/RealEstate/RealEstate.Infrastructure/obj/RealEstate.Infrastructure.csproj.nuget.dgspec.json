@@ -4,14 +4,14 @@
     "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Infrastructure/RealEstate.Infrastructure.csproj": {}
   },
   "projects": {
-    "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj": {
+    "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj": {
       "version": "1.0.0",
       "restore": {
-        "projectUniqueName": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj",
-        "projectName": "BuildingBlocks",
-        "projectPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj",
+        "projectUniqueName": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj",
+        "projectName": "BuildingBlocks.Domain",
+        "projectPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj",
         "packagesPath": "/Users/ahmedelgndy/.nuget/packages/",
-        "outputPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/obj/",
+        "outputPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/obj/",
         "projectStyle": "PackageReference",
         "configFilePaths": [
           "/Users/ahmedelgndy/.nuget/NuGet/NuGet.Config"
@@ -696,8 +696,8 @@
           "net10.0": {
             "targetAlias": "net10.0",
             "projectReferences": {
-              "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj": {
-                "projectPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj"
+              "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj": {
+                "projectPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj"
               }
             }
           }
