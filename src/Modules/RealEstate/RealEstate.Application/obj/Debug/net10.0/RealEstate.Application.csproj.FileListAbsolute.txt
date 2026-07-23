@@ -14,5 +14,5 @@
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/obj/Debug/net10.0/refint/RealEstate.Application.dll
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/obj/Debug/net10.0/RealEstate.Application.pdb
 /Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/obj/Debug/net10.0/ref/RealEstate.Application.dll
-/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/bin/Debug/net10.0/BuildingBlocks.dll
-/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/bin/Debug/net10.0/BuildingBlocks.pdb
+/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/bin/Debug/net10.0/BuildingBlocks.Domain.dll
+/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/Modules/RealEstate/RealEstate.Application/bin/Debug/net10.0/BuildingBlocks.Domain.pdb

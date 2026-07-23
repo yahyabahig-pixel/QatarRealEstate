@@ -1,38 +1,34 @@
+using BuildingBlocks.Domain.Common.Results;
+using RealEstate.Domain.DomainErros;
+using System.Runtime;
+
 namespace RealEstate.Domain.ValueObjects;
 
-public class RentTerms
+public sealed record RentTerms
 {
-    public Money Price { get; private set; }
-
-    public int ContractDurationMonths { get; private set; }
+    public Guid Id { get; init; }
+    public Money Price { get; init; } = default!;
+    public int ContractDurationMonths { get; init; }
 
     private RentTerms() { }
 
-    public static RentTerms Create(Money price, int contractDurationMonths)
+    private RentTerms(Money price, int contractDurationMonths)
     {
-        if (price == null)
-            throw new ArgumentNullException(nameof(price), "Price is required.");
+        Price = price;
+        ContractDurationMonths = contractDurationMonths;
+    }
+
+    public static Result<RentTerms> Create(Money price, int contractDurationMonths)
+    {
+        if (price is null)
+            return RentTermsErrors.PriceRequired;
+
+        if (price.Amount <= 0)
+            return RentTermsErrors.PriceInvalid;
 
         if (contractDurationMonths <= 0)
-            throw new ArgumentException("Contract duration must be greater than 0.", nameof(contractDurationMonths));
+            return RentTermsErrors.ContractDurationInvalid;
 
-        return new RentTerms
-        {
-            Price = price,
-            ContractDurationMonths = contractDurationMonths
-        };
-    }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj is not RentTerms other)
-            return false;
-
-        return Price.Equals(other.Price) && ContractDurationMonths == other.ContractDurationMonths;
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(Price, ContractDurationMonths);
+        return new RentTerms(price, contractDurationMonths);
     }
 }

@@ -2,28 +2,28 @@
   "version": 3,
   "targets": {
     "net10.0": {
-      "BuildingBlocks/1.0.0": {
+      "BuildingBlocks.Domain/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "compile": {
-          "bin/placeholder/BuildingBlocks.dll": {}
+          "bin/placeholder/BuildingBlocks.Domain.dll": {}
         },
         "runtime": {
-          "bin/placeholder/BuildingBlocks.dll": {}
+          "bin/placeholder/BuildingBlocks.Domain.dll": {}
         }
       }
     }
   },
   "libraries": {
-    "BuildingBlocks/1.0.0": {
+    "BuildingBlocks.Domain/1.0.0": {
       "type": "project",
-      "path": "../../../BuildingBlocks/BuildingBlocks.csproj",
-      "msbuildProject": "../../../BuildingBlocks/BuildingBlocks.csproj"
+      "path": "../../../BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj",
+      "msbuildProject": "../../../BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj"
     }
   },
   "projectFileDependencyGroups": {
     "net10.0": [
-      "BuildingBlocks >= 1.0.0"
+      "BuildingBlocks.Domain >= 1.0.0"
     ]
   },
   "packageFolders": {
@@ -51,8 +51,8 @@
         "net10.0": {
           "targetAlias": "net10.0",
           "projectReferences": {
-            "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj": {
-              "projectPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.csproj"
+            "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj": {
+              "projectPath": "/Users/ahmedelgndy/Desktop/QatarRealEstateAPI/src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj"
             }
           }
         }

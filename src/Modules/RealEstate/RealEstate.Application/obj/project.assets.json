@@ -2,21 +2,21 @@
   "version": 3,
   "targets": {
     "net10.0": {
-      "BuildingBlocks/1.0.0": {
+      "BuildingBlocks.Domain/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "compile": {
-          "bin/placeholder/BuildingBlocks.dll": {}
+          "bin/placeholder/BuildingBlocks.Domain.dll": {}
         },
         "runtime": {
-          "bin/placeholder/BuildingBlocks.dll": {}
+          "bin/placeholder/BuildingBlocks.Domain.dll": {}
         }
       },
       "RealEstate.Domain/1.0.0": {
         "type": "project",
         "framework": ".NETCoreApp,Version=v10.0",
         "dependencies": {
-          "BuildingBlocks": "1.0.0"
+          "BuildingBlocks.Domain": "1.0.0"
         },
         "compile": {
           "bin/placeholder/RealEstate.Domain.dll": {}
@@ -28,10 +28,10 @@
     }
   },
   "libraries": {
-    "BuildingBlocks/1.0.0": {
+    "BuildingBlocks.Domain/1.0.0": {
       "type": "project",
-      "path": "../../../BuildingBlocks/BuildingBlocks.csproj",
-      "msbuildProject": "../../../BuildingBlocks/BuildingBlocks.csproj"
+      "path": "../../../BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj",
+      "msbuildProject": "../../../BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj"
     },
     "RealEstate.Domain/1.0.0": {
       "type": "project",

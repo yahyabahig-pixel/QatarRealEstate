@@ -1,38 +1,32 @@
+using BuildingBlocks.Domain.Common.Results;
+using RealEstate.Domain.DomainErros;
+
 namespace RealEstate.Domain.ValueObjects;
 
-public class Money
+public sealed record Money
 {
-    public decimal Amount { get; private set; }
-    
-    public string Currency { get; private set; }
+    public decimal Amount { get; init; }
+    public string Currency { get; init; } = null!;
 
+    // for ORM / serialization
     private Money() { }
 
-    public static Money Create(decimal amount, string currency)
+    private Money(decimal amount, string currency)
+    {
+        Amount = amount;
+        Currency = currency;
+    }
+
+    public static Result<Money> Create(decimal amount, string currency)
     {
         if (amount < 0)
-            throw new ArgumentException("Amount cannot be negative.", nameof(amount));
-        
+            return MoneyErrors.AmountInvalid;
+
         if (string.IsNullOrWhiteSpace(currency))
-            throw new ArgumentException("Currency is required.", nameof(currency));
+            return MoneyErrors.CurrencyRequired;
 
-        return new Money
-        {
-            Amount = amount,
-            Currency = currency
-        };
-    }
-
-    public override bool Equals(object? obj)
-    {
-        if (obj is not Money other)
-            return false;
-
-        return Amount == other.Amount && Currency == other.Currency;
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(Amount, Currency);
+        var money = new Money(amount, currency.Trim().ToUpperInvariant());
+        return money;
     }
 }
+

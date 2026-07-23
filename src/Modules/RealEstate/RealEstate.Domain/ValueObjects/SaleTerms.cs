@@ -1,47 +1,43 @@
-using RealEstate.Domain.Entities;
+using BuildingBlocks.Domain.Common.Results;
+using RealEstate.Domain.DomainErros;
 using RealEstate.Domain.Enums;
+using RealEstate.Domain.ValueObjects;
 
 namespace RealEstate.Domain.ValueObjects;
 
-public class SaleTerms
+public sealed record SaleTerms
 {
-    public Money Price { get; private set; }
-
-    public PaymentMethod PaymentMethod { get; private set; }
-
-    public InstallmentPlan? InstallmentPlan { get; private set; }
+    public Money Price { get; init; } = default!;
+    public PaymentMethod PaymentMethod { get; init; }
+    public InstallmentPlan? InstallmentPlan { get; init; }
 
     private SaleTerms() { }
 
-    public static SaleTerms Create(Money price, PaymentMethod paymentMethod, InstallmentPlan? installmentPlan = null)
+    private SaleTerms(Money price, PaymentMethod paymentMethod, InstallmentPlan? installmentPlan)
     {
-        if (price == null)
-            throw new ArgumentNullException(nameof(price), "Price is required.");
+        Price = price;
+        PaymentMethod = paymentMethod;
+        InstallmentPlan = installmentPlan;
+    }
+
+    public static Result<SaleTerms> Create(Money price, PaymentMethod paymentMethod, InstallmentPlan? installmentPlan = null)
+    {
+        if (price is null)
+            return SaleTermsErrors.PriceRequired;
+
+        if (price.Amount <= 0)
+            return SaleTermsErrors.PriceInvalid;
 
         if (!Enum.IsDefined(typeof(PaymentMethod), paymentMethod))
-            throw new ArgumentException("Invalid payment method.", nameof(paymentMethod));
+            return SaleTermsErrors.PaymentMethodInvalid;
 
-        if (paymentMethod == PaymentMethod.Installment && installmentPlan == null)
-            throw new ArgumentException("Installment plan is required when payment method is Installment.", nameof(installmentPlan));
+        if (paymentMethod == PaymentMethod.Installment && installmentPlan is null)
+            return SaleTermsErrors.InstallmentPlanRequired;
 
-        return new SaleTerms
-        {
-            Price = price,
-            PaymentMethod = paymentMethod,
-            InstallmentPlan = installmentPlan
-        };
-    }
+        if (paymentMethod != PaymentMethod.Installment && installmentPlan is not null)
+            return SaleTermsErrors.InstallmentPlanNotAllowed;
 
-    public override bool Equals(object? obj)
-    {
-        if (obj is not SaleTerms other)
-            return false;
-
-        return Price.Equals(other.Price) && PaymentMethod == other.PaymentMethod && InstallmentPlan == other.InstallmentPlan;
-    }
-
-    public override int GetHashCode()
-    {
-        return HashCode.Combine(Price, PaymentMethod, InstallmentPlan);
+        return new SaleTerms(price, paymentMethod, installmentPlan);
     }
 }
+
