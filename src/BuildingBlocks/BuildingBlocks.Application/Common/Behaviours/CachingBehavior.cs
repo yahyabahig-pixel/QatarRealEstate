@@ -1,6 +1,5 @@
-using BuildingBlocks.Domain.Common.Interfaces;
+using BuildingBlocks.Domain.Common;
 using BuildingBlocks.Domain.Common.Results;
-
 using MediatR;
 
 using Microsoft.Extensions.Caching.Hybrid;

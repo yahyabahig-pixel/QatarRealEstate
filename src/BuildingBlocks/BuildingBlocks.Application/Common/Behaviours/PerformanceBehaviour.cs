@@ -1,6 +1,6 @@
 using System.Diagnostics;
 
-using BuildingBlocks.Domain.Common.Interfaces;
+using BuildingBlocks.Domain.Common;
 
 using MediatR;
 

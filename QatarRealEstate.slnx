@@ -1,8 +1,8 @@
 <Solution>
-  <Folder Name="/src/BuildingBlocks/">
+  <Folder Name="/src/">
     <Project Path="src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj" />
     <Project Path="src/BuildingBlocks/BuildingBlocks.Application/BuildingBlocks.Application.csproj" />
-    <Project Path="src/BuildingBlocks/BuildingBlocks.Presentation/BuildingBlocks.Presentation.csproj" />
+    <Project Path="src/BuildingBlocks/BuildingBlocks.Persistence/BuildingBlocks.Persistence.csproj" />
 
   </Folder>
 
