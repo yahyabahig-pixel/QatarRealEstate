@@ -8,6 +8,7 @@
     ".NETCoreApp,Version=v10.0": {
       "RealEstate.Application/1.0.0": {
         "dependencies": {
+          "BuildingBlocks.Application": "1.0.0",
           "BuildingBlocks.Domain": "1.0.0",
           "RealEstate.Domain": "1.0.0"
         },
@@ -122,13 +123,22 @@
           }
         }
       },
-      "BuildingBlocks.Domain/1.0.0": {
+      "BuildingBlocks.Application/1.0.0": {
         "dependencies": {
+          "BuildingBlocks.Domain": "1.0.0",
           "FluentValidation": "11.11.0",
           "MediatR": "12.4.1",
           "Microsoft.Extensions.Caching.Hybrid": "9.3.0",
           "Microsoft.Extensions.Logging.Abstractions": "9.0.3"
         },
+        "runtime": {
+          "BuildingBlocks.Application.dll": {
+            "assemblyVersion": "1.0.0.0",
+            "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "BuildingBlocks.Domain/1.0.0": {
         "runtime": {
           "BuildingBlocks.Domain.dll": {
             "assemblyVersion": "1.0.0.0",
@@ -224,6 +234,11 @@
       "sha512": "sha512-yCCJHvBcRyqapMSNzP+kTc57Eaavq2cr5Tmuil6/XVnipQf5xmskxakSQ1enU6S4+fNg3sJ27WcInV64q24JsA==",
       "path": "microsoft.extensions.primitives/9.0.3",
       "hashPath": "microsoft.extensions.primitives.9.0.3.nupkg.sha512"
+    },
+    "BuildingBlocks.Application/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
     },
     "BuildingBlocks.Domain/1.0.0": {
       "type": "project",
