@@ -228,7 +228,8 @@ public sealed class Property : AuditableEntity
         return Result.Updated;
     }
 
-    // ---- state transitions (no generic status setter) -----------------------
+
+
 
     public Result<Updated> Publish()
     {
