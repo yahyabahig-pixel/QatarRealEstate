@@ -1,4 +1,5 @@
 // Properties/Admin/UpdateProperty/UpdatePropertyHandler.cs
+
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
 using RealEstate.Application.Abstractions.Messaging;
@@ -6,7 +7,6 @@ using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.policies;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
 using RealEstate.Application.Properties.Admin.Command.UpdateProperty;
-using RealEstate.Application.Properties.Admin.CreateProperty;
 using RealEstate.Domain.ValueObjects;
 
 namespace RealEstate.Application.Properties.Admin.UpdateProperty;
