@@ -1,7 +1,7 @@
 using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Abstractions.Messaging;
-using RealEstate.Application.Properties.User.SearchProperties;
 using RealEstate.Domain.Enums;
+namespace RealEstate.Application.Properties.User.Queries.SearchProperties;
 
 public sealed record SearchPropertiesQuery(
     string? Q = null,

@@ -1,8 +1,8 @@
 using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Abstractions.Messaging;
-using RealEstate.Application.Properties.User.SearchProperties;
 
+namespace RealEstate.Application.Properties.User.Queries.SearchProperties;
 public sealed class SearchPropertiesHandler : IQueryHandler<SearchPropertiesQuery, PagedResult<PropertyListItem>>
 {
     private readonly IPropertyQueries _queries;

@@ -1,10 +1,9 @@
 using BuildingBlocks.Domain.Common.Results;
 using MediatR;
 using RealEstate.Application.Abstractions.Messaging;
-using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Properties.User.SearchProperties;
 
-namespace RealEstate.Application.Properties.User.GetFeaturedProperties;
+namespace RealEstate.Application.Properties.User.Queries.GetFeaturedProperties;
 
 
 public sealed class GetFeaturedPropertiesHandler

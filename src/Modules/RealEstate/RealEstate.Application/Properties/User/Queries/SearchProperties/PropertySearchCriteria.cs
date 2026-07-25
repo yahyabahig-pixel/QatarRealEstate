@@ -1,6 +1,6 @@
 using RealEstate.Domain.Enums;
 
-namespace RealEstate.Application.Properties.User.SearchProperties;
+namespace RealEstate.Application.Properties.User.Queries.SearchProperties;
 
 public record PropertySearchCriteria(
        string? Text,

@@ -1,6 +1,6 @@
 
 using FluentValidation;
-namespace RealEstate.Application.Properties.User.SearchProperties;
+namespace RealEstate.Application.Properties.User.Queries.SearchProperties;
 
 public sealed class SearchPropertiesValidator : AbstractValidator<SearchPropertiesQuery>
 {
