@@ -85,6 +85,7 @@ public sealed class Result<TValue> : IResult<TValue>
 
     public Error TopError => (_errors?.Count > 0) ? _errors[0] : default;
 
+
     public TNextValue Match<TNextValue>(Func<TValue, TNextValue> onValue, Func<List<Error>, TNextValue> onError)
         => IsSuccess ? onValue(Value!) : onError(Errors);
 

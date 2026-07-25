@@ -1,6 +1,7 @@
 using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Domain.DomainErros;
 using System.Runtime;
+using System.Runtime.CompilerServices;
 
 namespace RealEstate.Domain.ValueObjects;
 
@@ -30,5 +31,10 @@ public sealed record RentTerms
             return RentTermsErrors.ContractDurationInvalid;
 
         return new RentTerms(price, contractDurationMonths);
+
+        //private builders 
+
+
     }
+
 }
