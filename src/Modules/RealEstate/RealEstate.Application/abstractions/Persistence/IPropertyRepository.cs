@@ -11,4 +11,6 @@ public interface IPropertyRepository
     Task AddAsync(Property property, CancellationToken ct = default);
 
     Task<bool> PropertyTypeExistsAsync(Guid propertyTypeId, CancellationToken ct = default);
+    //GetByIdWithFeaturesAsync
+    Task<Property?> GetByIdWithFeaturesAsync(Guid id, CancellationToken ct = default);
 }

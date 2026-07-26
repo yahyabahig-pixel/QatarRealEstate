@@ -185,11 +185,9 @@ public sealed class Property : AuditableEntity
 
     public Result<Updated> AddFeature(PropertyFeature feature)
     {
-        if (feature is null)
-            return PropertyErrors.FeatureRequired;
+        if (feature is null) return PropertyErrors.FeatureRequired;
 
-        if (_features.Contains(feature))
-            return PropertyErrors.DuplicateFeature;
+        if (_features.Contains(feature)) return PropertyErrors.DuplicateFeature;
 
         _features.Add(feature);
         return Result.Updated;
@@ -227,9 +225,6 @@ public sealed class Property : AuditableEntity
         _features.RemoveAll(features.Contains);
         return Result.Updated;
     }
-
-
-
 
     public Result<Updated> Publish()
     {
@@ -329,5 +324,7 @@ public sealed class Property : AuditableEntity
         PropertySpecs = specs;
         return Result.Updated;
     }
+
+
 
 }
