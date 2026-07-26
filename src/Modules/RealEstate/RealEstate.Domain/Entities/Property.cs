@@ -27,6 +27,11 @@ public sealed class Property : AuditableEntity
     public PropertySpecs PropertySpecs { get; private set; } = null!;
     public Money? Offer { get; private set; }
 
+
+    public bool IsActive { get; private set; } = true;
+    public bool IsFeatured { get; private set; }
+    public int ViewsCount { get; private set; }
+
     // read-only views out. AsReadOnly() blocks a caller from casting back to List and mutating.
     public IReadOnlyCollection<Media> Media => _media.AsReadOnly();
     public IReadOnlyCollection<PropertyFeature> PropertyFeatures => _features.AsReadOnly();
@@ -353,6 +358,33 @@ public sealed class Property : AuditableEntity
             return Error.Validation("Property.Offer.TooHigh", "Offer must not exceed the asking price.");
 
         Offer = offer;
+        return Result.Updated;
+    }
+
+    public Result<Updated> Activate()
+    {
+        if (IsActive) return PropertyErrors.AlreadyActive;          // add to PropertyErrors
+        IsActive = true;
+        return Result.Updated;
+    }
+
+    public Result<Updated> Deactivate()
+    {
+        if (!IsActive) return PropertyErrors.AlreadyInactive;       // add to PropertyErrors
+        IsActive = false;
+        return Result.Updated;
+    }
+
+    public Result<Updated> Feature()
+    {
+        if (Status != PropertyStatus.Published) return PropertyErrors.OnlyPublishedCanBeFeatured;  // add
+        IsFeatured = true;
+        return Result.Updated;
+    }
+
+    public Result<Updated> Unfeature()
+    {
+        IsFeatured = false;
         return Result.Updated;
     }
 }

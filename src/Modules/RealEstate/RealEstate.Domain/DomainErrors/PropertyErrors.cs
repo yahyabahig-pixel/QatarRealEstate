@@ -5,6 +5,12 @@ namespace RealEstate.Domain.DomainErros;
 
 public static class PropertyErrors
 {
+    internal static Result<Updated> AlreadyInactive => Error.Conflict("Property.AlreadyInactive", "The property is already inactive.");
+
+    public static Result<Updated> AlreadyFeatured => Error.Conflict("Property.AlreadyFeatured", "The property is already featured.");
+    public static Result<Updated> NotFeatured => Error.Conflict("Property.NotFeatured", "The property is not featured.");
+    public static Result<Updated> OnlyPublishedCanBeFeatured => Error.Conflict("Property.OnlyPublishedCanBeFeatured", "Only published properties can be featured.");
+    public static Result<Updated> AlreadyActive => Error.Conflict("Property.AlreadyActive", "The property is already active.");
     // Title
     public static Error TitleRequired =>
         Error.Validation("Property.Title.Required", "Property title is required.");
@@ -87,4 +93,5 @@ public static class PropertyErrors
 
     public static Error AlreadyArchived =>
         Error.Conflict("Property.AlreadyArchived", "The property is already archived.");
+
 }
