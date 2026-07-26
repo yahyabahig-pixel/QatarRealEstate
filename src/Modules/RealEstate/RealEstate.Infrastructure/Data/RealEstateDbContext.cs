@@ -10,7 +10,7 @@ public sealed class RealEstateDbContext : DbContext
     public DbSet<RealEstate.Domain.Entities.Property> Properties => Set<RealEstate.Domain.Entities.Property>();
     public DbSet<PropertyType> PropertyTypes => Set<PropertyType>();
     public DbSet<Feature> Features => Set<Feature>();
-    //public DbSet<PropertyStatusHistory> PropertyStatusHistories => Set<PropertyStatusHistory>();
+    public DbSet<PropertyStatusHistory> PropertyStatusHistories => Set<PropertyStatusHistory>();
     // Media & PropertyFeature are reached through the Property aggregate — no public DbSet needed.
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
