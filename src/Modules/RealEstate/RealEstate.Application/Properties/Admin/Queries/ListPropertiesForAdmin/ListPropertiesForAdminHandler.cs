@@ -4,6 +4,7 @@ using RealEstate.Application.Abstractions.Authentication;
 using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Abstractions.Messaging;
 using RealEstate.Application.Common;
+using RealEstate.Application.Properties.Admin.Policies;
 using RealEstate.Application.Properties.Admin.Queries.ListPropertiesForAdmin.Inputs;
 
 namespace RealEstate.Application.Properties.Admin.ListPropertiesForAdmin;

@@ -6,6 +6,7 @@ using RealEstate.Application.Abstractions.Messaging;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
+using RealEstate.Application.Properties.Admin.Policies;
 using RealEstate.Domain.Entities;
 using RealEstate.Domain.ValueObjects;
 

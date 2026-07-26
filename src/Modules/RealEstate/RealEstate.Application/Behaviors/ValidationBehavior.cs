@@ -1,4 +1,9 @@
-using System.IO;
+using BuildingBlocks.Domain.Common.Results.Errors;
+using FluentValidation;
+using MediatR;
+
+namespace BuildingBlocks.Application.Behaviors;
+
 public sealed class ValidationBehavior<TRequest, TResponse> : IPipelineBehavior<TRequest, TResponse>
     where TRequest : notnull
     where TResponse : notnull

@@ -2,6 +2,7 @@
 using BuildingBlocks.Domain.Common.Results;
 using MediatR;
 using RealEstate.Application.Abstractions.Messaging;
+using RealEstate.Application.Properties.Admin.Policies;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
 namespace RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
 
