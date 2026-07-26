@@ -2,6 +2,7 @@ using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Application.Abstractions.Authentication;
 using RealEstate.Application.Common;
 using RealEstate.Application.policies;
+namespace RealEstate.Application.Properties.Admin.Policies;
 
 public sealed class PropertyAuthorizationPolicy
 {
