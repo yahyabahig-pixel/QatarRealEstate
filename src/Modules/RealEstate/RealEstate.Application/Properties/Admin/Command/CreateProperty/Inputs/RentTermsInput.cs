@@ -1,0 +1,4 @@
+// Flat, primitive inputs — the API never touches domain value objects.
+namespace RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
+
+public sealed record RentTermsInput(MoneyInput Price, int ContractDurationMonths);

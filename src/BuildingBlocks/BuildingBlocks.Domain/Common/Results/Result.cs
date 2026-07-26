@@ -85,17 +85,23 @@ public sealed class Result<TValue> : IResult<TValue>
 
     public Error TopError => (_errors?.Count > 0) ? _errors[0] : default;
 
+
     public TNextValue Match<TNextValue>(Func<TValue, TNextValue> onValue, Func<List<Error>, TNextValue> onError)
         => IsSuccess ? onValue(Value!) : onError(Errors);
 
     public static implicit operator Result<TValue>(TValue value)
         => new(value);
 
+
     public static implicit operator Result<TValue>(Error error)
         => new(error);
 
     public static implicit operator Result<TValue>(List<Error> errors)
         => new(errors);
+    public static Result<TValue> Success(TValue value) => new(value);
+
+
+
 }
 
 public readonly record struct Success;
