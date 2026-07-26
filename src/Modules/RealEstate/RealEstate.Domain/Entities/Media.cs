@@ -20,13 +20,13 @@ public class Media : AuditableEntity
 
     public bool IsPrimary { get; private set; }
 
-    public int PropertyId { get; private set; }
+    public Guid PropertyId { get; private set; }
 
     // for ORM / serialization
     private Media() { }
 
     // Factory that validates using domain errors (DDD style)
-    public static Result<Media> Create(string url, string mediaType, int width, int height, int order, bool isPrimary, int propertyId = 0)
+    public static Result<Media> Create(string url, string mediaType, int width, int height, int order, bool isPrimary, Guid propertyId = default)
     {
         if (string.IsNullOrWhiteSpace(url))
             return MediaErrors.UrlRequired;
@@ -40,7 +40,7 @@ public class Media : AuditableEntity
         if (order < 0)
             return MediaErrors.InvalidOrder;
 
-        if (propertyId < 0)
+        if (propertyId == default(Guid))
             return MediaErrors.InvalidPropertyId;
 
         var media = new Media
@@ -57,7 +57,7 @@ public class Media : AuditableEntity
         return media;
     }
 
-    public Result<Updated> Update(string url, string mediaType, int width, int height, int order, bool isPrimary, int propertyId = 0)
+    public Result<Updated> Update(string url, string mediaType, int width, int height, int order, bool isPrimary, Guid propertyId = default)
     {
         if (string.IsNullOrWhiteSpace(url))
             return MediaErrors.UrlRequired;
@@ -71,7 +71,7 @@ public class Media : AuditableEntity
         if (order < 0)
             return MediaErrors.InvalidOrder;
 
-        if (propertyId < 0)
+        if (propertyId == default(Guid))
             return MediaErrors.InvalidPropertyId;
 
         Url = url.Trim();

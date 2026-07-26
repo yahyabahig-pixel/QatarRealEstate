@@ -10,7 +10,6 @@ public class Feature : AuditableEntity
 {
     public string Name { get; private set; } = string.Empty;   // "Parking", "Near Hospital"
 
-    public string FeatureValue { get; private set; } = string.Empty;
     public FeatureValueType ValueType { get; private set; }     // Boolean / Text / Number
 
     public string? Icon { get; private set; }                  // icon key or URL for the UI
