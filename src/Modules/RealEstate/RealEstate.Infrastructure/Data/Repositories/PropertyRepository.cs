@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Domain.Entities;
 
+namespace RealEstate.Infrastructure.Data.Repositories;
 
 public sealed class PropertyRepository : IPropertyRepository
 {
