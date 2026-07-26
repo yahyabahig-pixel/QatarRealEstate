@@ -14,9 +14,9 @@ public sealed class Property : AuditableEntity
     private readonly List<Media> _media = new();
     private readonly List<PropertyFeature> _features = new();
 
-    public string Title { get; private set; }
-    public string Description { get; private set; }
-    public Location Location { get; private set; }
+    public string Title { get; private set; } = null!;
+    public string Description { get; private set; } = null!;
+    public Location Location { get; private set; } = null!;
     public ListingKind ListingKind { get; private set; }
     public SaleTerms? SaleTerms { get; private set; }
     public RentTerms? RentTerms { get; private set; }
@@ -24,7 +24,8 @@ public sealed class Property : AuditableEntity
     public PropertyStatus Status { get; private set; } = PropertyStatus.Draft;
 
     public bool IsAvailable => Status == PropertyStatus.Published;
-    public PropertySpecs PropertySpecs { get; private set; }
+    public PropertySpecs PropertySpecs { get; private set; } = null!;
+    public Money? Offer { get; private set; }
 
     // read-only views out. AsReadOnly() blocks a caller from casting back to List and mutating.
     public IReadOnlyCollection<Media> Media => _media.AsReadOnly();
@@ -32,9 +33,17 @@ public sealed class Property : AuditableEntity
 
     private Property() { }   // EF Core
 
-    private Property(Guid id, string title, string description,
-                     Guid typeId, Location location,
-                     ListingKind kind, SaleTerms? sale, RentTerms? rent, PropertySpecs? specs = null)
+    private Property(Guid id,
+                     string title,
+                     string description,
+                     Guid typeId,
+                     Location location,
+                     ListingKind kind,
+                     SaleTerms? sale,
+                     RentTerms? rent,
+                     PropertySpecs? specs = null,
+                     Money? offer = null
+                    )
         : base(id)
     {
         Title = title;
@@ -46,17 +55,18 @@ public sealed class Property : AuditableEntity
         RentTerms = rent;
         Status = PropertyStatus.Draft;
         PropertySpecs = specs ?? new PropertySpecs();
+        Offer = offer;
     }
 
     // ---- creation & editing -------------------------------------------------
 
     public static Result<Property> Create(Guid id, string title, string description,
-        Guid typeId, Location location, ListingKind kind, SaleTerms? sale, RentTerms? rent, PropertySpecs? specs = null)
+        Guid typeId, Location location, ListingKind kind, SaleTerms? sale, RentTerms? rent, PropertySpecs? specs = null, Money? offer = null)
     {
         if (Validate(title, description, typeId, location, kind, sale, rent, specs) is { } error)
             return error;
 
-        return new Property(id, title, description, typeId, location, kind, sale, rent);
+        return new Property(id, title, description, typeId, location, kind, sale, rent, specs, offer);
     }
 
     public Result<Updated> Update(string title, string description,
@@ -325,6 +335,24 @@ public sealed class Property : AuditableEntity
         return Result.Updated;
     }
 
+    public Result<Updated> SetOffer(Money? offer)
+    {
+        if (offer is null)
+        {
+            Offer = null;
+            return Result.Updated;
+        }
 
+        if (SaleTerms is null)
+            return PropertyErrors.ListingTermsMissing;
 
+        if (!string.Equals(offer.Currency, SaleTerms.Price.Currency, StringComparison.OrdinalIgnoreCase))
+            return Error.Validation("Property.Offer.CurrencyMismatch", "Offer currency must match the sale currency.");
+
+        if (offer.Amount > SaleTerms.Price.Amount)
+            return Error.Validation("Property.Offer.TooHigh", "Offer must not exceed the asking price.");
+
+        Offer = offer;
+        return Result.Updated;
+    }
 }
