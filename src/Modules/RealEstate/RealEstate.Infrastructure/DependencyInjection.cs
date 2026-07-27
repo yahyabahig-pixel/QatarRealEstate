@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using RealEstate.Application.Abstractions.Authentication;
 using RealEstate.Application.Abstractions.Persistence;
+using RealEstate.Infrastructure.Data.Authentication;
 using RealEstate.Infrastructure.Data.Interceptors;
 using RealEstate.Infrastructure.Data.Queries;
 using RealEstate.Infrastructure.Data.Repositories;
@@ -19,7 +20,7 @@ public static class DependencyInjection
         // --- auditing prerequisites -------------------------------------------------
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);            // testable clock, .NET 8 built-in
-        services.AddScoped<ICurrentUser, ICurrentUser>();
+        services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<AuditableEntityInterceptor>();
 
         // --- DbContext (SQL Server) with the audit interceptor wired in -------------

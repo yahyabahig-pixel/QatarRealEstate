@@ -11,8 +11,8 @@ namespace RealEstate.Domain.Entities;
 
 public sealed class Property : AuditableEntity
 {
-    private readonly List<Media> _media = new();
-    private readonly List<PropertyFeature> _features = new();
+    private List<Media> _media = new();
+    private List<PropertyFeature> _propertyFeatures = new();
 
     public string Title { get; private set; } = null!;
     public string Description { get; private set; } = null!;
@@ -34,7 +34,7 @@ public sealed class Property : AuditableEntity
 
     // read-only views out. AsReadOnly() blocks a caller from casting back to List and mutating.
     public IReadOnlyCollection<Media> Media => _media.AsReadOnly();
-    public IReadOnlyCollection<PropertyFeature> PropertyFeatures => _features.AsReadOnly();
+    public IReadOnlyCollection<PropertyFeature> PropertyFeatures => _propertyFeatures.AsReadOnly();
 
     private Property() { }   // EF Core
 
@@ -202,9 +202,9 @@ public sealed class Property : AuditableEntity
     {
         if (feature is null) return PropertyErrors.FeatureRequired;
 
-        if (_features.Contains(feature)) return PropertyErrors.DuplicateFeature;
+        if (_propertyFeatures.Contains(feature)) return PropertyErrors.DuplicateFeature;
 
-        _features.Add(feature);
+        _propertyFeatures.Add(feature);
         return Result.Updated;
     }
     public Result<Updated> AddFeatures(IReadOnlyCollection<PropertyFeature> features)
@@ -212,10 +212,10 @@ public sealed class Property : AuditableEntity
         if (features is null || features.Count == 0)
             return PropertyErrors.FeatureRequired;
 
-        if (features.Any(f => _features.Contains(f)))
+        if (features.Any(f => _propertyFeatures.Contains(f)))
             return PropertyErrors.DuplicateFeature;
 
-        _features.AddRange(features);
+        _propertyFeatures.AddRange(features);
         return Result.Updated;
     }
 
@@ -224,7 +224,7 @@ public sealed class Property : AuditableEntity
         if (feature is null)
             return PropertyErrors.FeatureRequired;
 
-        if (!_features.Remove(feature))
+        if (!_propertyFeatures.Remove(feature))
             return PropertyErrors.FeatureNotFound;
 
         return Result.Updated;
@@ -234,10 +234,10 @@ public sealed class Property : AuditableEntity
         if (features is null || features.Count == 0)
             return PropertyErrors.FeatureRequired;
 
-        if (features.Any(f => !_features.Contains(f)))
+        if (features.Any(f => !_propertyFeatures.Contains(f)))
             return PropertyErrors.FeatureNotFound;
 
-        _features.RemoveAll(features.Contains);
+        _propertyFeatures.RemoveAll(features.Contains);
         return Result.Updated;
     }
 
