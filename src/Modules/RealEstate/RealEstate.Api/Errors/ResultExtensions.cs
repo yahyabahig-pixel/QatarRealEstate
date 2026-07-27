@@ -1,4 +1,3 @@
-namespace RealEstate.Api.Errors;
 
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
