@@ -1,6 +1,5 @@
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata.Internal;
 using RealEstate.Domain.Entities;
 
 public sealed class RealEstateDbContext : DbContext
