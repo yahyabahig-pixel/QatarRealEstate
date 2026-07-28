@@ -1,3 +1,8 @@
+using Auth.Api;
+using Auth.Application;
+using Auth.Infrastructure;
+using Auth.Infrastructure.Data.Seeding;
+using BuildingBlocks.Authorization;
 using Host.ErrorHandling;
 using Host.Middleware;
 using Host.OpenApi;
@@ -11,8 +16,6 @@ using Serilog.Events;
 var builder = WebApplication.CreateBuilder(args);
 
 // ---- structured logging (Serilog) ----------------------------------------------------
-// Replaces the default logger. Every log line is enriched from LogContext, which is
-// where RequestLogContextMiddleware pushes the CorrelationId.
 builder.Host.UseSerilog((context, configuration) => configuration
     .MinimumLevel.Information()
     .MinimumLevel.Override("Microsoft.AspNetCore", LogEventLevel.Warning)
@@ -25,35 +28,40 @@ builder.Services.AddApplication();                                   // MediatR 
 builder.Services.AddRealEstateInfrastructure(builder.Configuration); // DbContext + repos + queries
 builder.Services.AddRealEstateApi();                                 // controllers + JSON options
 
+// ---- the Auth module, layer by layer --------------------------------------------------
+builder.Services.AddAuthApplication();                               // MediatR + validators
+builder.Services.AddAuthInfrastructure(builder.Configuration);       // Identity + JWT + AuthDbContext
+builder.Services.AddAuthApi();                                       // controllers
+
+// ---- authorization: permission policies for ALL modules -------------------------------
+builder.Services.AddPermissionAuthorization();
+
 // ---- the safety net -------------------------------------------------------------------
-builder.Services.AddProblemDetails();                                // the ProblemDetails writer
-builder.Services.AddExceptionHandler<GlobalExceptionHandler>();      // last-resort 500
+builder.Services.AddProblemDetails();
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 
 builder.Services.AddOpenApi(options =>
 {
-    options.AddDocumentTransformer<VersionInfoTransformer>();        // titled docs
-    // Uncomment both lines when the Auth module lands:
-    // options.AddDocumentTransformer<BearerSecuritySchemeTransformer>();
-    // options.AddOperationTransformer<BearerSecuritySchemeTransformer>();
+    options.AddDocumentTransformer<VersionInfoTransformer>();
 });
 
 var app = builder.Build();
 
 app.UseMiddleware<RequestLogContextMiddleware>();  // FIRST — stamps everything after it
-app.UseExceptionHandler();                          // activates GlobalExceptionHandler
-app.UseSerilogRequestLogging();                     // one summary log line per request
+app.UseExceptionHandler();
+app.UseSerilogRequestLogging();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();                          // OpenAPI JSON at /openapi/v1.json
-    await app.Services.SeedRealEstateAsync();  // idempotent — safe on every startup
+    app.MapOpenApi();
+    await app.Services.SeedAuthAsync();            // roles → Main Admin → positions
+    await app.Services.SeedRealEstateAsync();      // property types → features → listings
 }
 
 app.UseHttpsRedirection();
 
-// When the Auth module arrives, its two lines land exactly here:
-//   app.UseAuthentication();
-//   app.UseAuthorization();
+app.UseAuthentication();   // who are you?  (validates the JWT, fills HttpContext.User)
+app.UseAuthorization();    // may you?      (permission policies + [Authorize])
 
 app.MapControllers();
 
