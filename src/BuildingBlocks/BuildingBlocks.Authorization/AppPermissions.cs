@@ -19,6 +19,14 @@ public static class AppPermissions
         public const string Publish = "Property.Publish";
     }
 
+    public static class Agent
+    {
+        public const string Read   = "Agent.Read";
+        public const string Create = "Agent.Create";
+        public const string Update = "Agent.Update";
+        public const string Delete = "Agent.Delete";
+    }
+
     public static class User
     {
         public const string Read   = "User.Read";
@@ -53,6 +61,7 @@ public static class AppPermissions
     public static readonly IReadOnlyList<string> Catalog =
     [
         Property.Read, Property.Create, Property.Update, Property.Delete, Property.Publish,
+        Agent.Read, Agent.Create, Agent.Update, Agent.Delete,
         User.Read, User.Update, User.Delete,
         Admin.Read, Admin.Create, Admin.Update, Admin.Delete, Admin.AssignPosition,
         Position.Read, Position.Create, Position.Update, Position.Delete,

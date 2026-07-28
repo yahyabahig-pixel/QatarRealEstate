@@ -44,6 +44,37 @@ public sealed class RealEstateDbSeeder
         var propertyTypeIds = await SeedPropertyTypesAsync(ct);
         var featureIds = await SeedFeaturesAsync(ct);
         await SeedPropertiesAsync(propertyTypeIds, featureIds, ct);
+        await SeedAgentsAsync(ct);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    //  agents  (matched on Slug — uniquely indexed, so this check is DB-backed)
+    // -----------------------------------------------------------------------------------------
+    private async Task SeedAgentsAsync(CancellationToken ct)
+    {
+        var existing = await _db.Agents.Select(a => a.Slug).ToListAsync(ct);
+        var known = new HashSet<string>(existing, StringComparer.Ordinal);
+        var added = 0;
+
+        foreach (var seed in AgentSeedCatalog.Agents)
+        {
+            if (known.Contains(seed.Slug))
+                continue;
+
+            var agent = Must(
+                Agent.Create(seed.Name, seed.JobTitle, seed.PhotoUrl, seed.Slug,
+                             seed.Phone, seed.WhatsApp, seed.Email, seed.Rating, seed.Bio),
+                $"Agent '{seed.Name}'");
+
+            _db.Agents.Add(agent);
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log?.LogInformation("Seed: inserted {Count} agent(s).", added);
+        }
     }
 
     // -----------------------------------------------------------------------------------------
