@@ -51,6 +51,39 @@ public sealed class RealEstateDbSeeder
         await BackfillPropertyAreasAsync(ct);
         await SeedAgentsAsync(ct);
         await SeedDevelopmentsAsync(ct);
+        await SeedJobsAsync(ct);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    //  jobs  (matched on Title — NOT uniquely indexed, so this check is application-level only:
+    //  renaming an entry in JobSeedCatalog inserts a second advert rather than renaming the first)
+    // -----------------------------------------------------------------------------------------
+    private async Task SeedJobsAsync(CancellationToken ct)
+    {
+        var existing = await _db.Jobs.Select(j => j.Title).ToListAsync(ct);
+        var known = new HashSet<string>(existing, StringComparer.OrdinalIgnoreCase);
+        var added = 0;
+
+        foreach (var seed in JobSeedCatalog.Jobs)
+        {
+            if (known.Contains(seed.Title))
+                continue;
+
+            var job = Must(
+                Job.Create(seed.Title, seed.Department, seed.EmploymentType,
+                           seed.Location, seed.Description),
+                $"Job '{seed.Title}'");
+
+            _db.Jobs.Add(job);
+            known.Add(seed.Title);      // guards against a duplicate title inside the catalog itself
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log?.LogInformation("Seed: inserted {Count} job opening(s).", added);
+        }
     }
 
     // -----------------------------------------------------------------------------------------

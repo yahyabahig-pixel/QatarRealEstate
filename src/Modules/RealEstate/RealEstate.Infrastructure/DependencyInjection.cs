@@ -39,6 +39,7 @@ public static class DependencyInjection
         services.AddScoped<IStoredImageRepository, StoredImageRepository>();
         services.AddScoped<IDevelopmentRepository, DevelopmentRepository>();
         services.AddScoped<IAreaRepository, AreaRepository>();
+        services.AddScoped<IJobRepository, JobRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         // --- read side ------------------------------------------------------------------
@@ -47,6 +48,7 @@ public static class DependencyInjection
         services.AddScoped<IStoredImageQueries, StoredImageQueries>();
         services.AddScoped<IDevelopmentQueries, DevelopmentQueries>();
         services.AddScoped<IAreaQueries, AreaQueries>();
+        services.AddScoped<IJobQueries, JobQueries>();
         services.AddScoped<IPropertyViewRecorder, PropertyViewRecorder>();
 
         return services;

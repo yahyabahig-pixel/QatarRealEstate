@@ -43,6 +43,16 @@ public static class AppPermissions
         public const string Delete = "Area.Delete";
     }
 
+    // Job adverts on the Careers page. Deliberately its own permission set rather than folded into
+    // Area/Agent: whoever writes area guides is not necessarily whoever may post a vacancy.
+    public static class Job
+    {
+        public const string Read   = "Job.Read";
+        public const string Create = "Job.Create";
+        public const string Update = "Job.Update";   // also covers opening/closing a role
+        public const string Delete = "Job.Delete";
+    }
+
     public static class Media
     {
         public const string Upload = "Media.Upload";
@@ -86,6 +96,7 @@ public static class AppPermissions
         Agent.Read, Agent.Create, Agent.Update, Agent.Delete,
         Development.Read, Development.Create, Development.Update, Development.Delete,
         Area.Read, Area.Create, Area.Update, Area.Delete,
+        Job.Read, Job.Create, Job.Update, Job.Delete,
         Media.Upload, Media.Delete,
         User.Read, User.Update, User.Delete,
         Admin.Read, Admin.Create, Admin.Update, Admin.Delete, Admin.AssignPosition,
