@@ -3,11 +3,13 @@ using Auth.Application.Abstractions.Authentication;
 using Auth.Application.Abstractions.Identity;
 using Auth.Application.Abstractions.Persistence;
 using Auth.Infrastructure.Data;
+using Auth.Infrastructure.Data.Interceptors;
 using Auth.Infrastructure.Data.Queries;
 using Auth.Infrastructure.Data.Repositories;
 using Auth.Infrastructure.Data.UnitOfWork;
 using Auth.Infrastructure.Identity;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,11 +26,16 @@ public static class DependencyInjection
         services.AddHttpContextAccessor();
         services.AddSingleton(TimeProvider.System);
 
+        services.AddScoped<AuthAuditInterceptor>();
+
         // ---- DbContext: module schema "auth", own migration history --------------------
-        services.AddDbContext<AuthDbContext>(options =>
+        services.AddDbContext<AuthDbContext>((sp, options) =>
+        {
             options.UseSqlServer(
                 configuration.GetConnectionString("RealEstateDb"),
-                sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "auth")));
+                sql => sql.MigrationsHistoryTable("__EFMigrationsHistory", "auth"));
+            options.AddInterceptors(sp.GetRequiredService<AuthAuditInterceptor>());
+        });
 
         // ---- ASP.NET Core Identity (stores + managers; NO cookie UI) -------------------
         services.AddIdentityCore<AppUser>(options =>
@@ -54,6 +61,15 @@ public static class DependencyInjection
         services.Configure<JwtSettings>(jwtSection);
         var jwt = jwtSection.Get<JwtSettings>()
                   ?? throw new InvalidOperationException("Missing 'Jwt' configuration section.");
+
+        // Fail FAST and CLEARLY on a missing/weak secret. Without this, an empty secret
+        // only explodes later as a cryptic IDX10703 key-length error on the first login.
+        // (Safe for `dotnet ef`: the design-time AuthDbContextFactory takes precedence
+        // over building the host, so migrations never hit this code path.)
+        if (string.IsNullOrWhiteSpace(jwt.Secret) || jwt.Secret.Length < 32)
+            throw new InvalidOperationException(
+                "Jwt:Secret must be configured and at least 32 characters long. " +
+                "Set it via appsettings.Development.json (dev) or user-secrets/environment variables (prod).");
 
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             .AddJwtBearer(options =>

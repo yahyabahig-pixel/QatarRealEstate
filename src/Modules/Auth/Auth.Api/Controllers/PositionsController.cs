@@ -2,6 +2,7 @@ using Auth.Application.Positions.AssignPermission;
 using Auth.Application.Positions.CreatePosition;
 using Auth.Application.Positions.DeletePosition;
 using Auth.Application.Positions.GetPosition;
+using Auth.Application.Positions.GetPositionPermissions;
 using Auth.Application.Positions.ListPositions;
 using Auth.Application.Positions.RemovePermission;
 using Auth.Application.Positions.UpdatePosition;
@@ -45,6 +46,12 @@ public sealed class PositionsController : ApiControllerBase
         => (await Sender.Send(new DeletePositionCommand(id), ct)).ToNoContent();
 
     // ---- the position's permission set ------------------------------------------------
+
+    // GET /api/positions/{id}/permissions
+    [HttpGet("{id:guid}/permissions")]
+    [HasPermission(AppPermissions.Permission.Read)]
+    public async Task<IActionResult> GetPermissions(Guid id, CancellationToken ct)
+        => (await Sender.Send(new GetPositionPermissionsQuery(id), ct)).ToOk();
 
     // POST /api/positions/{id}/permissions   { "permission": "Property.Publish" }
     [HttpPost("{id:guid}/permissions")]

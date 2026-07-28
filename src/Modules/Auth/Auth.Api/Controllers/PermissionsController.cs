@@ -1,5 +1,4 @@
 using Auth.Application.Permissions.ListPermissions;
-using Auth.Application.Positions.GetPosition;
 using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Api.Errors;
 using BuildingBlocks.Authorization;

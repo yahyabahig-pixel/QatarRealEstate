@@ -24,6 +24,7 @@ public sealed class CreateAdminHandler : ICommandHandler<CreateAdminCommand, Gui
         {
             var position = await _positions.GetByIdAsync(positionId, ct);
             if (position is null) return PositionErrors.NotFound;
+            if (!position.IsActive) return PositionErrors.Inactive;
         }
 
         // IIdentityService.CreateAdminAsync can ONLY produce a regular admin:

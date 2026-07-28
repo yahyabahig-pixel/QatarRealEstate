@@ -34,6 +34,9 @@ public static class PositionErrors
     public static readonly Error AlreadyInactive =
         Error.Conflict("Position.AlreadyInactive", "The position is already inactive.");
 
+    public static readonly Error Inactive =
+        Error.Validation("Position.Inactive", "An inactive position cannot be assigned to an admin.");
+
     public static readonly Error InUse =
         Error.Conflict("Position.InUse", "The position is assigned to one or more admins and cannot be deleted.");
 }

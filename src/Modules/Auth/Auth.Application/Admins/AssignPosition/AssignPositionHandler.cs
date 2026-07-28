@@ -28,7 +28,7 @@ public sealed class AssignPositionHandler : ICommandHandler<AssignPositionComman
 
         var position = await _positions.GetByIdAsync(request.PositionId, ct);
         if (position is null) return PositionErrors.NotFound;
-        if (!position.IsActive) return PositionErrors.AlreadyInactive;
+        if (!position.IsActive) return PositionErrors.Inactive;
 
         return await _identity.SetPositionAsync(request.AdminId, request.PositionId, ct);
     }
