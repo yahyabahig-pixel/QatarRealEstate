@@ -35,7 +35,7 @@ public sealed class AddPropertyMediaHandler : ICommandHandler<AddPropertyMediaCo
         {
             // propertyId left default: EF sets the FK from the aggregate relationship.
             // (After the Section-5 fix, change Media.PropertyId to Guid and pass property.Id.)
-            var created = Media.Create(item.Url, item.MediaType, item.Width, item.Height, item.Order, item.IsPrimary);
+            var created = Media.Create(item.Url, item.MediaType, item.Width, item.Height, item.Order, item.IsPrimary, property.Id);
             if (created.IsError) return created.TopError;
             media.Add(created.Value);
         }

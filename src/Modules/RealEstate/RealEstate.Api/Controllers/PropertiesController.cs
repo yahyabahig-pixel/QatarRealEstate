@@ -1,6 +1,5 @@
 
 
-using Microsoft.AspNetCore.Components;
 using Microsoft.AspNetCore.Mvc;
 using RealEstate.Api.Controllers;
 using RealEstate.Api.Errors;
@@ -13,7 +12,7 @@ using RealEstate.Application.Properties.User.Queries.SearchProperties;
 namespace RealEstate.Api.Controllers;
 
 
-[Microsoft.AspNetCore.Mvc.Route("api/properties")]
+[Route("api/properties")]
 public sealed class PropertiesController : ApiControllerBase
 {
     // GET /api/properties?q=villa&listingKind=Sale&city=Doha&minRooms=3&sort=PriceAsc&page=1&pageSize=24

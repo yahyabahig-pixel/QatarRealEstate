@@ -32,8 +32,4 @@ public sealed class GetPropertyStatusHistoryHandler
         return Result<IReadOnlyList<PropertyStatusHistoryDto>>.Success(history);
     }
 
-    Task<Result<IReadOnlyList<PropertyStatusHistoryDto>>> IRequestHandler<GetPropertyStatusHistoryQuery, Result<IReadOnlyList<PropertyStatusHistoryDto>>>.Handle(GetPropertyStatusHistoryQuery request, CancellationToken cancellationToken)
-    {
-        throw new NotImplementedException();
-    }
 }
