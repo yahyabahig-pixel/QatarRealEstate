@@ -5,6 +5,7 @@ import { useToast } from '../components/Toast'
 import { InquiryForm, LogoMarquee } from '../components/misc'
 import { WhatsAppIcon } from '../components/ui'
 import { IconCheck, IconMail, IconMap, IconPhone } from '../components/icons'
+import LocationPicker from '../components/LocationPicker'
 import { PROPERTY_TYPES } from '../data/mockData'
 
 const OFFICE = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1600&q=80'
@@ -72,8 +73,47 @@ export function ContactUs() {
 export function ListProperty() {
   const { addInquiry } = useData()
   const toast = useToast()
-  const [f, setF] = useState({ name: '', phone: '', email: '', type: 'Apartment', purpose: 'buy', location: '', message: '' })
+  const [f, setF] = useState({
+    name: '', phone: '', email: '', type: 'Apartment', purpose: 'buy', message: '',
+    city: '', street: '', locCountry: 'Qatar', locState: '', locDescription: '', x: '', y: '',
+  })
+  const [sending, setSending] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+
+  // Same picker→form adapter the admin forms use — one location dialect everywhere.
+  const applyLocation = (patch) => setF(prev => ({ ...prev,
+    ...(patch.x !== undefined ? { x: patch.x, y: patch.y } : {}),
+    ...(patch.country !== undefined ? { locCountry: patch.country } : {}),
+    ...(patch.city !== undefined ? { city: patch.city } : {}),
+    ...(patch.street !== undefined ? { street: patch.street } : {}),
+    ...(patch.state !== undefined ? { locState: patch.state } : {}),
+    ...(patch.description !== undefined ? { locDescription: patch.description } : {}),
+  }))
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (sending) return
+    if (!f.x || !f.y) { toast('Please select your property location on the map.', 'error'); return }
+    setSending(true)
+    try {
+      // Live mode POSTs to /api/leads/listing-request; success only after the backend
+      // confirms. On failure everything the owner typed stays in place.
+      await addInquiry({
+        listingRequest: true,
+        name: f.name, phone: f.phone, email: f.email,
+        type: f.type, purpose: f.purpose, message: f.message,
+        city: f.city, street: f.street, locCountry: f.locCountry,
+        locState: f.locState, locDescription: f.locDescription, x: f.x, y: f.y,
+        source: 'List your property',
+      })
+      toast('Received — a consultant will call you today.')
+      setF({ name: '', phone: '', email: '', type: 'Apartment', purpose: 'buy', message: '',
+             city: '', street: '', locCountry: 'Qatar', locState: '', locDescription: '', x: '', y: '' })
+    } catch (err) {
+      toast(err?.problem?.title || 'Your request could not be sent — please try again.', 'error')
+    } finally { setSending(false) }
+  }
+
   return (
     <div className="pt-24 pb-20 max-w-7xl mx-auto px-4">
       <div className="grid lg:grid-cols-2 gap-12 items-start">
@@ -88,12 +128,7 @@ export function ListProperty() {
             <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Off-market on request</b> — sell quietly to our private client list.</span></li>
           </ul>
         </div>
-        <form className="card p-6 space-y-3" onSubmit={e => {
-          e.preventDefault()
-          addInquiry({ name: f.name, phone: f.phone, email: f.email, message: `[${f.purpose}] ${f.type} in ${f.location}: ${f.message}`, source: 'List your property' })
-          toast('Received — a consultant will call you today.')
-          setF({ name: '', phone: '', email: '', type: 'Apartment', purpose: 'buy', location: '', message: '' })
-        }}>
+        <form className="card p-6 space-y-3" onSubmit={submit}>
           <h2 className="h-serif text-xl">Tell us about your property</h2>
           <input required placeholder="Full name" className="field" value={f.name} onChange={set('name')} />
           <div className="grid grid-cols-2 gap-3">
@@ -106,9 +141,15 @@ export function ListProperty() {
               <option value="buy">For Sale</option><option value="rent">For Rent</option>
             </select>
           </div>
-          <input required placeholder="Location (area / district)" className="field" value={f.location} onChange={set('location')} />
+          <div>
+            <p className="text-xs font-medium text-neutral-500 mb-1.5">Location — search or click the map, the address fills in automatically</p>
+            <LocationPicker variant="light"
+              value={{ x: f.x, y: f.y, country: f.locCountry, city: f.city, street: f.street, state: f.locState, description: f.locDescription }}
+              onChange={applyLocation}
+            />
+          </div>
           <textarea placeholder="Anything else we should know?" rows="3" className="field" value={f.message} onChange={set('message')} />
-          <button className="btn-gold w-full">Request a Valuation</button>
+          <button className="btn-gold w-full" disabled={sending}>{sending ? 'Sending…' : 'Request a Valuation'}</button>
         </form>
       </div>
     </div>

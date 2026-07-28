@@ -40,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<IDevelopmentRepository, DevelopmentRepository>();
         services.AddScoped<IAreaRepository, AreaRepository>();
         services.AddScoped<IJobRepository, JobRepository>();
+        services.AddScoped<ILeadRepository, LeadRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         // --- read side ------------------------------------------------------------------
@@ -50,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IAreaQueries, AreaQueries>();
         services.AddScoped<IJobQueries, JobQueries>();
         services.AddScoped<ICatalogQueries, CatalogQueries>();
+        services.AddScoped<ILeadQueries, LeadQueries>();
         services.AddScoped<IPropertyViewRecorder, PropertyViewRecorder>();
 
         return services;

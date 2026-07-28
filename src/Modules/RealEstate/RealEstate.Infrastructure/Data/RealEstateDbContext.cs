@@ -15,6 +15,7 @@ public sealed class RealEstateDbContext : DbContext
     public DbSet<Development> Developments => Set<Development>();
     public DbSet<Area> Areas => Set<Area>();
     public DbSet<Job> Jobs => Set<Job>();
+    public DbSet<Lead> Leads => Set<Lead>();
     // Media & PropertyFeature are reached through the Property aggregate — no public DbSet needed.
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

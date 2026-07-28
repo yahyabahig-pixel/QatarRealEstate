@@ -61,6 +61,7 @@ export default function ListingsMap({
   const cbRef = useRef({})
   const [ready, setReady] = useState(false)
   const [failed, setFailed] = useState(false)
+  const [failReason, setFailReason] = useState('')
   const [moved, setMoved] = useState(false)
 
   cbRef.current = { onHoverPin, onSelectPin, onSearchArea }
@@ -182,6 +183,21 @@ export default function ListingsMap({
         })
         map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
 
+        // A silent white map is worse than an error message. Style/auth failures are
+        // fatal (401 = invalid token, 403 = token URL-restricted away from this origin);
+        // transient tile errors after a successful load are not.
+        map.on('error', (e) => {
+          const status = e?.error?.status
+          const fatal = status === 401 || status === 403 || !map.loaded()
+          if (!fatal || cancelled) return
+          setFailReason(status === 401
+            ? 'Mapbox rejected the token (401 — invalid or rotated). Check VITE_MAPBOX_TOKEN and restart the dev server.'
+            : status === 403
+              ? "Mapbox refused this origin (403). The token's URL restrictions don't allow this site — allow localhost in the Mapbox dashboard."
+              : 'The map style failed to load — check the connection and the Mapbox token, then reload.')
+          setFailed(true)
+        })
+
         // e.originalEvent is present only for USER moves (drag, wheel, dblclick) — the
         // initial fitBounds cannot arm the "Search this area" button.
         map.on('moveend', (e) => {
@@ -207,10 +223,18 @@ export default function ListingsMap({
 
         mapRef.current = map
       })
-      .catch(() => { if (!cancelled) setFailed(true) })
+      .catch(() => { if (!cancelled) { setFailReason('Mapbox GL JS could not be downloaded — check the connection.'); setFailed(true) } })
+
+    // Layout shifts (mobile pane toggle, sidebar collapse, orientation) resize the pane;
+    // a Mapbox canvas measured at the old size renders stretched or blank until resize().
+    const ro = typeof ResizeObserver !== 'undefined'
+      ? new ResizeObserver(() => requestAnimationFrame(() => mapRef.current?.resize()))
+      : null
+    if (ro && containerRef.current) ro.observe(containerRef.current)
 
     return () => {
       cancelled = true
+      ro?.disconnect()
       popupRef.current?.remove()
       markersRef.current.forEach((m) => m.remove())
       markersRef.current.clear()
@@ -285,10 +309,10 @@ export default function ListingsMap({
       <div className="qre-map-fallback">
         <div className="text-center px-6">
           <div className="w-12 h-12 mx-auto rounded-full bg-neutral-200 text-neutral-500 flex items-center justify-center mb-3"><IconMap className="w-6 h-6" /></div>
-          <p className="text-sm text-neutral-600">
+          <p className="text-sm text-neutral-600 max-w-sm mx-auto">
             {MAPBOX_TOKEN
-              ? 'The map could not be loaded. Check your connection and try again.'
-              : 'Map unavailable — VITE_MAPBOX_TOKEN is not set in this build.'}
+              ? (failReason || 'The map could not be loaded. Check your connection and try again.')
+              : 'Map unavailable — VITE_MAPBOX_TOKEN is not set in this build. Add it to frontend/.env.local and RESTART the dev server (Vite only reads env files at startup).'}
           </p>
         </div>
       </div>

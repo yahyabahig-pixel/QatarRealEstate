@@ -12,7 +12,12 @@ const CDN = 'https://api.mapbox.com/mapbox-gl-js/v3.4.0'
 
 // The token is a BUILD-TIME env var (frontend/.env.local), never a literal in the source.
 // Vite inlines it, so it is public by nature -- restrict it by URL in the Mapbox dashboard.
-export const MAPBOX_TOKEN = import.meta.env.VITE_MAPBOX_TOKEN || ''
+// Both spellings accepted; VITE_MAPBOX_TOKEN is the canonical one in .env.local.
+// NOTE: Vite reads .env files ONLY at dev-server startup — if the token was added while
+// `npm run dev` was already running, the map shows its "token not set" panel until the
+// dev server is restarted.
+export const MAPBOX_TOKEN =
+  import.meta.env.VITE_MAPBOX_TOKEN || import.meta.env.VITE_MAPBOX_ACCESS_TOKEN || ''
 export const MAP_STYLE = 'mapbox://styles/mapbox/light-v11'
 
 let pending = null

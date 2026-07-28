@@ -13,7 +13,8 @@ public sealed record MonthlyStatisticsDto(
     int Published,
     int Sold,
     int Rented,
-    int Archived);
+    int Archived,
+    int NewLeads);
 
 public sealed record DashboardStatisticsDto(
     int Year,

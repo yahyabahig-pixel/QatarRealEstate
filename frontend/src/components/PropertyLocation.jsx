@@ -34,6 +34,10 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
           zoom: approx ? 13 : 15,
         })
         map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
+        map.on('error', (e) => {
+          const status = e?.error?.status
+          if ((status === 401 || status === 403 || !map.loaded()) && !cancelled) setFailed(true)
+        })
         // A map embedded mid-article must not swallow the page scroll. Ctrl/⌘+wheel and the
         // +/- controls still zoom.
         map.scrollZoom.disable()

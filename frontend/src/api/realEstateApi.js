@@ -320,6 +320,75 @@ export const mapAdminPropertyRow = (p) => ({
   addedOn: String(p.createdOnUtc || '').slice(0, 10),
 })
 
+// ---- Leads -----------------------------------------------------------------------------
+const LEAD_STATUS_UI = { New: 'New', Contacted: 'Contacted', Qualified: 'Qualified', Converted: 'Converted', Lost: 'Lost', Archived: 'Archived' }
+const LEAD_TYPE_UI = { PropertyInquiry: 'Property Inquiry', ListingRequest: 'Listing Request', GeneralInquiry: 'General Inquiry' }
+
+export const mapLead = (l) => ({
+  id: l.id,
+  name: l.fullName, phone: l.phone, email: l.email,
+  message: l.message || '',
+  type: l.type,                                 // backend enum name
+  typeLabel: LEAD_TYPE_UI[l.type] || l.type,
+  status: LEAD_STATUS_UI[l.status] || l.status,
+  source: l.source || '',
+  propertyId: l.propertyId || null,
+  propertyTitle: l.propertyTitle || null,
+  agentId: null,
+  // listing-request extras
+  propertyTypeName: l.propertyTypeName || null,
+  purpose: l.listingKind ? kindToPurpose(l.listingKind) : null,
+  locationLabel: [l.locationStreet, l.locationCity].filter(Boolean).join(', ') || null,
+  date: String(l.createdOnUtc || '').slice(0, 10),
+})
+
+export const mapLeadDetails = (l) => ({
+  ...mapLead(l),
+  agentName: l.agentName || null,
+  property: l.property ? {
+    id: l.property.id, title: l.property.title, city: l.property.city,
+    purpose: kindToPurpose(l.property.listingKind),
+    price: l.property.price, currency: l.property.currency,
+    coverImage: l.property.coverImageUrl || '', type: l.property.propertyType || '',
+  } : null,
+  location: l.location ? {
+    country: l.location.country, city: l.location.city, street: l.location.street,
+    state: l.location.state, description: l.location.description || '',
+    // X = longitude, Y = latitude — the one convention, everywhere.
+    lat: Number(l.location.y), lng: Number(l.location.x),
+  } : null,
+})
+
+// PUBLIC intake — the only lead operations an anonymous visitor can perform.
+export const leadsApi = {
+  createInquiry: (f) => http('/api/leads/inquiry', { method: 'POST', auth: false, body: {
+    fullName: f.name, phone: f.phone, email: f.email, message: f.message || null,
+    propertyId: f.propertyId || null, agentId: f.agentId || null, source: f.source || null,
+  } }),
+  createListingRequest: (f) => http('/api/leads/listing-request', { method: 'POST', auth: false, body: {
+    fullName: f.name, phone: f.phone, email: f.email, message: f.message || null,
+    propertyTypeName: f.type, listingKind: f.purpose === 'rent' ? 'Rent' : 'Sale',
+    location: {
+      country: f.locCountry || 'Qatar', city: f.city || 'Doha',
+      street: f.street || f.city || 'Doha', postalCode: '00000',
+      state: f.locState || f.city || 'Doha',
+      x: String(f.x), y: String(f.y),
+      description: f.locDescription || null,
+    },
+    source: 'List your property',
+  } }),
+}
+
+export const leadsAdminApi = {
+  async list(filters = {}) {
+    const page = await http(`/api/admin/leads${qs(filters)}`)
+    return { ...page, items: (page?.items || []).map(mapLead) }
+  },
+  async byId(id) { return mapLeadDetails(await http(`/api/admin/leads/${id}`)) },
+  setStatus: (id, status) => http(`/api/admin/leads/${id}/status`, { method: 'PUT', body: { status } }),
+  remove: (id) => http(`/api/admin/leads/${id}`, { method: 'DELETE' }),
+}
+
 export const propertiesAdminApi = {
   list: (filters = {}) => http(`/api/admin/properties${qs(filters)}`),
   // Monthly platform statistics for one year — real data, grouped in SQL.

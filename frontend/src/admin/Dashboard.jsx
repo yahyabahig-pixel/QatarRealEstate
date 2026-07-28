@@ -14,7 +14,7 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 const zeroMonths = () => MONTHS_LONG.map((name, i) => ({
-  month: i + 1, monthName: name, newProperties: 0, published: 0, sold: 0, rented: 0, archived: 0,
+  month: i + 1, monthName: name, newProperties: 0, published: 0, sold: 0, rented: 0, archived: 0, newLeads: 0,
 }))
 
 // Bar with a rounded TOP only — the data end; the baseline edge stays square.
@@ -141,10 +141,11 @@ export default function Dashboard() {
         sold: inMonth.filter(p => p.status === 'sold').length,
         rented: inMonth.filter(p => p.status === 'rented').length,
         archived: inMonth.filter(p => p.status === 'archived').length,
+        newLeads: inquiries.filter(q => (q.date || '').startsWith(prefix)).length,
       }
     })
     return { year, availableYears: years.length ? years : [year], months }
-  }, [properties, year])
+  }, [properties, inquiries, year])
 
   const stats = MOCK_MODE ? mockStats : (liveStats ?? { year, availableYears: [year], months: zeroMonths() })
   const metricLabel = METRICS.find(([k]) => k === metric)?.[1] || ''

@@ -8,7 +8,7 @@ import { MOCK_MODE, tokenStore } from '../api/client'
 import {
   publicApi, catalogApi, propertyCommand, mapFeature,
   agentsAdminApi, areasAdminApi, developmentsAdminApi, jobsAdminApi,
-  propertiesAdminApi, featuresAdminApi,
+  propertiesAdminApi, featuresAdminApi, leadsApi, leadsAdminApi,
 } from '../api/realEstateApi'
 
 // ---------------------------------------------------------------------------------------
@@ -92,7 +92,7 @@ export function DataProvider({ children }) {
     ;(async () => {
       const results = await Promise.allSettled([
         reloadProperties(), reloadAgents(), reloadAreas(), reloadDevelopments(),
-        reloadJobs(), reloadFeatures(),
+        reloadJobs(), reloadFeatures(), reloadInquiries(),
         catalogApi.propertyTypes().then(ts => !cancelled && setPropertyTypes(ts)),
       ])
       if (cancelled) return
@@ -104,7 +104,7 @@ export function DataProvider({ children }) {
       setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures])
+  }, [reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures, reloadInquiries])
 
   // Name → id lookups the property form mapper needs (see realEstateApi.propertyCommand).
   const typeIdByName = useMemo(
@@ -126,8 +126,22 @@ export function DataProvider({ children }) {
     if (!MOCK_MODE) publicApi.recordView(id)     // real ViewsCount++, fire-and-forget
   }, [])
 
-  const addInquiry = useCallback((inq) => {
-    setInquiries(prev => [{ id: uid(), status: 'New', date: new Date().toISOString().slice(0, 10), ...inq }, ...prev])
+  // Leads are a real backend module now. LIVE: the public form POSTs to /api/leads/*
+  // and success is only reported when the API confirmed (the promise rejects otherwise —
+  // callers keep the form intact and show the real error). MOCK: in-memory as before.
+  const reloadInquiries = useCallback(async () => {
+    if (!authed()) return
+    const page = await leadsAdminApi.list({ pageSize: 100 }).catch(() => null)
+    if (page) setInquiries(page.items)
+  }, [])
+
+  const addInquiry = useCallback(async (inq) => {
+    if (MOCK_MODE) {
+      setInquiries(prev => [{ id: uid(), status: 'New', date: new Date().toISOString().slice(0, 10), ...inq }, ...prev])
+      return
+    }
+    if (inq.listingRequest) await leadsApi.createListingRequest(inq)
+    else await leadsApi.createInquiry(inq)
   }, [])
 
   // ---- mock CRUD ----------------------------------------------------------------------
@@ -308,12 +322,20 @@ export function DataProvider({ children }) {
       ? mockCrud(setFeatures)
       : liveCrud(featuresAdminApi, reloadFeatures, features, { toggleKey: 'active' }),
 
-    // No backend module yet — in-memory in both modes, on purpose.
-    inquiryActions: mockCrud(setInquiries),
+    inquiryActions: MOCK_MODE
+      ? mockCrud(setInquiries)
+      : {
+          add: () => {},   // public intake goes through addInquiry
+          update: guard(async (id, patch) => {
+            if ('status' in patch) await leadsAdminApi.setStatus(id, patch.status)
+            await reloadInquiries()
+          }),
+          remove: guard(async (id) => { await leadsAdminApi.remove(id); await reloadInquiries() }),
+        },
   }), [properties, developments, areas, agents, jobs, jobDepartments, features, propertyTypes,
        inquiries, settings, recentlyViewed, loading, apiError, areaCount, trackView, addInquiry,
        typeIdByName, featureIdByName, areaIdByName,
-       reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures])
+       reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures, reloadInquiries])
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }

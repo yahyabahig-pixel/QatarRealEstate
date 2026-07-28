@@ -26,22 +26,34 @@ export function InquiryForm({ propertyId = null, agentId = null, source = 'Conta
   const { addInquiry } = useData()
   const toast = useToast()
   const [f, setF] = useState({ name: '', phone: '', email: '', message: '' })
+  const [sending, setSending] = useState(false)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   const cls = dark ? 'field-dark' : 'field'
-  return (
-    <form className="space-y-3" onSubmit={e => {
-      e.preventDefault()
-      addInquiry({ ...f, propertyId, agentId, source })
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (sending) return
+    setSending(true)
+    try {
+      // Success is announced ONLY after the backend confirmed. On failure the form keeps
+      // every value the visitor typed — they fix and retry, never re-type.
+      await addInquiry({ ...f, propertyId, agentId, source })
       toast('Inquiry sent — our team will reach out shortly.')
       setF({ name: '', phone: '', email: '', message: '' })
-    }}>
+    } catch (err) {
+      toast(err?.problem?.title || 'Your inquiry could not be sent — please try again.', 'error')
+    } finally { setSending(false) }
+  }
+
+  return (
+    <form className="space-y-3" onSubmit={submit}>
       <input required placeholder="Full name" className={cls} value={f.name} onChange={set('name')} />
       <div className={compact ? 'space-y-3' : 'grid md:grid-cols-2 gap-3'}>
         <input required placeholder="Phone" className={cls} value={f.phone} onChange={set('phone')} />
         <input required type="email" placeholder="Email" className={cls} value={f.email} onChange={set('email')} />
       </div>
       <textarea required placeholder="Message" rows="3" className={cls} value={f.message} onChange={set('message')} />
-      <button className="btn-gold w-full">Submit Inquiry</button>
+      <button className="btn-gold w-full" disabled={sending}>{sending ? 'Sending…' : 'Submit Inquiry'}</button>
     </form>
   )
 }

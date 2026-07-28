@@ -286,6 +286,13 @@ public sealed class PropertyQueries : IPropertyQueries
             .Select(g => new { g.Key.Month, g.Key.NewStatus, Count = g.Count() })
             .ToListAsync(ct);
 
+        // Leads share the monthly-statistics architecture: grouped in SQL by CreatedAtUtc.
+        var leads = await _db.Leads.AsNoTracking()
+            .Where(l => l.CreatedAtUtc.Year == year)
+            .GroupBy(l => l.CreatedAtUtc.Month)
+            .Select(g => new { Month = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
         var firstYear = await props.MinAsync(p => (int?)p.CreatedAtUtc.Year, ct)
             ?? DateTime.UtcNow.Year;
         var availableYears = Enumerable
@@ -304,7 +311,8 @@ public sealed class PropertyQueries : IPropertyQueries
             EventCount(m, PropertyStatus.Published),
             EventCount(m, PropertyStatus.Sold),
             EventCount(m, PropertyStatus.Rented),
-            EventCount(m, PropertyStatus.Archived))).ToList();
+            EventCount(m, PropertyStatus.Archived),
+            leads.FirstOrDefault(x => x.Month == m)?.Count ?? 0)).ToList();
 
         return new DashboardStatisticsDto(year, availableYears, months);
     }

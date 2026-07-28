@@ -285,7 +285,7 @@ export default function Listings({ purpose, offMarket = false }) {
               </div>
             </div>
 
-            <div className={pane === 'list' ? 'hidden lg:block' : ''}>
+            <div className={`h-full min-h-[360px] ${pane === 'list' ? 'hidden lg:block' : ''}`}>
               <ListingsMap
                 items={mapItems}
                 purpose={purpose}
