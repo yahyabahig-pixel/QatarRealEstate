@@ -117,21 +117,29 @@ internal static class SeedCatalog
     // -----------------------------------------------------------------------------------------
     internal static readonly FeatureSeed[] Features =
     [
-        new() { Name = "Swimming Pool",     ValueType = FeatureValueType.Boolean, Icon = "pool" },
+        new() { Name = "Swimming Pool",     ValueType = FeatureValueType.Boolean, Icon = "swimming-pool" },
         new() { Name = "Private Garden",    ValueType = FeatureValueType.Boolean, Icon = "garden" },
-        new() { Name = "Maid's Room",       ValueType = FeatureValueType.Boolean, Icon = "bed" },
-        new() { Name = "Sea View",          ValueType = FeatureValueType.Boolean, Icon = "waves" },
-        new() { Name = "Central A/C",       ValueType = FeatureValueType.Boolean, Icon = "ac" },
+        new() { Name = "Maid's Room",       ValueType = FeatureValueType.Boolean, Icon = "bedroom" },
+        new() { Name = "Sea View",          ValueType = FeatureValueType.Boolean, Icon = "sea-view" },
+        new() { Name = "Central A/C",       ValueType = FeatureValueType.Boolean, Icon = "air-conditioning" },
         new() { Name = "Gym Access",        ValueType = FeatureValueType.Boolean, Icon = "gym" },
-        new() { Name = "24/7 Security",     ValueType = FeatureValueType.Boolean, Icon = "shield" },
+        new() { Name = "24/7 Security",     ValueType = FeatureValueType.Boolean, Icon = "security" },
         new() { Name = "Elevator",          ValueType = FeatureValueType.Boolean, Icon = "elevator" },
-        new() { Name = "Pets Allowed",      ValueType = FeatureValueType.Boolean, Icon = "pet" },
-        new() { Name = "Covered Parking",   ValueType = FeatureValueType.Number,  Icon = "car" },
+        new() { Name = "Pets Allowed",      ValueType = FeatureValueType.Boolean, Icon = "pets-allowed" },
+        new() { Name = "Covered Parking",   ValueType = FeatureValueType.Number,  Icon = "covered-parking" },
         new() { Name = "Balconies",         ValueType = FeatureValueType.Number,  Icon = "balcony" },
-        new() { Name = "Floor Number",      ValueType = FeatureValueType.Number,  Icon = "stairs" },
+        new() { Name = "Floor Number",      ValueType = FeatureValueType.Number,  Icon = "floor" },
         new() { Name = "Distance To Metro", ValueType = FeatureValueType.Number,  Icon = "metro" },
-        new() { Name = "Furnishing",        ValueType = FeatureValueType.Text,    Icon = "sofa" },
+        new() { Name = "Furnishing",        ValueType = FeatureValueType.Text,    Icon = "living-room" },
         new() { Name = "Kitchen Type",      ValueType = FeatureValueType.Text,    Icon = "kitchen" },
+        new() { Name = "CCTV",              ValueType = FeatureValueType.Boolean, Icon = "cctv" },
+        new() { Name = "Beach Access",      ValueType = FeatureValueType.Boolean, Icon = "beach-access" },
+        new() { Name = "Playground",        ValueType = FeatureValueType.Boolean, Icon = "playground" },
+        new() { Name = "School Nearby",     ValueType = FeatureValueType.Boolean, Icon = "near-school" },
+        new() { Name = "Hospital Nearby",   ValueType = FeatureValueType.Boolean, Icon = "near-hospital" },
+        new() { Name = "Wi-Fi",             ValueType = FeatureValueType.Boolean, Icon = "wifi" },
+        new() { Name = "Smart Home",        ValueType = FeatureValueType.Boolean, Icon = "smart-home" },
+        new() { Name = "Concierge",         ValueType = FeatureValueType.Boolean, Icon = "concierge" },
     ];
 
     // -----------------------------------------------------------------------------------------

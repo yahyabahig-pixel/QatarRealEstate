@@ -3,6 +3,7 @@ import {
   seedProperties, seedDevelopments, seedAreas, seedAgents, seedJobs,
   seedSettings, seedInquiries, refFor, AMENITIES, PROPERTY_TYPES,
 } from '../data/mockData'
+import { guessFeatureIcon } from '../lib/featureIcons'
 import { MOCK_MODE, tokenStore } from '../api/client'
 import {
   publicApi, catalogApi, propertyCommand, mapFeature,
@@ -27,7 +28,7 @@ const uid = () => Math.random().toString(36).slice(2, 10)
 
 // Mock features derive from the old hardcoded amenity list, shaped like FeatureAdminDto.
 const mockFeatures = AMENITIES.map((name, i) => ({
-  id: `f${i + 1}`, name, valueType: 'Boolean', icon: null, active: true,
+  id: `f${i + 1}`, name, valueType: 'Boolean', icon: guessFeatureIcon(name), active: true,
 }))
 
 export function DataProvider({ children }) {

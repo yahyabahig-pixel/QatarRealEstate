@@ -10,6 +10,8 @@ public sealed class CreateFeatureValidator : AbstractValidator<CreateFeatureComm
     {
         RuleFor(x => x.Name).NotEmpty().MaximumLength(100);
         RuleFor(x => x.ValueType).IsInEnum();
-        RuleFor(x => x.Icon).MaximumLength(500);
+        RuleFor(x => x.Icon).MaximumLength(500)
+            .Must(RealEstate.Domain.Constants.FeatureIconCatalog.IsValid)
+            .WithMessage("Icon must be a key from the curated real-estate icon catalog.");
     }
 }

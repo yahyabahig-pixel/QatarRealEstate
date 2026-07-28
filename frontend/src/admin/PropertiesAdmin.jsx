@@ -7,6 +7,7 @@ import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice,
 import { MOCK_MODE } from '../api/client'
 import { imagesAdminApi, imageUrl, propertiesAdminApi } from '../api/realEstateApi'
 import LocationPicker from '../components/LocationPicker'
+import { resolveFeatureIcon } from '../lib/featureIcons'
 
 // Form state mirrors the UI dialect; DataContext + realEstateApi translate it into the
 // backend's CreatePropertyCommand / UpdatePropertyRequest (see propertyCommand).
@@ -273,9 +274,11 @@ export default function PropertiesAdmin() {
                   : (
                     <div className="flex flex-wrap gap-2">
                       {featureOptions.map(f => (
-                        <label key={f.id} className={`cursor-pointer rounded-full border px-3 py-1 text-xs ${form.amenities.includes(f.name) ? 'bg-gold text-black border-gold' : 'border-neutral-600 text-neutral-300'}`}>
+                        <label key={f.id} className={`cursor-pointer rounded-full border px-3 py-1 text-xs inline-flex items-center gap-1.5 ${form.amenities.includes(f.name) ? 'bg-gold text-white border-gold' : 'border-neutral-600 text-neutral-300'}`}>
                           <input type="checkbox" className="hidden" checked={form.amenities.includes(f.name)}
-                            onChange={() => setV('amenities', form.amenities.includes(f.name) ? form.amenities.filter(x => x !== f.name) : [...form.amenities, f.name])} />{f.name}
+                            onChange={() => setV('amenities', form.amenities.includes(f.name) ? form.amenities.filter(x => x !== f.name) : [...form.amenities, f.name])} />
+                          {(() => { const r = resolveFeatureIcon(f.icon); return r ? <r.Icon className="w-3.5 h-3.5" /> : null })()}
+                          {f.name}
                         </label>
                       ))}
                     </div>

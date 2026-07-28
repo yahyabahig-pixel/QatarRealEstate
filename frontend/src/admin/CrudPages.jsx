@@ -1,7 +1,8 @@
 import { useRef, useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useToast } from '../components/Toast'
-import { CenterNotice, CrudPage, Field, Modal, PageTitle, Spinner, StatusBadge, useConfirm } from './adminUi'
+import { CenterNotice, CrudPage, Field, ImageUpload, Modal, PageTitle, Spinner, StatusBadge, useConfirm } from './adminUi'
+import { resolveFeatureIcon } from '../lib/featureIcons'
 import LocationPicker from '../components/LocationPicker'
 import { MOCK_MODE } from '../api/client'
 import { imagesAdminApi, imageUrl } from '../api/realEstateApi'
@@ -29,7 +30,6 @@ export function DevelopmentsAdmin() {
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
   const [notice, setNotice] = useState(null)
-  const fileInput = useRef(null)
 
   const rows = search
     ? developments.filter(d => JSON.stringify(d).toLowerCase().includes(search.toLowerCase()))
@@ -57,30 +57,6 @@ export function DevelopmentsAdmin() {
     ...(patch.description !== undefined ? { locDescription: patch.description } : {}),
   }))
 
-  // Cover image: validated on the client, uploaded through the EXISTING media system.
-  const onCover = async (e) => {
-    const file = e.target.files?.[0]
-    e.target.value = ''
-    if (!file) return
-    if (!file.type.startsWith('image/')) { setNotice({ kind: 'error', message: 'Please choose an image file (JPG, PNG, WebP…).' }); return }
-    if (file.size > 8 * 1024 * 1024) { setNotice({ kind: 'error', message: 'Image is too large — maximum size is 8 MB.' }); return }
-    setUploading(true)
-    try {
-      if (MOCK_MODE) {
-        const dataUrl = await new Promise((resolve, reject) => {
-          const r = new FileReader()
-          r.onload = () => resolve(r.result); r.onerror = reject
-          r.readAsDataURL(file)
-        })
-        setForm(f => ({ ...f, coverImage: dataUrl }))
-      } else {
-        const id = await imagesAdminApi.upload(file)
-        setForm(f => ({ ...f, coverImage: imageUrl(id) }))
-      }
-    } catch (err) {
-      setNotice({ kind: 'error', message: 'Upload failed — ' + (err?.problem?.title || err.message) })
-    } finally { setUploading(false) }
-  }
 
   const save = async (e) => {
     e.preventDefault()
@@ -168,25 +144,10 @@ export function DevelopmentsAdmin() {
 
             <div className="md:col-span-2">
               <Field label="Cover image (uploaded from your device)">
-                <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={onCover} />
-                {form.coverImage ? (
-                  <div className="relative inline-block group">
-                    <img src={form.coverImage} alt="Cover preview" className="w-64 h-40 object-cover rounded-lg border border-white/10" />
-                    <div className="absolute inset-0 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
-                      <button type="button" className="btn-outline !bg-transparent !border-white/40 !text-white !py-1.5 !px-3 text-xs" onClick={() => fileInput.current?.click()}>Replace</button>
-                      <button type="button" className="btn-danger !py-1.5 !px-3 text-xs" onClick={() => setForm(f => ({ ...f, coverImage: '' }))}>Remove</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" disabled={uploading}
-                    className="w-64 h-40 rounded-lg border-2 border-dashed border-white/15 hover:border-gold text-neutral-500 hover:text-gold text-sm flex flex-col items-center justify-center gap-2 transition-colors"
-                    onClick={() => fileInput.current?.click()}>
-                    {uploading ? <><Spinner /> Uploading…</> : <>Choose image…<span className="text-[11px]">JPG / PNG / WebP, up to 8 MB</span></>}
-                  </button>
-                )}
-                {uploading && form.coverImage && <p className="text-xs text-gold mt-2 flex items-center gap-2"><Spinner /> Uploading…</p>}
+                <ImageUpload value={form.coverImage} onChange={url => setForm(f => ({ ...f, coverImage: url }))} onBusy={setUploading} />
               </Field>
             </div>
+
 
             <div className="md:col-span-2 flex justify-end gap-3 pt-2">
               <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
@@ -215,7 +176,8 @@ export function AreasAdmin() {
     ]}
     fields={[
       { key: 'name', label: 'Area name', required: true }, { key: 'slug', label: 'Slug (url name)' },
-      { key: 'photo', label: 'Photo URL', required: true }, { key: 'intro', label: 'Intro text', type: 'textarea' },
+      { key: 'photo', label: 'Photo (uploaded from your device)', type: 'image' },
+      { key: 'intro', label: 'Intro text', type: 'textarea' },
     ]} />
 }
 
@@ -267,13 +229,18 @@ export function FeaturesAdmin() {
     columns={[
       { key: 'name', label: 'Feature' },
       { key: 'valueType', label: 'Value type' },
-      { key: 'icon', label: 'Icon', render: r => r.icon || '—' },
+      { key: 'icon', label: 'Icon', render: r => {
+        const resolved = resolveFeatureIcon(r.icon)
+        return resolved
+          ? <span className="inline-flex items-center gap-2"><span className="w-7 h-7 rounded-lg bg-gold/15 text-gold flex items-center justify-center"><resolved.Icon className="w-4 h-4" /></span><span className="text-xs text-neutral-400">{resolved.name}</span></span>
+          : '—'
+      } },
       { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-500/15 text-green-400', retired: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
       { key: 'name', label: 'Feature name (e.g. Swimming Pool)', required: true },
       { key: 'valueType', label: 'Value type', type: 'select', options: [['Boolean', 'Yes / No (presence only)'], ['Text', 'Text value (e.g. floor type)'], ['Number', 'Numeric value (e.g. parking count)'] ] },
-      { key: 'icon', label: 'Icon key or URL (optional)' },
+      { key: 'icon', label: 'Icon (pick from the real-estate icon set)', type: 'icon' },
       { key: 'active', label: 'Active (offered on new listings)', type: 'toggle' },
     ]} />
 }

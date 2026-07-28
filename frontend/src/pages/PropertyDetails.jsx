@@ -7,12 +7,13 @@ import { InquiryForm, RecentlyViewed } from '../components/misc'
 import { IconArrowUpRight, IconCamera, IconChevronLeft, IconChevronRight, IconHeart, IconPhone, IconShare, IconSparkle, IconX } from '../components/icons'
 import PropertyLocation from '../components/PropertyLocation'
 import { fallbackQatarCoord } from '../lib/geo'
+import { resolveFeatureIcon } from '../lib/featureIcons'
 import { MOCK_MODE } from '../api/client'
 import { publicApi } from '../api/realEstateApi'
 
 export default function PropertyDetails() {
   const { id } = useParams()
-  const { properties, agents, areas, areaCount, trackView } = useData()
+  const { properties, agents, areas, areaCount, trackView, features: featureCatalog } = useData()
   const [lightbox, setLightbox] = useState(null)
   const [showAllAmenities, setShowAllAmenities] = useState(false)
   const [showInquiry, setShowInquiry] = useState(false)
@@ -150,7 +151,16 @@ export default function PropertyDetails() {
               <h2 className="eyebrow mb-3">Amenities & Services</h2>
               <div className="flex flex-wrap gap-2 mb-3">
                 {amenities.map(a => (
-                  <span key={a} className="inline-flex items-center gap-1.5 border border-neutral-200 bg-white rounded-full px-3.5 py-1.5 text-sm text-neutral-700"><IconSparkle className="w-3.5 h-3.5 text-gold" /> {a}</span>
+                  <span key={a} className="inline-flex items-center gap-1.5 border border-neutral-200 bg-white rounded-full px-3.5 py-1.5 text-sm text-neutral-700">
+                    {(() => {
+                      // Resolve the amenity's saved icon key: the property's own feature rows
+                      // first (live mode), then the global catalog (mock mode), then a default.
+                      const key = (p.features || []).find(x => x.name === a)?.icon
+                        || featureCatalog.find(x => x.name === a)?.icon
+                      const r = resolveFeatureIcon(key)
+                      const C = r ? r.Icon : IconSparkle
+                      return <C className="w-3.5 h-3.5 text-gold" />
+                    })()} {a}</span>
                 ))}
               </div>
               {allAmenities.length > 6 && (

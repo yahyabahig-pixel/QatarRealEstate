@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../store/AuthContext'
 import { IconCheck, IconPlus, IconX } from '../components/icons'
+import IconPicker from '../components/IconPicker'
+import { MOCK_MODE } from '../api/client'
+import { imagesAdminApi, imageUrl } from '../api/realEstateApi'
 
 // ---------------------------------------------------------------------------------------
 // Shared admin UI: table, modal, confirm, generic CRUD page factory. Permission props
@@ -71,6 +74,67 @@ export function useConfirm() {
     </Modal>
   )
   return [confirm, dialog]
+}
+
+// ---------------------------------------------------------------------------------------
+// Reusable admin image upload: choose from the PC, preview, replace, remove. Uses the
+// EXISTING media system (imagesAdminApi → /api/admin/media/images) in live mode and an
+// inline data-URL in mock mode — never a second storage mechanism, never a pasted URL.
+// ---------------------------------------------------------------------------------------
+export function ImageUpload({ value = '', onChange, onBusy, maxMb = 8 }) {
+  const fileInput = useRef(null)
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState('')
+
+  const busy = (b) => { setUploading(b); onBusy?.(b) }
+
+  const onFile = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError('')
+    if (!file.type.startsWith('image/')) { setError('Please choose an image file (JPG, PNG, WebP…).'); return }
+    if (file.size > maxMb * 1024 * 1024) { setError(`Image is too large — maximum size is ${maxMb} MB.`); return }
+    busy(true)
+    try {
+      if (MOCK_MODE) {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader()
+          r.onload = () => resolve(r.result); r.onerror = reject
+          r.readAsDataURL(file)
+        })
+        onChange?.(dataUrl)
+      } else {
+        const id = await imagesAdminApi.upload(file)   // throws with ProblemDetails on 4xx
+        onChange?.(imageUrl(id))
+      }
+    } catch (err) {
+      setError('Upload failed — ' + (err?.problem?.title || err.message))
+    } finally { busy(false) }
+  }
+
+  return (
+    <div>
+      <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={onFile} />
+      {value ? (
+        <div className="relative inline-block group">
+          <img src={value} alt="Preview" className="w-64 h-40 object-cover rounded-lg border border-white/10" />
+          <div className="absolute inset-0 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+            <button type="button" className="btn-outline !bg-transparent !border-white/40 !text-white !py-1.5 !px-3 text-xs" onClick={() => fileInput.current?.click()}>Replace</button>
+            <button type="button" className="btn-danger !py-1.5 !px-3 text-xs" onClick={() => { setError(''); onChange?.('') }}>Remove</button>
+          </div>
+          {uploading && <p className="text-xs text-gold mt-2 flex items-center gap-2"><Spinner /> Uploading…</p>}
+        </div>
+      ) : (
+        <button type="button" disabled={uploading}
+          className="w-64 h-40 rounded-lg border-2 border-dashed border-white/15 hover:border-gold text-neutral-500 hover:text-gold text-sm flex flex-col items-center justify-center gap-2 transition-colors"
+          onClick={() => fileInput.current?.click()}>
+          {uploading ? <><Spinner /> Uploading…</> : <>Choose image…<span className="text-[11px]">JPG / PNG / WebP, up to {maxMb} MB</span></>}
+        </button>
+      )}
+      {error && <p className="text-xs text-red-400 mt-2">{error}</p>}
+    </div>
+  )
 }
 
 export function Field({ label, children }) {
@@ -177,9 +241,11 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
         <Modal title={editing.id ? `Edit ${singular}` : `Add ${singular}`} onClose={() => !saving && setEditing(null)} wide={fields.length > 6}>
           <form onSubmit={save} className={`grid gap-4 ${fields.length > 6 ? 'md:grid-cols-2' : ''}`}>
             {fields.map(f => (
-              <div key={f.key} className={f.type === 'textarea' ? 'md:col-span-2' : ''}>
+              <div key={f.key} className={['textarea', 'image', 'icon'].includes(f.type) ? 'md:col-span-2' : ''}>
                 <Field label={f.label}>
-                  {f.type === 'textarea' ? <textarea rows="3" required={f.required} className="field-dark" value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
+                  {f.type === 'image' ? <ImageUpload value={form[f.key] || ''} onChange={url => setForm({ ...form, [f.key]: url })} />
+                    : f.type === 'icon' ? <IconPicker value={form[f.key] || ''} onChange={k => setForm({ ...form, [f.key]: k })} />
+                    : f.type === 'textarea' ? <textarea rows="3" required={f.required} className="field-dark" value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
                     : f.type === 'select' ? (
                       <select className="field-dark" value={form[f.key] ?? ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })}>
                         {f.options.map(o => Array.isArray(o)
