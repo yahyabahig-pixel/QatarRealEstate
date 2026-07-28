@@ -139,15 +139,30 @@ export function DataProvider({ children }) {
   // ---- live CRUD ----------------------------------------------------------------------
   // Same call signatures the admin pages already use: add(form), update(id, patch),
   // remove(id). Each action hits the API, then re-fetches the slice — the store never
-  // guesses at what the database did. Errors land in apiError (surfaced as a toast by
-  // the admin pages) instead of exploding in a component that never awaited the promise.
-  const guard = (fn) => (...args) =>
-    fn(...args).catch(err => {
+  // guesses at what the database did.
+  //
+  // RESULT CONTRACT: every guarded action resolves to { ok: true, value } only after the
+  // backend confirmed success, or { ok: false, error } with the backend's real message
+  // (ProblemDetails title + validation details). It never throws — pages await the
+  // result, keep their form open on failure, and only announce success on ok: true.
+  const describeError = (err) => {
+    const parts = [err?.problem?.title || err?.message || 'The API rejected the request.']
+    const errs = err?.errors
+    if (Array.isArray(errs)) parts.push(errs.map(e => e.description || e.code).join(' '))
+    else if (errs && typeof errs === 'object') parts.push(Object.values(errs).flat().join(' '))
+    if (err?.status === 404) parts.push('(The endpoint was not found — is the backend running the latest build?)')
+    return parts.filter(Boolean).join('\n')
+  }
+
+  const guard = (fn) => async (...args) => {
+    try {
+      const value = await fn(...args)
+      return { ok: true, value }
+    } catch (err) {
       console.error(err)
-      const validation = err?.errors && typeof err.errors === 'object'
-        ? ' ' + Object.values(err.errors).flat().join(' ') : ''
-      setApiError((err?.problem?.title || err?.message || 'The API rejected the request.') + validation)
-    })
+      return { ok: false, error: describeError(err), status: err?.status }
+    }
+  }
 
   const liveCrud = (api, reload, rows, { toggleKey } = {}) => ({
     add: guard(async (form) => { await api.create(form); await reload() }),

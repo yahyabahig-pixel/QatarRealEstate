@@ -5,6 +5,12 @@ import { useAuth } from '../store/AuthContext'
 // ---------------------------------------------------------------------------------------
 // Shared admin UI: table, modal, confirm, generic CRUD page factory. Permission props
 // hide/disable actions the caller can't use — the backend re-checks everything anyway.
+//
+// SAVE CONTRACT (live mode): store actions return { ok: true, value } on backend success
+// and { ok: false, error } on failure. CrudPage awaits that result — success is only
+// announced after the backend confirms it, and a failure keeps the form OPEN with every
+// entered value intact so the user can fix and retry. Mock-mode actions return plain
+// values; anything without ok === false counts as success.
 // ---------------------------------------------------------------------------------------
 
 export function PageTitle({ title, action }) {
@@ -29,6 +35,27 @@ export function Modal({ title, onClose, children, wide }) {
     </div>
   )
 }
+
+// Centered notice: success (auto-dismissed by the caller) or error (user dismisses).
+// Rendered above everything, including an open modal — the modal and its data survive.
+export function CenterNotice({ kind = 'success', message, onClose }) {
+  return (
+    <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
+      <div className={`max-w-md w-full border-2 p-6 text-center bg-coal shadow-2xl ${kind === 'success' ? 'border-green-600' : 'border-red-600'}`}
+        onClick={e => e.stopPropagation()}>
+        <div className={`text-4xl mb-3 ${kind === 'success' ? 'text-green-400' : 'text-red-400'}`}>{kind === 'success' ? '✓' : '✕'}</div>
+        <p className="text-white text-sm leading-relaxed whitespace-pre-line">{message}</p>
+        {kind === 'error' && (
+          <button className="btn-gold mt-5 !py-2" onClick={onClose}>OK — let me fix it</button>
+        )}
+      </div>
+    </div>
+  )
+}
+
+export const Spinner = () => (
+  <span className="inline-block w-4 h-4 border-2 border-neutral-500 border-t-gold rounded-full animate-spin align-middle" />
+)
 
 export function useConfirm() {
   const [state, setState] = useState(null)
@@ -75,17 +102,38 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
   const [form, setForm] = useState({})
   const [confirm, confirmDialog] = useConfirm()
   const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [notice, setNotice] = useState(null)     // { kind, message }
 
+  const singular = title.endsWith('s') ? title.slice(0, -1) : title
   const canCreate = !permissions.create || hasPermission(permissions.create)
   const canUpdate = !permissions.update || hasPermission(permissions.update)
   const canDelete = !permissions.delete || hasPermission(permissions.delete)
 
   const open = (row) => { setEditing(row ?? {}); setForm(row ? { ...row } : { ...defaults }) }
-  const save = (e) => {
+
+  const save = async (e) => {
     e.preventDefault()
-    if (editing?.id) { actions.update(editing.id, form); toast(`${title.slice(0, -1)} updated.`) }
-    else { actions.add(form); toast(`${title.slice(0, -1)} added.`) }
+    if (saving) return                            // no duplicate submissions
+    setSaving(true)
+    const res = await Promise.resolve(
+      editing?.id ? actions.update(editing.id, form) : actions.add(form))
+    setSaving(false)
+    if (res && res.ok === false) {
+      // Backend rejected it: the form stays open with everything the user typed.
+      setNotice({ kind: 'error', message: res.error || 'The API rejected the request.' })
+      return
+    }
+    // Only now — after the backend confirmed — close and announce.
     setEditing(null)
+    setNotice({ kind: 'success', message: `${singular} ${editing?.id ? 'updated' : 'added'} successfully.` })
+    setTimeout(() => setNotice(n => (n?.kind === 'success' ? null : n)), 2000)
+  }
+
+  const remove = async (id) => {
+    const res = await Promise.resolve(actions.remove(id))
+    if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
+    else toast('Deleted.', 'error')
   }
 
   const filtered = search
@@ -94,7 +142,7 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
 
   return (
     <div>
-      <PageTitle title={title} action={canCreate && <button className="btn-gold !py-2" onClick={() => open(null)}>+ Add {title.slice(0, -1)}</button>} />
+      <PageTitle title={title} action={canCreate && <button className="btn-gold !py-2" onClick={() => open(null)}>+ Add {singular}</button>} />
       <input placeholder={`Search ${title.toLowerCase()}…`} className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
 
       {filtered.length === 0 ? (
@@ -115,7 +163,7 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
                   <td className="px-4 py-3 whitespace-nowrap">
                     {canUpdate && <button className="text-gold hover:underline mr-3" onClick={() => open(row)}>Edit</button>}
                     {canDelete && <button className="text-red-400 hover:underline"
-                      onClick={() => confirm(`Delete "${row.name || row.title}"? This cannot be undone.`, () => { actions.remove(row.id); toast('Deleted.', 'error') })}>Delete</button>}
+                      onClick={() => confirm(`Delete "${row.name || row.title}"? This cannot be undone.`, () => remove(row.id))}>Delete</button>}
                   </td>
                 </tr>
               ))}
@@ -125,7 +173,7 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
       )}
 
       {editing !== null && (
-        <Modal title={editing.id ? `Edit ${title.slice(0, -1)}` : `Add ${title.slice(0, -1)}`} onClose={() => setEditing(null)} wide={fields.length > 6}>
+        <Modal title={editing.id ? `Edit ${singular}` : `Add ${singular}`} onClose={() => !saving && setEditing(null)} wide={fields.length > 6}>
           <form onSubmit={save} className={`grid gap-4 ${fields.length > 6 ? 'md:grid-cols-2' : ''}`}>
             {fields.map(f => (
               <div key={f.key} className={f.type === 'textarea' ? 'md:col-span-2' : ''}>
@@ -144,12 +192,15 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
               </div>
             ))}
             <div className={`flex justify-end gap-3 pt-2 ${fields.length > 6 ? 'md:col-span-2' : ''}`}>
-              <button type="button" className="btn-outline !border-neutral-600 !text-neutral-300" onClick={() => setEditing(null)}>Cancel</button>
-              <button className="btn-gold">Save</button>
+              <button type="button" className="btn-outline !border-neutral-600 !text-neutral-300" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn-gold flex items-center gap-2" disabled={saving}>
+                {saving && <Spinner />}{saving ? 'Saving…' : 'Save'}
+              </button>
             </div>
           </form>
         </Modal>
       )}
+      {notice && <CenterNotice kind={notice.kind} message={notice.message} onClose={() => setNotice(null)} />}
       {confirmDialog}
     </div>
   )

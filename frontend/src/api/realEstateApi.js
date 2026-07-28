@@ -67,7 +67,7 @@ export const mapPropertyListItem = (p) => ({
   images: p.coverImageUrl ? [p.coverImageUrl] : [],
   exclusive: !!p.isFeatured,
   type: '', area: '', district: '', amenities: [], agentId: null,
-  offPlan: false, balcony: false, parking: 0, furnishing: '',
+  offPlan: false, balcony: false, furnishing: '',
   addedOn: '',
 })
 
@@ -100,7 +100,7 @@ export const mapPropertyDetails = (p) => ({
   media: p.media || [],                       // full objects, for the admin media manager
   amenities: (p.features || []).map(f => f.name),
   features: p.features || [],                 // full objects, for the admin feature editor
-  parking: 0, balcony: false,
+  balcony: false,
   furnishing: '',
   agentId: null,
   addedOn: '',

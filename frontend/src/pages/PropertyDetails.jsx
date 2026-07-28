@@ -63,7 +63,7 @@ export default function PropertyDetails() {
     ['Reference No.', p.referenceNo], ['Type', p.type || '—'], ['Purpose', p.purpose === 'rent' ? 'For Rent' : 'For Sale'],
     ['Added on', p.addedOn || '—'], ['Bedrooms', p.type === 'Land' ? '—' : (p.bedrooms === 0 ? 'Studio' : p.bedrooms)],
     ['Bathrooms', p.type === 'Land' ? '—' : p.bathrooms], ['Unit Size', `${(p.sizeSqm || 0).toLocaleString()} sqm`],
-    ['Furnishing', p.furnishing || '—'], ['Parking', p.parking ?? '—'], ['Balcony', p.balcony ? 'Yes' : 'No'],
+    ['Furnishing', p.furnishing || '—'], ['Balcony', p.balcony ? 'Yes' : 'No'],
   ]
 
   return (
