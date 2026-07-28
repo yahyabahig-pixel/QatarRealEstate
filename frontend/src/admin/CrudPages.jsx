@@ -1,11 +1,13 @@
 import { useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useToast } from '../components/Toast'
 import { CenterNotice, CrudPage, Field, ImageUpload, Modal, PageTitle, Spinner, StatusBadge, useConfirm } from './adminUi'
 import { resolveFeatureIcon } from '../lib/featureIcons'
 import LocationPicker from '../components/LocationPicker'
+import PropertyLocation from '../components/PropertyLocation'
 import { MOCK_MODE } from '../api/client'
-import { imagesAdminApi, imageUrl } from '../api/realEstateApi'
+import { imagesAdminApi, imageUrl, leadsAdminApi } from '../api/realEstateApi'
 
 // ---------------------------------------------------------------------------------------
 // Developments now carry the SAME Location object as properties, picked with the SAME
@@ -245,52 +247,179 @@ export function FeaturesAdmin() {
     ]} />
 }
 
+// ---------------------------------------------------------------------------------------
+// Lead management. LIVE: rows come from GET /api/admin/leads (real Leads module —
+// status changes and deletes persist). MOCK: in-memory inquiries, as before.
+// Three lead types, type-safe from the backend enum: PropertyInquiry (linked to a
+// listing), ListingRequest ("list your property with us", carries a Location picked on
+// Mapbox), GeneralInquiry (contact page / agent contact).
+// ---------------------------------------------------------------------------------------
+const LEAD_STATUSES = ['New', 'Contacted', 'Qualified', 'Converted', 'Lost', 'Archived']
+const LEAD_TYPE_LABELS = { PropertyInquiry: 'Property Inquiry', ListingRequest: 'Listing Request', GeneralInquiry: 'General Inquiry' }
+
 export function LeadsAdmin() {
   const { inquiries, inquiryActions, properties, agents } = useData()
   const toast = useToast()
-  const [selected, setSelected] = useState(null)
-  const linked = (q) => q.propertyId ? properties.find(p => p.id === q.propertyId)?.title
-    : q.agentId ? agents.find(a => a.id === q.agentId)?.name : null
+  const [confirm, confirmDialog] = useConfirm()
+  const [selected, setSelected] = useState(null)     // detail (mapped lead or {loading})
+  const [notice, setNotice] = useState(null)
+  const [q, setQ] = useState('')
+  const [typeFilter, setTypeFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  // Mock rows predate the backend type — derive it so both modes filter identically.
+  const typeOf = (l) => l.type || (l.listingRequest || l.source === 'List your property' ? 'ListingRequest' : l.propertyId ? 'PropertyInquiry' : 'GeneralInquiry')
+
+  const rows = inquiries.filter(l =>
+    (!q || `${l.name} ${l.email} ${l.phone}`.toLowerCase().includes(q.toLowerCase())) &&
+    (!typeFilter || typeOf(l) === typeFilter) &&
+    (!statusFilter || l.status === statusFilter))
+
+  const linked = (l) => {
+    if (typeOf(l) === 'ListingRequest')
+      return [l.propertyTypeName || l.type, l.purpose === 'rent' ? 'For Rent' : l.purpose ? 'For Sale' : null, l.locationLabel]
+        .filter(Boolean).join(' · ') || 'Listing request'
+    if (l.propertyTitle) return l.propertyTitle
+    if (l.propertyId) return properties.find(p => p.id === l.propertyId)?.title || null
+    if (l.agentId) return agents.find(a => a.id === l.agentId)?.name || null
+    return null
+  }
+
+  const view = async (l) => {
+    if (MOCK_MODE) {
+      const prop = l.propertyId ? properties.find(p => p.id === l.propertyId) : null
+      setSelected({ ...l, typeLabel: LEAD_TYPE_LABELS[typeOf(l)],
+        property: prop ? { id: prop.id, title: prop.title, city: prop.area || prop.city, purpose: prop.purpose, price: prop.price, currency: prop.currency, coverImage: prop.images?.[0] || '', type: prop.type } : null,
+        location: (l.x && l.y) ? { lat: Number(l.y), lng: Number(l.x), city: l.city, street: l.street, state: l.locState, country: l.locCountry || 'Qatar', description: l.locDescription } : null,
+        propertyTypeName: l.propertyTypeName || (typeOf(l) === 'ListingRequest' ? l.type : null),
+      })
+      return
+    }
+    setSelected({ loading: true })
+    try { setSelected(await leadsAdminApi.byId(l.id)) }
+    catch (err) { setSelected(null); setNotice({ kind: 'error', message: err?.problem?.title || err.message }) }
+  }
+
+  const setStatus = async (l, status) => {
+    const res = await Promise.resolve(inquiryActions.update(l.id, { status }))
+    if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
+    else toast('Lead status updated.')
+  }
+
+  const remove = async (id) => {
+    const res = await Promise.resolve(inquiryActions.remove(id))
+    if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
+    else { toast('Lead deleted.', 'error'); setSelected(null) }
+  }
 
   return (
     <div>
       <PageTitle title="Leads" />
-      <div className="overflow-x-auto panel-dark !rounded-xl">
-        <table className="w-full text-sm">
-          <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
-            <tr>{['Date', 'Name', 'Contact', 'Source', 'Message', 'Status'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
-          </thead>
-          <tbody className="divide-y divide-white/6">
-            {inquiries.map(q => (
-              <tr key={q.id} className="hover:bg-white/4 transition-colors cursor-pointer" onClick={() => setSelected(q)}>
-                <td className="px-4 py-3 whitespace-nowrap text-neutral-400">{q.date}</td>
-                <td className="px-4 py-3 text-white">{q.name}</td>
-                <td className="px-4 py-3 text-neutral-400"><div>{q.phone}</div><div className="text-[11px]">{q.email}</div></td>
-                <td className="px-4 py-3">{q.source}{linked(q) && <div className="text-[11px] text-gold">{linked(q)}</div>}</td>
-                <td className="px-4 py-3 max-w-[220px] truncate text-neutral-400">{q.message}</td>
-                <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
-                  <select value={q.status} className="field-dark !py-1 !w-auto"
-                    onChange={e => { inquiryActions.update(q.id, { status: e.target.value }); toast('Lead status updated.') }}>
-                    <option>New</option><option>Contacted</option><option>Closed</option>
-                  </select>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="flex gap-3 flex-wrap mb-4">
+        <input placeholder="Search name, email or phone…" className="field-dark max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
+        <select className="field-dark !w-auto" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+          <option value="">Type (all)</option>
+          <option value="PropertyInquiry">Property Inquiry</option>
+          <option value="ListingRequest">Listing Request</option>
+          <option value="GeneralInquiry">General Inquiry</option>
+        </select>
+        <select className="field-dark !w-auto" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
+          <option value="">Status (all)</option>
+          {LEAD_STATUSES.map(st => <option key={st}>{st}</option>)}
+        </select>
       </div>
 
+      {rows.length === 0 ? (
+        <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
+          No leads match. New inquiries from the website land here automatically.
+        </div>
+      ) : (
+        <div className="overflow-x-auto panel-dark !rounded-xl">
+          <table className="w-full text-sm">
+            <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
+              <tr>{['Date', 'Name', 'Contact', 'Type', 'Regarding', 'Status', 'Actions'].map(h => <th key={h} className="px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-white/6">
+              {rows.map(l => (
+                <tr key={l.id} className="hover:bg-white/4 transition-colors cursor-pointer" onClick={() => view(l)}>
+                  <td className="px-4 py-3 whitespace-nowrap text-neutral-400">{l.date}</td>
+                  <td className="px-4 py-3 text-white">{l.name}</td>
+                  <td className="px-4 py-3 text-neutral-400"><div>{l.phone}</div><div className="text-[11px]">{l.email}</div></td>
+                  <td className="px-4 py-3"><StatusBadge value={LEAD_TYPE_LABELS[typeOf(l)] || typeOf(l)}
+                    map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-gold/15 text-gold', 'General Inquiry': 'bg-white/10 text-neutral-300' }} /></td>
+                  <td className="px-4 py-3 max-w-[220px]"><div className="truncate text-neutral-300">{linked(l) || '—'}</div><div className="text-[11px] text-neutral-500">{l.source}</div></td>
+                  <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
+                    <select value={l.status} className="field-dark !py-1 !w-auto" onChange={e => setStatus(l, e.target.value)}>
+                      {LEAD_STATUSES.map(st => <option key={st}>{st}</option>)}
+                      {!LEAD_STATUSES.includes(l.status) && <option>{l.status}</option>}
+                    </select>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                    <button className="text-gold hover:underline mr-3" onClick={() => view(l)}>View</button>
+                    <button className="text-red-400 hover:underline"
+                      onClick={() => confirm(`Delete the lead from "${l.name}"? This cannot be undone.`, () => remove(l.id))}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
       {selected && (
-        <Modal title={`Lead — ${selected.name}`} onClose={() => setSelected(null)}>
-          <div className="space-y-3 text-sm text-neutral-300">
-            <p><span className="text-neutral-500">Date:</span> {selected.date} · <StatusBadge value={selected.status} /></p>
-            <p><span className="text-neutral-500">Contact:</span> {selected.phone} · {selected.email}</p>
-            <p><span className="text-neutral-500">Source:</span> {selected.source}</p>
-            {linked(selected) && <p><span className="text-neutral-500">Linked to:</span> <span className="text-gold">{linked(selected)}</span></p>}
-            <div className="border border-white/8 bg-ink rounded-lg p-4 whitespace-pre-line">{selected.message}</div>
-          </div>
+        <Modal title={selected.loading ? 'Loading…' : `Lead — ${selected.name}`} onClose={() => setSelected(null)} wide>
+          {selected.loading ? (
+            <div className="py-14 text-center text-neutral-400"><Spinner /> <span className="ml-2">Loading lead…</span></div>
+          ) : (
+            <div className="space-y-4 text-sm text-neutral-300">
+              <div className="flex flex-wrap items-center gap-2">
+                <StatusBadge value={selected.typeLabel || LEAD_TYPE_LABELS[typeOf(selected)]}
+                  map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-gold/15 text-gold', 'General Inquiry': 'bg-white/10 text-neutral-300' }} />
+                <StatusBadge value={selected.status} />
+                <span className="text-neutral-500 text-xs ml-auto">{selected.date} · {selected.source}</span>
+              </div>
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                <p><span className="text-neutral-500">Phone:</span> {selected.phone}</p>
+                <p><span className="text-neutral-500">Email:</span> {selected.email}</p>
+                {selected.agentName && <p><span className="text-neutral-500">Agent:</span> {selected.agentName}</p>}
+              </div>
+              {selected.message && <div className="border border-white/8 bg-ink rounded-lg p-4 whitespace-pre-line">{selected.message}</div>}
+
+              {selected.property && (
+                <Link to={`/property/${selected.property.purpose || 'buy'}/${selected.property.id}`}
+                  className="flex items-center gap-4 panel-dark p-3 hover:border-gold transition-colors group">
+                  {selected.property.coverImage && <img src={selected.property.coverImage} alt="" className="w-24 h-16 object-cover rounded-lg shrink-0" />}
+                  <div className="min-w-0">
+                    <div className="text-white truncate group-hover:text-gold transition-colors">{selected.property.title}</div>
+                    <div className="text-xs text-neutral-500">{[selected.property.type, selected.property.city].filter(Boolean).join(' · ')}</div>
+                    {selected.property.price != null && <div className="text-gold text-xs font-semibold mt-0.5">{Number(selected.property.price).toLocaleString()} {selected.property.currency || 'QAR'}</div>}
+                  </div>
+                  <span className="ml-auto text-gold text-xs whitespace-nowrap">View property →</span>
+                </Link>
+              )}
+
+              {(selected.propertyTypeName || selected.location) && (
+                <div className="panel-dark p-4 space-y-1.5">
+                  <div className="text-xs uppercase tracking-wider text-neutral-500 mb-1">Owner's property</div>
+                  {selected.propertyTypeName && <p><span className="text-neutral-500">Type:</span> {selected.propertyTypeName}</p>}
+                  {selected.purpose && <p><span className="text-neutral-500">Transaction:</span> {selected.purpose === 'rent' ? 'For Rent' : 'For Sale'}</p>}
+                  {selected.location && (
+                    <p><span className="text-neutral-500">Location:</span> {[selected.location.street, selected.location.state, selected.location.city, selected.location.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ')}</p>
+                  )}
+                  {selected.location && Number.isFinite(selected.location.lat) && Number.isFinite(selected.location.lng) && (
+                    <div className="pt-2">
+                      <PropertyLocation lat={selected.location.lat} lng={selected.location.lng}
+                        title={selected.name} areaLabel={[selected.location.street, selected.location.city].filter(Boolean).join(', ')} />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </Modal>
       )}
+      {notice && <CenterNotice kind={notice.kind} message={notice.message} onClose={() => setNotice(null)} />}
+      {confirmDialog}
     </div>
   )
 }

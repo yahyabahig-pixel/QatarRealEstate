@@ -8,7 +8,7 @@ import { propertiesAdminApi } from '../api/realEstateApi'
 
 const METRICS = [
   ['newProperties', 'New properties'], ['published', 'Published'],
-  ['sold', 'Sold'], ['rented', 'Rented'], ['archived', 'Archived'],
+  ['sold', 'Sold'], ['rented', 'Rented'], ['archived', 'Archived'], ['newLeads', 'Leads'],
 ]
 const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']

@@ -36,7 +36,7 @@ export default function Listings({ purpose, offMarket = false }) {
   const perPage = 6
 
   // ---- split-view state ---------------------------------------------------
-  const [showMap, setShowMap] = useState(false)
+  const [showMap, setShowMap] = useState(!offMarket)   // booking-style: map-first on buy/rent
   const [pane, setPane] = useState('list')          // mobile only: which half is on screen
   const [activeId, setActiveId] = useState(null)
   const [bounds, setBounds] = useState(null)        // null => QATAR_BOUNDS

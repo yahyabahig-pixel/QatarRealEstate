@@ -23,8 +23,10 @@ const SVG = {
 
 // Pin label: compact, prefixed with the currency ("QAR 2.6M"). Space on a pin is ~80px,
 // so "Price on Request" becomes "On Request" here and the full phrase lives in the popup.
-const pinLabel = (it) =>
-  it.price == null ? 'On Request' : `${it.currency || 'QAR'} ${compactPrice(it.price)}`
+const pinLabel = (it, purpose) =>
+  it.price == null
+    ? 'On Request'
+    : `${it.currency || 'QAR'} ${compactPrice(it.price)}${purpose === 'rent' ? '/mo' : ''}`
 
 const fullPrice = (it, purpose) =>
   it.price == null
@@ -144,7 +146,7 @@ export default function ListingsMap({
         el.type = 'button'
         el.className = 'pin' + (String(props.id) === String(activeIdRef.current) ? ' pin-active' : '')
         el.dataset.pid = String(props.id)
-        el.textContent = pinLabel(it)
+        el.textContent = pinLabel(it, purposeRef.current)
         el.setAttribute('aria-label', it.title || 'Listing')
         el.addEventListener('mouseenter', () => cbRef.current.onHoverPin?.(it.id))
         el.addEventListener('mouseleave', () => cbRef.current.onHoverPin?.(null))
@@ -282,6 +284,17 @@ export default function ListingsMap({
       const el = marker.getElement()
       if (el.dataset.pid) el.classList.toggle('pin-active', el.dataset.pid === String(activeId))
     })
+    // Card → map sync: if the highlighted listing sits outside the current viewport
+    // (or is folded into a cluster off-screen), ease the map over to it — same zoom,
+    // no jump-cuts, and never while the user is mid-drag.
+    const map = mapRef.current
+    const it = activeId != null ? itemsRef.current.get(String(activeId)) : null
+    if (map && it) {
+      const pos = [Number(it.lng), Number(it.lat)]
+      if (Number.isFinite(pos[0]) && Number.isFinite(pos[1]) && !map.getBounds().contains(pos)) {
+        map.easeTo({ center: pos, duration: 450 })
+      }
+    }
   }, [activeId, items])
 
   // ---- mobile pane toggle: the map was display:none, so it measured 0x0 ---

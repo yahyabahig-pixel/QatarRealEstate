@@ -86,6 +86,12 @@ export function DataProvider({ children }) {
       : (await catalogApi.features()).map(mapFeature))
   }, [])
 
+  const reloadInquiries = useCallback(async () => {
+    if (!authed()) return
+    const page = await leadsAdminApi.list({ pageSize: 100 }).catch(() => null)
+    if (page) setInquiries(page.items)
+  }, [])
+
   useEffect(() => {
     if (MOCK_MODE) return
     let cancelled = false
@@ -129,12 +135,6 @@ export function DataProvider({ children }) {
   // Leads are a real backend module now. LIVE: the public form POSTs to /api/leads/*
   // and success is only reported when the API confirmed (the promise rejects otherwise —
   // callers keep the form intact and show the real error). MOCK: in-memory as before.
-  const reloadInquiries = useCallback(async () => {
-    if (!authed()) return
-    const page = await leadsAdminApi.list({ pageSize: 100 }).catch(() => null)
-    if (page) setInquiries(page.items)
-  }, [])
-
   const addInquiry = useCallback(async (inq) => {
     if (MOCK_MODE) {
       setInquiries(prev => [{ id: uid(), status: 'New', date: new Date().toISOString().slice(0, 10), ...inq }, ...prev])
