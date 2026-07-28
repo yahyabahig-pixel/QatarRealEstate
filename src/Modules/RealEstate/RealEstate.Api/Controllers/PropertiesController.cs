@@ -1,8 +1,8 @@
 
 
 using Microsoft.AspNetCore.Mvc;
-using RealEstate.Api.Controllers;
-using RealEstate.Api.Errors;
+using BuildingBlocks.Api.Controllers;
+using BuildingBlocks.Api.Errors;
 using RealEstate.Application.Properties.User.Command.RecordPropertyView;
 using RealEstate.Application.Properties.User.Queries.GetFeaturedProperties;
 using RealEstate.Application.Properties.User.Queries.GetPropertyDetails;
