@@ -23,10 +23,12 @@ export default function ListingsMap({
   onSearchArea,
   searching = false,
   resizeSignal = 0,
+  purpose = 'buy',
 }) {
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef(new Map())
+  const popupRef = useRef(null)
   const userMovedRef = useRef(false)
   const cbRef = useRef({})
   const [ready, setReady] = useState(false)
@@ -69,6 +71,7 @@ export default function ListingsMap({
 
     return () => {
       cancelled = true
+      popupRef.current?.remove()
       markersRef.current.forEach((m) => m.remove())
       markersRef.current.clear()
       mapRef.current?.remove()
@@ -104,6 +107,19 @@ export default function ListingsMap({
       el.addEventListener('click', (ev) => {
         ev.stopPropagation()
         cbRef.current.onSelectPin?.(it.id)
+        // Info popup on the pin: photo, price, title, link to the listing.
+        popupRef.current?.remove()
+        const price = it.price == null ? 'Price on request' : compactPrice(it.price) + ' ' + (it.currency || 'QAR')
+        const esc = (s) => String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+        popupRef.current = new mapboxgl.Popup({ offset: 16, closeButton: true, maxWidth: '260px' })
+          .setLngLat([Number(it.lng), Number(it.lat)])
+          .setHTML(
+            '<a class="qre-popup" href="/property/' + purpose + '/' + esc(it.id) + '">' +
+            (it.thumbUrl ? '<img src="' + esc(it.thumbUrl) + '" alt="" loading="lazy" />' : '') +
+            '<div class="qre-popup-body"><div class="qre-popup-price">' + esc(price) + '</div>' +
+            '<div class="qre-popup-title">' + esc(it.title) + '</div>' +
+            '<span class="qre-popup-link">View details →</span></div></a>')
+          .addTo(map)
       })
 
       const marker = new mapboxgl.Marker({ element: el, anchor: 'center' })

@@ -164,13 +164,17 @@ export const propertyCommand = (f, typeIdByName, areaIdByName) => {
     propertyTypeId: typeIdByName[f.type],   // undefined → 400 from the API, surfaced to the form
     listingKind: purposeToKind(f.purpose),
     location: {
-      country: 'Qatar',
+      country: f.locCountry || 'Qatar',
       city: f.city || 'Doha',
       street: f.district || f.area || f.city || 'Doha',
       postalCode: '00000',
-      state: f.city || 'Doha',
-      x: '0', y: '0',
-      description: null,
+      state: f.locState || f.city || 'Doha',
+      // From the LocationPicker. Convention everywhere: X = LONGITUDE, Y = LATITUDE
+      // (same as the backend Location value object). '0' only as a legacy fallback for
+      // records saved before the picker existed.
+      x: f.x !== undefined && f.x !== '' && f.x !== null ? String(f.x) : '0',
+      y: f.y !== undefined && f.y !== '' && f.y !== null ? String(f.y) : '0',
+      description: f.locDescription || null,
     },
     sale: isSale ? { price: money, paymentMethod: 'Cash', installment: null } : null,
     rent: isSale ? null : { price: money, contractDurationMonths: 12 },

@@ -6,6 +6,7 @@ import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE } from '../api/client'
 import { imagesAdminApi, imageUrl, propertiesAdminApi } from '../api/realEstateApi'
+import LocationPicker from '../components/LocationPicker'
 
 // Form state mirrors the UI dialect; DataContext + realEstateApi translate it into the
 // backend's CreatePropertyCommand / UpdatePropertyRequest (see propertyCommand).
@@ -15,6 +16,9 @@ const EMPTY = {
   bedrooms: 0, bathrooms: 0, sizeSqm: 0, price: 0, currency: 'QAR', priceOnRequest: false,
   exclusive: false, offPlan: false, status: 'available', furnishing: 'Unfurnished',
   balcony: false, amenities: [], images: [], agentId: '',
+  // Location: x = LONGITUDE, y = LATITUDE (strings, matching the backend Location VO).
+  // Set by the LocationPicker only -- there are no coordinate inputs in the form.
+  x: '', y: '', lat: null, lng: null, locCountry: 'Qatar', locState: '', locDescription: '',
 }
 
 export default function PropertiesAdmin() {
@@ -49,6 +53,25 @@ export default function PropertiesAdmin() {
   ), [properties, filters])
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target?.type === 'number' ? +e.target.value : e.target.value }))
+
+  // Editing: the detail DTO exposes lat/lng; the form speaks x/y (x=lng, y=lat).
+  const withCoords = (src) => ({
+    x: src.lng != null ? String(src.lng) : '',
+    y: src.lat != null ? String(src.lat) : '',
+    locCountry: src.locCountry || 'Qatar',
+    locState: src.locState || src.city || '',
+    locDescription: src.locDescription || '',
+  })
+
+  // One adapter between the picker's generic keys and this form's field names.
+  const applyLocation = (patch) => setForm(f => ({ ...f,
+    ...(patch.x !== undefined ? { x: patch.x, y: patch.y, lat: patch.lat, lng: patch.lng } : {}),
+    ...(patch.country !== undefined ? { locCountry: patch.country } : {}),
+    ...(patch.city !== undefined ? { city: patch.city } : {}),
+    ...(patch.street !== undefined ? { district: patch.street } : {}),
+    ...(patch.state !== undefined ? { locState: patch.state } : {}),
+    ...(patch.description !== undefined ? { locDescription: patch.description } : {}),
+  }))
   const setV = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   // EDIT loads the FULL record from GET /api/properties/{id} — the table rows are thin
@@ -60,12 +83,12 @@ export default function PropertiesAdmin() {
       setForm({ ...EMPTY, type: typeNames[0] || '', agentId: agents[0]?.id || '' })
       return
     }
-    if (MOCK_MODE) { setEditing(row); setForm({ ...EMPTY, ...row }); return }
+    if (MOCK_MODE) { setEditing(row); setForm({ ...EMPTY, ...row, ...withCoords(row) }); return }
     setEditing({ id: row.id, loading: true })
     try {
       const full = await propertiesAdminApi.details(row.id)
       setEditing({ id: row.id, referenceNo: full.referenceNo })
-      setForm({ ...EMPTY, ...full })
+      setForm({ ...EMPTY, ...full, ...withCoords(full) })
     } catch (err) {
       setEditing(null)
       setNotice({ kind: 'error', message: `Could not load this listing for editing.\n${err?.problem?.title || err.message}` })
@@ -81,6 +104,7 @@ export default function PropertiesAdmin() {
     e.preventDefault()
     if (saving) return                                     // no duplicate submissions
     if (form.images.length === 0) { setNotice({ kind: 'error', message: 'Add at least one photo before saving.' }); return }
+    if (!form.x || !form.y) { setNotice({ kind: 'error', message: 'Select the property location on the map before saving.\nSearch for the area or click the map in the Location section.' }); return }
     if (!MOCK_MODE && !form.type) { setNotice({ kind: 'error', message: 'Pick a property type.' }); return }
 
     setSaving(true)
@@ -210,7 +234,7 @@ export default function PropertiesAdmin() {
                 {typeNames.map(t => <option key={t}>{t}</option>)}
               </select>
             </Field>
-            <Field label="City"><input required className="field-dark" value={form.city} onChange={set('city')} /></Field>
+            <Field label="City (auto-filled from the map)"><input required readOnly title="Set by the Location picker below" className="field-dark opacity-70 cursor-default" value={form.city} /></Field>
             <Field label="Area (from the Areas catalog)">
               {/* Only defined Areas are selectable — the value submitted is the Area's id,
                   resolved in DataContext. Free-typed area names are gone on purpose. */}
@@ -220,7 +244,7 @@ export default function PropertiesAdmin() {
               </select>
               {areas.length === 0 && <p className="text-[11px] text-neutral-500 mt-1">No areas defined yet — add them under Areas first.</p>}
             </Field>
-            <Field label="District / street"><input className="field-dark" value={form.district} onChange={set('district')} /></Field>
+            <Field label="Street (auto-filled from the map)"><input readOnly title="Set by the Location picker below" className="field-dark opacity-70 cursor-default" value={form.district} /></Field>
             <Field label="Assigned agent"><select className="field-dark" value={form.agentId} onChange={set('agentId')}>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
             <Field label="Bedrooms (number of beds)"><input type="number" min="0" className="field-dark" value={form.bedrooms} onChange={set('bedrooms')} /></Field>
             <Field label="Bathrooms"><input type="number" min="0" className="field-dark" value={form.bathrooms} onChange={set('bathrooms')} /></Field>
@@ -256,6 +280,14 @@ export default function PropertiesAdmin() {
                       ))}
                     </div>
                   )}
+              </Field>
+            </div>
+            <div className="md:col-span-2">
+              <Field label="Location (search or click the map — the address and coordinates fill in automatically)">
+                <LocationPicker
+                  value={{ x: form.x, y: form.y, country: form.locCountry, city: form.city, street: form.district, state: form.locState, description: form.locDescription }}
+                  onChange={applyLocation}
+                />
               </Field>
             </div>
             <div className="md:col-span-2">

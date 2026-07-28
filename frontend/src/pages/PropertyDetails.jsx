@@ -6,6 +6,7 @@ import { Breadcrumb, SectionHeading, fmtPrice, WhatsAppIcon, Star } from '../com
 import { InquiryForm, RecentlyViewed } from '../components/misc'
 import { IconArrowUpRight, IconCamera, IconChevronLeft, IconChevronRight, IconHeart, IconPhone, IconShare, IconSparkle, IconX } from '../components/icons'
 import PropertyLocation from '../components/PropertyLocation'
+import { fallbackQatarCoord } from '../lib/geo'
 import { MOCK_MODE } from '../api/client'
 import { publicApi } from '../api/realEstateApi'
 
@@ -160,13 +161,22 @@ export default function PropertyDetails() {
             </>
           )}
 
-          {/* LOCATION — renders nothing at all when the listing has no coordinates */}
-          <PropertyLocation
-            lat={p.lat}
-            lng={p.lng}
-            title={p.title}
-            areaLabel={[p.district, p.area || p.city].filter(Boolean).join(', ')}
-          />
+          {/* LOCATION — saved coordinates when the listing has them; otherwise a
+              deterministic in-Qatar fallback, clearly labelled approximate, so every
+              listing shows its neighbourhood on a map. */}
+          {(() => {
+            const hasReal = p.lat != null && p.lng != null
+            const fb = hasReal ? null : fallbackQatarCoord(p.id)
+            return (
+              <PropertyLocation
+                lat={hasReal ? p.lat : fb.lat}
+                lng={hasReal ? p.lng : fb.lng}
+                approx={!hasReal}
+                title={p.title}
+                areaLabel={[p.district, p.area || p.city].filter(Boolean).join(', ')}
+              />
+            )
+          })()}
           {areaObj && (
             <Link to={`/areas/${areaObj.slug}`} className="flex items-center gap-4 card p-3 lift mb-10">
               <img src={areaObj.photo} alt={areaObj.name} className="w-24 h-16 object-cover rounded-lg" />

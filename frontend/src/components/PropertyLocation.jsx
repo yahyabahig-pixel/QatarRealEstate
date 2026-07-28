@@ -9,7 +9,7 @@ import { loadMapbox, MAPBOX_TOKEN, MAP_STYLE } from '../lib/mapbox'
 // (PropertyDetailsDto.Latitude/Longitude), so one null here means one thing: we do not know
 // where this property is, and guessing is worse than staying quiet.
 // ---------------------------------------------------------------------------------------
-export default function PropertyLocation({ lat, lng, areaLabel, title }) {
+export default function PropertyLocation({ lat, lng, areaLabel, title, approx = false }) {
   const containerRef = useRef(null)
   const [failed, setFailed] = useState(false)
 
@@ -31,7 +31,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title }) {
           container: containerRef.current,
           style: MAP_STYLE,
           center: [longitude, latitude],
-          zoom: 15,
+          zoom: approx ? 13 : 15,
         })
         map.addControl(new mapboxgl.NavigationControl({ showCompass: false }), 'top-right')
         // A map embedded mid-article must not swallow the page scroll. Ctrl/⌘+wheel and the
@@ -69,6 +69,12 @@ export default function PropertyLocation({ lat, lng, areaLabel, title }) {
         </div>
       )}
 
+      {approx && (
+        <p className="text-xs mb-3 -mt-1" style={{ color: 'var(--muted)' }}>
+          Approximate area shown — an exact location has not been set for this listing yet.
+        </p>
+      )}
+
       {MAPBOX_TOKEN && !failed
         ? <div ref={containerRef} data-lat={latitude} data-lng={longitude} className="qre-detail-map" />
         : (
@@ -80,11 +86,13 @@ export default function PropertyLocation({ lat, lng, areaLabel, title }) {
           </div>
         )}
 
-      <a href={'https://maps.google.com/?q=' + latitude + ',' + longitude}
-         target="_blank" rel="noreferrer"
-         className="gold-link text-gold text-sm inline-block mt-3 mb-10">
-        View on Google Maps ↗
-      </a>
+      {approx ? <div className="mb-10" /> : (
+        <a href={'https://maps.google.com/?q=' + latitude + ',' + longitude}
+           target="_blank" rel="noreferrer"
+           className="gold-link text-gold text-sm inline-block mt-3 mb-10">
+          View on Google Maps ↗
+        </a>
+      )}
     </>
   )
 }
