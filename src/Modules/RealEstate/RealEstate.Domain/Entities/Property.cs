@@ -1,4 +1,5 @@
 ﻿using System.Security.Cryptography.X509Certificates;
+using System.Globalization;
 using BuildingBlocks.Domain.Common;
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
@@ -39,6 +40,22 @@ public sealed class Property : AuditableEntity
     public bool IsFeatured { get; private set; }
     public int ViewsCount { get; private set; }
 
+    // Sold before completion. A listing-level flag rather than a status: an off-plan unit
+    // moves through the same Draft -> Published -> Sold lifecycle as any other, it is only
+    // the delivery that is in the future. Distinct from IsFeatured, which is the existing
+    // "Exclusive" concept and stays what it is.
+    public bool IsOffPlan { get; private set; }
+
+    // Numeric mirror of Location.YCoordinate / Location.XCoordinate.
+    //
+    // The value object keeps the authoritative strings and stays untouched. These two exist
+    // only so the map viewport query can do an indexed BETWEEN on real floats: a nvarchar(50)
+    // column cannot answer "which listings fall inside these bounds" without parsing every
+    // row. They are never set from outside -- SetLocation derives them, so there is exactly
+    // one write path and the two representations cannot drift.
+    public double? Latitude { get; private set; }
+    public double? Longitude { get; private set; }
+
     // read-only views out. AsReadOnly() blocks a caller from casting back to List and mutating.
     public IReadOnlyCollection<Media> Media => _media.AsReadOnly();
     public IReadOnlyCollection<PropertyFeature> PropertyFeatures => _propertyFeatures.AsReadOnly();
@@ -61,7 +78,7 @@ public sealed class Property : AuditableEntity
         Title = title;
         Description = description ?? string.Empty;
         PropertyTypeId = typeId;
-        Location = location;
+        SetLocation(location);
         ListingKind = kind;
         SaleTerms = sale;
         RentTerms = rent;
@@ -90,7 +107,7 @@ public sealed class Property : AuditableEntity
         Title = title;
         Description = description ?? string.Empty;
         PropertyTypeId = typeId;
-        Location = location;
+        SetLocation(location);
         ListingKind = kind;
         SaleTerms = kind == ListingKind.Sale ? sale : null;
         RentTerms = kind == ListingKind.Rent ? rent : null;
@@ -365,7 +382,7 @@ public sealed class Property : AuditableEntity
         if (location is null)
             return PropertyErrors.LocationRequired;
 
-        Location = location;
+        SetLocation(location);
         return Result.Updated;
     }
 
@@ -457,5 +474,46 @@ public sealed class Property : AuditableEntity
     {
         IsFeatured = false;
         return Result.Updated;
+    }
+
+    public Result<Updated> MarkOffPlan()
+    {
+        IsOffPlan = true;
+        return Result.Updated;
+    }
+
+    public Result<Updated> ClearOffPlan()
+    {
+        IsOffPlan = false;
+        return Result.Updated;
+    }
+
+    // The ONLY place Location is assigned. Every write path -- the constructor, Update and
+    // UpdateLocation -- goes through here, so Latitude/Longitude can never fall out of step
+    // with the strings they mirror.
+    private void SetLocation(Location location)
+    {
+        Location = location;
+
+        // Location.Create already refuses unparseable coordinates, but the private EF
+        // constructor bypasses the factory and rows written before this column existed can
+        // carry anything. So parse defensively, and invariant-culture: "25.37" must not
+        // become 2537 on a machine whose locale uses a comma for the decimal separator.
+        var hasLng = double.TryParse(location.XCoordinate, NumberStyles.Float,
+                                     CultureInfo.InvariantCulture, out var lng);
+        var hasLat = double.TryParse(location.YCoordinate, NumberStyles.Float,
+                                     CultureInfo.InvariantCulture, out var lat);
+
+        // Half a position is not a position, and 0,0 is the placeholder the admin form used
+        // to send rather than a real address in the Gulf of Guinea. Both cases resolve to
+        // "unknown", which is what makes the frontend hide the map instead of pointing at
+        // the wrong continent.
+        var usable = hasLat && hasLng
+                     && lat is >= -90 and <= 90
+                     && lng is >= -180 and <= 180
+                     && !(lat == 0d && lng == 0d);
+
+        Latitude  = usable ? lat : null;
+        Longitude = usable ? lng : null;
     }
 }

@@ -45,7 +45,7 @@ export function AgentsAdmin() {
       { key: 'photo', label: '', render: r => <img src={r.photo} alt="" className="w-11 h-11 rounded-full object-cover" /> },
       { key: 'name', label: 'Name' }, { key: 'title', label: 'Title' }, { key: 'phone', label: 'Phone' },
       { key: 'rating', label: 'Rating', render: r => r.rating > 0 ? `★ ${r.rating.toFixed(1)}` : '—' },
-      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'active' : 'hidden'} map={{ active: 'bg-green-900 text-green-300', hidden: 'bg-neutral-800 text-neutral-400' }} /> },
+      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'active' : 'hidden'} map={{ active: 'bg-green-500/15 text-green-400', hidden: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
       { key: 'name', label: 'Full name', required: true }, { key: 'title', label: 'Job title', required: true },
@@ -63,7 +63,7 @@ export function JobsAdmin() {
     columns={[
       { key: 'title', label: 'Title' }, { key: 'department', label: 'Department' },
       { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
-      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'open' : 'closed'} map={{ open: 'bg-green-900 text-green-300', closed: 'bg-neutral-800 text-neutral-400' }} /> },
+      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'open' : 'closed'} map={{ open: 'bg-green-500/15 text-green-400', closed: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
       { key: 'title', label: 'Job title', required: true },
@@ -86,7 +86,7 @@ export function FeaturesAdmin() {
       { key: 'name', label: 'Feature' },
       { key: 'valueType', label: 'Value type' },
       { key: 'icon', label: 'Icon', render: r => r.icon || '—' },
-      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-900 text-green-300', retired: 'bg-neutral-800 text-neutral-400' }} /> },
+      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-500/15 text-green-400', retired: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
       { key: 'name', label: 'Feature name (e.g. Swimming Pool)', required: true },
@@ -106,14 +106,14 @@ export function LeadsAdmin() {
   return (
     <div>
       <PageTitle title="Leads" />
-      <div className="overflow-x-auto border border-neutral-800">
+      <div className="overflow-x-auto panel-dark !rounded-xl">
         <table className="w-full text-sm">
-          <thead className="bg-ink text-neutral-400 text-left text-xs uppercase tracking-wider">
+          <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
             <tr>{['Date', 'Name', 'Contact', 'Source', 'Message', 'Status'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-white/6">
             {inquiries.map(q => (
-              <tr key={q.id} className="hover:bg-neutral-900/60 cursor-pointer" onClick={() => setSelected(q)}>
+              <tr key={q.id} className="hover:bg-white/4 transition-colors cursor-pointer" onClick={() => setSelected(q)}>
                 <td className="px-4 py-3 whitespace-nowrap text-neutral-400">{q.date}</td>
                 <td className="px-4 py-3 text-white">{q.name}</td>
                 <td className="px-4 py-3 text-neutral-400"><div>{q.phone}</div><div className="text-[11px]">{q.email}</div></td>
@@ -138,7 +138,7 @@ export function LeadsAdmin() {
             <p><span className="text-neutral-500">Contact:</span> {selected.phone} · {selected.email}</p>
             <p><span className="text-neutral-500">Source:</span> {selected.source}</p>
             {linked(selected) && <p><span className="text-neutral-500">Linked to:</span> <span className="text-gold">{linked(selected)}</span></p>}
-            <div className="border border-neutral-800 bg-ink p-4 whitespace-pre-line">{selected.message}</div>
+            <div className="border border-white/8 bg-ink rounded-lg p-4 whitespace-pre-line">{selected.message}</div>
           </div>
         </Modal>
       )}

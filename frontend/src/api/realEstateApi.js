@@ -71,6 +71,24 @@ export const mapPropertyListItem = (p) => ({
   addedOn: '',
 })
 
+// GET /api/properties/map returns its own slim row: only what a pin and a compact
+// card need. It is NOT PropertyListItem -- there are no bathrooms, amenities or gallery
+// here, which is exactly why the split view has its own card component.
+export const mapPropertyMapItem = (p) => ({
+  id: p.id,
+  title: p.title,
+  area: p.area || '',
+  price: p.price ?? null,
+  currency: p.currency || 'QAR',
+  beds: p.beds ?? 0,
+  sizeM2: Number(p.sizeM2) || 0,
+  lat: p.lat,
+  lng: p.lng,
+  thumbUrl: p.thumbUrl || '',
+  isExclusive: !!p.isExclusive,
+  isOffPlan: !!p.isOffPlan,
+})
+
 export const mapPropertyDetails = (p) => ({
   id: p.id,
   referenceNo: `QP-${String(p.id).slice(0, 8).toUpperCase()}`,
@@ -96,6 +114,10 @@ export const mapPropertyDetails = (p) => ({
   exclusive: !!p.isFeatured,
   offPlan: false,
   viewsCount: p.viewsCount,
+  // null whenever the backend could not parse a usable coordinate pair; the
+  // detail page hides the whole Location block rather than showing a map of nowhere.
+  lat: p.latitude ?? null,
+  lng: p.longitude ?? null,
   images: [...(p.media || [])].sort((a, b) => a.order - b.order).map(m => m.url),
   media: p.media || [],                       // full objects, for the admin media manager
   amenities: (p.features || []).map(f => f.name),
@@ -183,6 +205,14 @@ export const publicApi = {
   async relatedProperties(id, take = 4) {
     const items = await http(`/api/properties/${id}/related${qs({ take })}`, { auth: false })
     return (items || []).map(mapPropertyListItem)
+  },
+  // Bounds are REQUIRED by the endpoint -- the handler validates them -- so the caller
+  // always passes a viewport, never an open query.
+  async propertiesForMap({ minLat, maxLat, minLng, maxLng, listingKind, propertyTypeId, minPrice, maxPrice, take } = {}) {
+    const items = await http(
+      `/api/properties/map${qs({ minLat, maxLat, minLng, maxLng, listingKind, propertyTypeId, minPrice, maxPrice, take })}`,
+      { auth: false })
+    return (items || []).map(mapPropertyMapItem)
   },
   recordView(id) {
     // fire-and-forget — a failed view ping must never surface in the UI

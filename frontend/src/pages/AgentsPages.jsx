@@ -2,6 +2,7 @@ import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, Star, WhatsAppIcon } from '../components/ui'
+import { IconMail, IconPhone } from '../components/icons'
 import { InquiryForm } from '../components/misc'
 
 export function AgentsIndex() {
@@ -12,7 +13,7 @@ export function AgentsIndex() {
       <h1 className="h-serif text-4xl mb-10">Work with Qatar's greatest real estate agents</h1>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {agents.filter(a => a.active).map(a => (
-          <div key={a.id} className="border border-neutral-200 lift overflow-hidden group">
+          <div key={a.id} className="card lift overflow-hidden group">
             <Link to={`/find-agent/${a.slug}`} className="block overflow-hidden">
               <img src={a.photo} alt={a.name} className="w-full h-72 object-cover transition-transform duration-500 group-hover:scale-105" />
             </Link>
@@ -43,16 +44,16 @@ export function AgentProfile() {
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
       <div className="grid md:grid-cols-[300px_1fr] gap-10 mb-14">
-        <img src={a.photo} alt={a.name} className="w-full h-80 object-cover" />
+        <img src={a.photo} alt={a.name} className="w-full h-80 object-cover rounded-xl" />
         <div>
           <h1 className="h-serif text-4xl mb-1">{a.name}</h1>
           <p className="text-neutral-500 mb-2">{a.title}</p>
           {a.rating > 0 && <div className="text-gold flex items-center gap-1 mb-4"><Star /> {a.rating.toFixed(1)} /5 · verified reviews</div>}
           <p className="text-neutral-700 leading-relaxed max-w-xl mb-6">{a.bio}</p>
           <div className="flex flex-wrap gap-3">
-            <a href={`tel:${a.phone}`} className="btn-dark">📞 Call</a>
-            <a href={`https://wa.me/${a.whatsapp}`} target="_blank" rel="noreferrer" className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 text-sm uppercase tracking-wider flex items-center gap-2 transition-colors"><WhatsAppIcon /> WhatsApp</a>
-            <a href={`mailto:${a.email}`} className="btn-outline">✉ Email</a>
+            <a href={`tel:${a.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> Call</a>
+            <a href={`https://wa.me/${a.whatsapp}`} target="_blank" rel="noreferrer" className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> WhatsApp</a>
+            <a href={`mailto:${a.email}`} className="btn-outline"><IconMail className="w-4 h-4" /> Email</a>
           </div>
         </div>
       </div>

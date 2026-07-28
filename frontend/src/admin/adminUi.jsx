@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useToast } from '../components/Toast'
 import { useAuth } from '../store/AuthContext'
+import { IconCheck, IconPlus, IconX } from '../components/icons'
 
 // ---------------------------------------------------------------------------------------
 // Shared admin UI: table, modal, confirm, generic CRUD page factory. Permission props
@@ -16,7 +17,7 @@ import { useAuth } from '../store/AuthContext'
 export function PageTitle({ title, action }) {
   return (
     <div className="flex items-center justify-between mb-6 gap-4 flex-wrap">
-      <h1 className="h-serif text-2xl text-white">{title}</h1>
+      <h1 className="h-serif text-2xl text-white tracking-tight">{title}</h1>
       {action}
     </div>
   )
@@ -25,10 +26,10 @@ export function PageTitle({ title, action }) {
 export function Modal({ title, onClose, children, wide }) {
   return (
     <div className="fixed inset-0 z-[80] bg-black/70 flex items-start justify-center overflow-y-auto py-10 px-4" onClick={onClose}>
-      <div className={`bg-coal border border-neutral-800 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} p-6`} onClick={e => e.stopPropagation()}>
+      <div className={`panel-dark !rounded-2xl shadow-2xl shadow-black/40 w-full ${wide ? 'max-w-3xl' : 'max-w-lg'} p-6`} onClick={e => e.stopPropagation()}>
         <div className="flex justify-between items-center mb-5">
           <h2 className="h-serif text-xl text-white">{title}</h2>
-          <button onClick={onClose} className="text-neutral-500 hover:text-white text-xl">✕</button>
+          <button onClick={onClose} aria-label="Close" className="w-8 h-8 rounded-lg flex items-center justify-center text-neutral-500 hover:text-white hover:bg-white/8 transition-colors"><IconX className="w-4 h-4" /></button>
         </div>
         {children}
       </div>
@@ -41,9 +42,9 @@ export function Modal({ title, onClose, children, wide }) {
 export function CenterNotice({ kind = 'success', message, onClose }) {
   return (
     <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/60 px-4" onClick={onClose}>
-      <div className={`max-w-md w-full border-2 p-6 text-center bg-coal shadow-2xl ${kind === 'success' ? 'border-green-600' : 'border-red-600'}`}
+      <div className={`max-w-md w-full rounded-2xl border p-7 text-center bg-coal shadow-2xl shadow-black/50 ${kind === 'success' ? 'border-green-600/60' : 'border-red-600/60'}`}
         onClick={e => e.stopPropagation()}>
-        <div className={`text-4xl mb-3 ${kind === 'success' ? 'text-green-400' : 'text-red-400'}`}>{kind === 'success' ? '✓' : '✕'}</div>
+        <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-4 ${kind === 'success' ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>{kind === 'success' ? <IconCheck className="w-6 h-6" /> : <IconX className="w-6 h-6" />}</div>
         <p className="text-white text-sm leading-relaxed whitespace-pre-line">{message}</p>
         {kind === 'error' && (
           <button className="btn-gold mt-5 !py-2" onClick={onClose}>OK — let me fix it</button>
@@ -64,8 +65,8 @@ export function useConfirm() {
     <Modal title="Are you sure?" onClose={() => setState(null)}>
       <p className="text-neutral-300 text-sm mb-6">{state.message}</p>
       <div className="flex gap-3 justify-end">
-        <button className="btn-outline !border-neutral-600 !text-neutral-300" onClick={() => setState(null)}>Cancel</button>
-        <button className="bg-red-700 hover:bg-red-600 text-white px-5 py-2 text-sm" onClick={() => { state.onYes(); setState(null) }}>Delete</button>
+        <button className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" onClick={() => setState(null)}>Cancel</button>
+        <button className="btn-danger !py-2" onClick={() => { state.onYes(); setState(null) }}>Delete</button>
       </div>
     </Modal>
   )
@@ -84,7 +85,7 @@ export function Field({ label, children }) {
 export function Toggle({ checked, onChange, label }) {
   return (
     <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2 text-sm">
-      <span className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-gold' : 'bg-neutral-700'}`}>
+      <span className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-gold' : 'bg-white/15'}`}>
         <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${checked ? 'left-4.5 ml-0.5' : 'left-0.5'}`} />
       </span>
       {label && <span className="text-neutral-300">{label}</span>}
@@ -142,23 +143,23 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
 
   return (
     <div>
-      <PageTitle title={title} action={canCreate && <button className="btn-gold !py-2" onClick={() => open(null)}>+ Add {singular}</button>} />
+      <PageTitle title={title} action={canCreate && <button className="btn-gold !py-2" onClick={() => open(null)}><IconPlus className="w-4 h-4" /> Add {singular}</button>} />
       <input placeholder={`Search ${title.toLowerCase()}…`} className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
 
       {filtered.length === 0 ? (
-        <div className="border border-dashed border-neutral-700 p-14 text-center text-neutral-500">
+        <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
           {emptyMessage || `Nothing here yet.`}
-          {canCreate && <div className="mt-4"><button className="btn-gold !py-2" onClick={() => open(null)}>+ Add</button></div>}
+          {canCreate && <div className="mt-4"><button className="btn-gold !py-2" onClick={() => open(null)}><IconPlus className="w-4 h-4" /> Add</button></div>}
         </div>
       ) : (
-        <div className="overflow-x-auto border border-neutral-800">
+        <div className="overflow-x-auto panel-dark !rounded-xl">
           <table className="w-full text-sm">
-            <thead className="bg-ink text-neutral-400 text-left text-xs uppercase tracking-wider">
+            <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
               <tr>{columns.map(c => <th key={c.key} className="px-4 py-3 whitespace-nowrap">{c.label}</th>)}<th className="px-4 py-3">Actions</th></tr>
             </thead>
-            <tbody className="divide-y divide-neutral-800">
+            <tbody className="divide-y divide-white/6">
               {filtered.map(row => (
-                <tr key={row.id} className="hover:bg-neutral-900/60">
+                <tr key={row.id} className="hover:bg-white/4 transition-colors">
                   {columns.map(c => <td key={c.key} className="px-4 py-3 align-middle">{c.render ? c.render(row) : String(row[c.key] ?? '—')}</td>)}
                   <td className="px-4 py-3 whitespace-nowrap">
                     {canUpdate && <button className="text-gold hover:underline mr-3" onClick={() => open(row)}>Edit</button>}
@@ -192,7 +193,7 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
               </div>
             ))}
             <div className={`flex justify-end gap-3 pt-2 ${fields.length > 6 ? 'md:col-span-2' : ''}`}>
-              <button type="button" className="btn-outline !border-neutral-600 !text-neutral-300" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
               <button className="btn-gold flex items-center gap-2" disabled={saving}>
                 {saving && <Spinner />}{saving ? 'Saving…' : 'Save'}
               </button>
@@ -207,6 +208,6 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
 }
 
 export const StatusBadge = ({ value, map }) => {
-  const colors = map || { available: 'bg-green-900 text-green-300', reserved: 'bg-yellow-900 text-yellow-300', sold: 'bg-red-900 text-red-300', New: 'bg-blue-900 text-blue-300', Contacted: 'bg-yellow-900 text-yellow-300', Closed: 'bg-neutral-800 text-neutral-400' }
-  return <span className={`text-xs px-2 py-1 rounded uppercase tracking-wide ${colors[value] || 'bg-neutral-800 text-neutral-300'}`}>{value}</span>
+  const colors = map || { available: 'bg-green-500/15 text-green-400', reserved: 'bg-amber-500/15 text-amber-400', sold: 'bg-red-500/15 text-red-400', New: 'bg-blue-500/15 text-blue-400', Contacted: 'bg-amber-500/15 text-amber-400', Closed: 'bg-white/10 text-neutral-400' }
+  return <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${colors[value] || 'bg-white/10 text-neutral-300'}`}>{value}</span>
 }

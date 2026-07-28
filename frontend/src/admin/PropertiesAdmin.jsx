@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useAuth } from '../store/AuthContext'
+import { IconChevronLeft, IconChevronRight, IconX } from '../components/icons'
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE } from '../api/client'
@@ -166,14 +167,14 @@ export default function PropertiesAdmin() {
         </select>
       </div>
 
-      <div className="overflow-x-auto border border-neutral-800">
+      <div className="overflow-x-auto panel-dark !rounded-xl">
         <table className="w-full text-sm">
-          <thead className="bg-ink text-neutral-400 text-left text-xs uppercase tracking-wider">
+          <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
             <tr>{['', 'Title', 'Type', 'Purpose', 'Location', 'Price', 'Status', 'Agent', 'Actions'].map(h => <th key={h} className="px-3 py-3 whitespace-nowrap">{h}</th>)}</tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-white/6">
             {rows.map(p => (
-              <tr key={p.id} className="hover:bg-neutral-900/60">
+              <tr key={p.id} className="hover:bg-white/4 transition-colors">
                 <td className="px-3 py-2"><img src={p.images[0]} alt="" className="w-16 h-11 object-cover" /></td>
                 <td className="px-3 py-2 max-w-[220px]"><div className="truncate text-white">{p.title}</div><div className="text-[11px] text-neutral-500">{p.referenceNo}</div></td>
                 <td className="px-3 py-2">{p.type}</td>
@@ -261,8 +262,8 @@ export default function PropertiesAdmin() {
               <Field label="Photos (uploaded from your device — first one is the cover)">
                 <input ref={fileInput} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
                 <div className="flex items-center gap-3 mb-2">
-                  <button type="button" className="btn-outline !border-neutral-600 !text-neutral-300"
-                    onClick={() => fileInput.current?.click()}>⬆ Choose photos…</button>
+                  <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold"
+                    onClick={() => fileInput.current?.click()}>Choose photos…</button>
                   {uploading.length > 0 && (
                     <span className="text-xs text-gold flex items-center gap-2"><Spinner /> Uploading {uploading.join(', ')}…</span>
                   )}
@@ -270,12 +271,12 @@ export default function PropertiesAdmin() {
                 <div className="flex flex-wrap gap-3">
                   {form.images.map((src, i) => (
                     <div key={i} className="relative group">
-                      <img src={src} alt="" className="w-24 h-16 object-cover border border-neutral-700" />
-                      {i === 0 && <span className="absolute top-0 left-0 bg-gold text-black text-[9px] px-1">COVER</span>}
-                      <div className="absolute inset-0 bg-black/70 opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 text-xs transition-opacity">
-                        <button type="button" onClick={() => moveImg(i, -1)}>◀</button>
-                        <button type="button" className="text-red-400" onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}>✕</button>
-                        <button type="button" onClick={() => moveImg(i, 1)}>▶</button>
+                      <img src={src} alt="" className="w-24 h-16 object-cover rounded-lg border border-white/10" />
+                      {i === 0 && <span className="absolute top-1 left-1 bg-gold text-white font-bold text-[9px] px-1.5 py-0.5 rounded">COVER</span>}
+                      <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 text-xs transition-opacity">
+                        <button type="button" aria-label="Move left" className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, -1)}><IconChevronLeft className="w-3.5 h-3.5" /></button>
+                        <button type="button" aria-label="Remove photo" className="w-6 h-6 rounded flex items-center justify-center text-red-400 hover:bg-white/20" onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}><IconX className="w-3.5 h-3.5" /></button>
+                        <button type="button" aria-label="Move right" className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, 1)}><IconChevronRight className="w-3.5 h-3.5" /></button>
                       </div>
                     </div>
                   ))}
@@ -286,7 +287,7 @@ export default function PropertiesAdmin() {
               </Field>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-              <button type="button" className="btn-outline !border-neutral-600 !text-neutral-300" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
               <button className="btn-gold flex items-center gap-2" disabled={saving || uploading.length > 0}>
                 {saving && <Spinner />}
                 {saving ? 'Saving property…' : uploading.length > 0 ? 'Waiting for uploads…' : 'Save Property'}

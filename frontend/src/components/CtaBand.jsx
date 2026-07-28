@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useToast } from './Toast'
 import { WhatsAppIcon } from './ui'
+import { IconApple, IconPlay } from './icons'
 
 export default function CtaBand() {
   const { settings } = useData()
@@ -16,9 +17,9 @@ export default function CtaBand() {
             <div className="eyebrow mb-4">Download our Mobile App</div>
             <div className="flex justify-center gap-3">
               {['App Store', 'Google Play'].map(store => (
-                <a key={store} href="#" className="border border-neutral-600 px-4 py-2.5 text-sm flex items-center gap-2 hover:border-gold hover:text-gold transition-colors">
-                  <span className="text-lg">{store === 'App Store' ? '' : '▶'}</span>
-                  <span className="text-left leading-tight"><span className="block text-[10px] text-neutral-400">Get it on</span>{store}</span>
+                <a key={store} href="#" className="border border-white/15 rounded-xl px-4 py-2.5 text-sm flex items-center gap-2.5 hover:border-gold hover:text-gold transition-colors">
+                  {store === 'App Store' ? <IconApple className="w-5 h-5" /> : <IconPlay className="w-4 h-4" />}
+                  <span className="text-left leading-tight font-medium"><span className="block text-[10px] text-neutral-400 font-normal">Get it on</span>{store}</span>
                 </a>
               ))}
             </div>
@@ -26,15 +27,15 @@ export default function CtaBand() {
           <div>
             <div className="eyebrow mb-4">Join our WhatsApp Channel</div>
             <a href={`https://wa.me/${settings.whatsapp}`} target="_blank" rel="noreferrer"
-              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 px-6 py-2.5 text-sm transition-colors">
+              className="inline-flex items-center gap-2 bg-[#25d366] hover:bg-[#1fb958] rounded-lg px-6 py-2.5 text-sm font-semibold transition-colors">
               <WhatsAppIcon /> Join the Channel
             </a>
           </div>
           <div>
             <div className="eyebrow mb-4">Market Newsletter</div>
-            <form className="flex max-w-xs mx-auto" onSubmit={e => { e.preventDefault(); toast('Subscribed — welcome aboard!'); setEmail('') }}>
+            <form className="flex gap-2 max-w-xs mx-auto" onSubmit={e => { e.preventDefault(); toast('Subscribed — welcome aboard!'); setEmail('') }}>
               <input value={email} onChange={e => setEmail(e.target.value)} type="email" required placeholder="Your email"
-                className="flex-1 bg-ink border border-neutral-700 px-3 py-2.5 text-sm outline-none focus:border-gold" />
+                className="field-dark flex-1" />
               <button className="btn-gold !py-2.5">Subscribe</button>
             </form>
           </div>

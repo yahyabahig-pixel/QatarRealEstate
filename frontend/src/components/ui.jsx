@@ -1,28 +1,65 @@
+import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { IconChevronRight } from './icons'
 
 export const fmtPrice = (p) =>
   p.priceOnRequest ? 'Price on request'
     : `${p.price.toLocaleString('en-US')} ${p.currency}${p.purpose === 'rent' ? ' /mo' : ''}`
 
+// Map pins have ~70px of room. "12,500,000 QAR" does not fit; "12.5M" does.
+// Deliberately unit-less -- the currency lives on the card, not on the pin.
+export const compactPrice = (amount) => {
+  const n = Number(amount)
+  if (!Number.isFinite(n) || n <= 0) return 'POA'
+  if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '')}M`
+  if (n >= 1e3) return `${Math.round(n / 1e3)}K`
+  return String(Math.round(n))
+}
+
+// ---------------------------------------------------------------------------------------
+// Favourites — a purely client-side nicety (saved in this browser via localStorage).
+// No backend endpoint exists for favourites, so nothing here pretends to sync anywhere.
+// ---------------------------------------------------------------------------------------
+const FAV_KEY = 'qre.favourites'
+const readFavs = () => {
+  try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')) }
+  catch { return new Set() }
+}
+export function useFavourite(id) {
+  const [fav, setFav] = useState(() => readFavs().has(id))
+  const toggle = useCallback((e) => {
+    e?.preventDefault?.(); e?.stopPropagation?.()
+    const favs = readFavs()
+    favs.has(id) ? favs.delete(id) : favs.add(id)
+    try { localStorage.setItem(FAV_KEY, JSON.stringify([...favs])) } catch { /* private mode */ }
+    setFav(favs.has(id))
+  }, [id])
+  return [fav, toggle]
+}
+
 export function SectionHeading({ eyebrow, title, link, linkLabel, dark }) {
   return (
-    <div className="flex items-end justify-between mb-8 gap-4">
+    <div className="flex items-end justify-between mb-10 gap-4">
       <div>
-        {eyebrow && <div className="eyebrow mb-2">{eyebrow}</div>}
-        <h2 className={`h-serif text-3xl md:text-4xl ${dark ? 'text-white' : 'text-ink'}`}>{title}</h2>
+        {eyebrow && <div className="eyebrow mb-2.5">{eyebrow}</div>}
+        <h2 className={`h-serif text-2xl md:text-[2rem] leading-tight ${dark ? 'text-white' : 'text-ink'}`}>{title}</h2>
       </div>
-      {link && <Link to={link} className="gold-link text-gold text-sm uppercase tracking-wider whitespace-nowrap">{linkLabel || 'View all'}</Link>}
+      {link && (
+        <Link to={link} className="gold-link text-gold text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1">
+          {linkLabel || 'View all'} <IconChevronRight className="w-3.5 h-3.5" />
+        </Link>
+      )}
     </div>
   )
 }
 
 export function Breadcrumb({ items }) {
   return (
-    <nav className="text-xs text-neutral-500 flex flex-wrap gap-1 items-center">
+    <nav className="text-xs text-neutral-500 flex flex-wrap gap-1.5 items-center">
       {items.map((it, i) => (
-        <span key={i} className="flex items-center gap-1">
-          {i > 0 && <span>/</span>}
-          {it.to ? <Link to={it.to} className="hover:text-gold">{it.label}</Link> : <span className="text-neutral-700">{it.label}</span>}
+        <span key={i} className="flex items-center gap-1.5">
+          {i > 0 && <IconChevronRight className="w-3 h-3 text-neutral-400" />}
+          {it.to ? <Link to={it.to} className="hover:text-gold transition-colors">{it.label}</Link> : <span className="text-neutral-700 font-medium">{it.label}</span>}
         </span>
       ))}
     </nav>
@@ -31,7 +68,7 @@ export function Breadcrumb({ items }) {
 
 export function EmptyState({ message, action }) {
   return (
-    <div className="text-center py-16 border border-dashed border-neutral-300 rounded">
+    <div className="text-center py-16 px-6 border border-dashed border-neutral-300 rounded-xl bg-white/60">
       <p className="text-neutral-500 mb-4">{message}</p>
       {action}
     </div>

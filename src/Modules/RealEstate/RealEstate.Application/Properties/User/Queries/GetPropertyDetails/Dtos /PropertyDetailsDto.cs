@@ -20,4 +20,15 @@ public sealed record PropertyDetailsDto(
     IReadOnlyList<MediaDto> Media,
     IReadOnlyList<FeatureDto> Features,
     Guid? AreaId = null,          // catalog Area link (null = not filed under an area)
-    string? AreaName = null);
+    string? AreaName = null)
+{
+    // Numeric mirror of Location.Y / Location.X, carried on Property itself and set on every
+    // write. Declared as init members rather than positional parameters so the EF projection
+    // can fill them with an object initialiser without disturbing any existing call site.
+    //
+    // Both null means "we do not know where this is" -- half a coordinate is treated as none
+    // at all -- and the detail page hides its whole map block on exactly that signal, rather
+    // than dropping a pin somewhere plausible and wrong.
+    public double? Latitude { get; init; }
+    public double? Longitude { get; init; }
+}

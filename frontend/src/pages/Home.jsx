@@ -39,11 +39,11 @@ export default function Home() {
           <div className="eyebrow mb-4">Doha · Lusail · The Pearl</div>
           <h1 className="h-serif text-4xl md:text-6xl leading-tight mb-8">Qatar's Most Exclusive<br />Real Estate Portal</h1>
 
-          <div className="bg-white text-neutral-900 shadow-2xl text-left">
+          <div className="bg-white text-neutral-900 shadow-2xl shadow-black/20 rounded-2xl overflow-hidden text-left">
             <div className="flex border-b border-neutral-200">
               {['rent', 'buy', 'commercial'].map(t => (
                 <button key={t} onClick={() => setTab(t)}
-                  className={`flex-1 py-3 text-sm uppercase tracking-wider transition-colors ${tab === t ? 'bg-ink text-gold' : 'hover:bg-neutral-100'}`}>
+                  className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab === t ? 'bg-ink text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}>
                   {t}
                 </button>
               ))}
@@ -66,7 +66,7 @@ export default function Home() {
           <div className="flex flex-wrap justify-center gap-2 mt-6">
             {PILLS.map(p => (
               <Link key={p} to={p.includes('Rental') ? '/rent' : '/buy'}
-                className="border border-white/30 rounded-full px-4 py-1.5 text-xs hover:border-gold hover:text-gold transition-colors">{p}</Link>
+                className="border border-white/25 bg-white/5 backdrop-blur rounded-full px-4 py-1.5 text-xs font-medium hover:border-gold hover:text-gold transition-colors">{p}</Link>
             ))}
           </div>
         </div>
@@ -78,7 +78,7 @@ export default function Home() {
           <SectionHeading dark eyebrow="Off-plan & new launches" title="Unlock High-Value Investment Opportunities" link="/developments" linkLabel="All developments" />
           <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4 snap-x">
             {developments.map(d => (
-              <Link key={d.id} to={`/development/${d.slug}`} className="relative shrink-0 w-80 h-96 overflow-hidden group snap-start">
+              <Link key={d.id} to={`/development/${d.slug}`} className="relative shrink-0 w-80 h-96 overflow-hidden rounded-xl group snap-start">
                 <img src={d.coverImage} alt={d.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
                 <div className="absolute bottom-0 p-5">
@@ -113,7 +113,7 @@ export default function Home() {
         <SectionHeading eyebrow="Where Qatar is moving" title="Explore Qatar's Trending Areas" link="/areas" />
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {trendingAreas.map(a => (
-            <Link key={a.id} to={`/areas/${a.slug}`} className="relative h-80 overflow-hidden group">
+            <Link key={a.id} to={`/areas/${a.slug}`} className="relative h-80 overflow-hidden rounded-xl group lift">
               <img src={a.photo} alt={a.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
               <div className="absolute bottom-0 p-5 text-white">

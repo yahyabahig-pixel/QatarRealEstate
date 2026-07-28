@@ -5,6 +5,7 @@ using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Api.Errors;
 using RealEstate.Application.Properties.User.Command.RecordPropertyView;
 using RealEstate.Application.Properties.User.Queries.GetFeaturedProperties;
+using RealEstate.Application.Properties.User.Queries.GetPropertiesForMap;
 using RealEstate.Application.Properties.User.Queries.GetPropertyDetails;
 using RealEstate.Application.Properties.User.Queries.GetRelatedProperties;
 using RealEstate.Application.Properties.User.Queries.SearchProperties;
@@ -19,6 +20,14 @@ public sealed class PropertiesController : ApiControllerBase
     // The record's constructor parameters bind 1:1 from the query string, defaults included.
     [HttpGet]
     public async Task<IActionResult> Search([FromQuery] SearchPropertiesQuery query, CancellationToken ct)
+        => (await Sender.Send(query, ct)).ToOk();
+
+    // GET /api/properties/map?minLat=25.2&maxLat=25.5&minLng=51.4&maxLng=51.6&listingKind=Sale
+    // Everything the split-view map needs for one viewport. Declared above the details route
+    // for readability -- what actually stops "map" being swallowed is the :guid constraint on
+    // that route, so the two can never collide.
+    [HttpGet("map")]
+    public async Task<IActionResult> Map([FromQuery] GetPropertiesForMapQuery query, CancellationToken ct)
         => (await Sender.Send(query, ct)).ToOk();
 
     // GET /api/properties/featured?take=8

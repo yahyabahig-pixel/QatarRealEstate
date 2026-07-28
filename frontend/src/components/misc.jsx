@@ -5,6 +5,7 @@ import { useToast } from './Toast'
 import { PARTNER_NAMES } from '../data/mockData'
 import PropertyCard from './PropertyCard'
 import { SectionHeading, WhatsAppIcon } from './ui'
+import { IconMail, IconTelegram, IconX } from './icons'
 
 export function LogoMarquee({ dark = false }) {
   const logos = [...PARTNER_NAMES, ...PARTNER_NAMES]
@@ -12,7 +13,7 @@ export function LogoMarquee({ dark = false }) {
     <div className="overflow-hidden py-10">
       <div className="marquee-track flex gap-16 w-max">
         {logos.map((name, i) => (
-          <span key={i} className={`h-serif text-xl whitespace-nowrap opacity-40 grayscale hover:opacity-80 transition-opacity ${dark ? 'text-white' : 'text-neutral-700'}`}>
+          <span key={i} className={`font-bold tracking-tight text-xl whitespace-nowrap opacity-35 hover:opacity-70 transition-opacity ${dark ? 'text-white' : 'text-neutral-700'}`}>
             {name}
           </span>
         ))}
@@ -50,7 +51,7 @@ export function RecentlyViewed() {
   const items = recentlyViewed.map(id => properties.find(p => p.id === id)).filter(Boolean)
   if (items.length === 0) return null
   return (
-    <section className="max-w-7xl mx-auto px-4 py-14">
+    <section className="max-w-7xl mx-auto px-4 py-16">
       <SectionHeading eyebrow="Keep exploring" title="Recently Viewed Properties" />
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         {items.slice(0, 4).map(p => <PropertyCard key={p.id} p={p} />)}
@@ -62,15 +63,17 @@ export function RecentlyViewed() {
 export function AgentsStrip() {
   const { agents } = useData()
   return (
-    <section className="bg-neutral-50 py-12">
-      <div className="max-w-7xl mx-auto px-4 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex -space-x-3">
-          {agents.filter(a => a.active).slice(0, 6).map(a => (
-            <img key={a.id} src={a.photo} alt={a.name} className="w-12 h-12 rounded-full object-cover border-2 border-white" />
-          ))}
+    <section className="py-12">
+      <div className="max-w-7xl mx-auto px-4">
+        <div className="card flex flex-col md:flex-row items-center justify-between gap-6 px-8 py-7">
+          <div className="flex -space-x-3">
+            {agents.filter(a => a.active).slice(0, 6).map(a => (
+              <img key={a.id} src={a.photo} alt={a.name} className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm" />
+            ))}
+          </div>
+          <p className="text-lg font-bold tracking-tight text-ink text-center">Can't find the right property?</p>
+          <Link to="/find-agent" className="btn-gold">Find your agent</Link>
         </div>
-        <p className="text-lg h-serif text-center">Can't find the right property?</p>
-        <Link to="/find-agent" className="btn-gold">Find your agent</Link>
       </div>
     </section>
   )
@@ -82,14 +85,14 @@ export function FloatingContact() {
   return (
     <div className="fixed bottom-6 left-6 z-40 flex flex-col items-start gap-2">
       {open && (
-        <div className="bg-ink text-white shadow-2xl border border-neutral-800 p-3 space-y-2 text-sm w-44">
-          <a href={`https://wa.me/${settings.whatsapp}`} className="flex items-center gap-2 hover:text-gold"><WhatsAppIcon /> WhatsApp</a>
-          <a href="#" className="flex items-center gap-2 hover:text-gold">✈ Telegram</a>
-          <a href={`mailto:${settings.email}`} className="flex items-center gap-2 hover:text-gold">✉ Email</a>
+        <div className="bg-ink text-white shadow-2xl shadow-black/25 border border-white/10 rounded-xl p-2 text-sm w-48">
+          <a href={`https://wa.me/${settings.whatsapp}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-gold transition-colors"><WhatsAppIcon /> WhatsApp</a>
+          <a href="#" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-gold transition-colors"><IconTelegram /> Telegram</a>
+          <a href={`mailto:${settings.email}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-gold transition-colors"><IconMail /> Email</a>
         </div>
       )}
-      <button onClick={() => setOpen(o => !o)} className="btn-gold rounded-full !px-5 shadow-xl">
-        {open ? 'Close' : "Let's talk"}
+      <button onClick={() => setOpen(o => !o)} className="btn-gold !rounded-full !px-5 shadow-xl shadow-gold/25">
+        {open ? <><IconX className="w-4 h-4" /> Close</> : "Let's talk"}
       </button>
     </div>
   )

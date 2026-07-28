@@ -128,6 +128,17 @@ public sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
 
         // ---- indexes for the query side -------------------------------------------------
 
+        builder.Property(p => p.IsOffPlan).HasDefaultValue(false);
+
+        // Denormalised copies of Location_X / Location_Y as real floats. Nullable on purpose:
+        // "we do not know where this is" is a legitimate state and the map hides those rows.
+        builder.Property(p => p.Latitude).HasColumnType("float");
+        builder.Property(p => p.Longitude).HasColumnType("float");
+
+        // Composite, latitude first: the viewport query filters latitude then longitude, so
+        // this is the order SQL Server can seek on rather than scan.
+        builder.HasIndex(p => new { p.Latitude, p.Longitude }).HasDatabaseName("IX_Properties_LatLng");
+
         builder.HasIndex(p => p.Status).HasDatabaseName("IX_Properties_Status");
         builder.HasIndex(p => new { p.Status, p.IsFeatured }).HasDatabaseName("IX_Properties_Featured");
         builder.HasIndex(p => p.PropertyTypeId);

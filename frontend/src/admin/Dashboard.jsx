@@ -17,18 +17,18 @@ export default function Dashboard() {
       <PageTitle title="Dashboard" />
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map(([k, v]) => (
-          <div key={k} className="bg-coal border border-neutral-800 p-5">
-            <div className="text-3xl h-serif text-gold">{v}</div>
-            <div className="text-xs uppercase tracking-wider text-neutral-500 mt-1">{k}</div>
+          <div key={k} className="panel-dark p-5">
+            <div className="text-3xl font-bold tracking-tight text-white">{v}</div>
+            <div className="text-xs font-medium text-neutral-500 mt-1.5">{k}</div>
           </div>
         ))}
       </div>
 
       <div className="grid lg:grid-cols-2 gap-6">
-        <div className="bg-coal border border-neutral-800 p-5">
-          <h2 className="text-white mb-4 text-sm uppercase tracking-wider">Recent leads</h2>
+        <div className="panel-dark p-5">
+          <h2 className="text-white mb-4 text-sm font-semibold">Recent leads</h2>
           <table className="w-full text-sm">
-            <tbody className="divide-y divide-neutral-800">
+            <tbody className="divide-y divide-white/6">
               {inquiries.slice(0, 5).map(q => (
                 <tr key={q.id}>
                   <td className="py-2.5">{q.name}</td>
@@ -41,12 +41,12 @@ export default function Dashboard() {
           <Link to="/admin/leads" className="text-gold text-sm gold-link inline-block mt-3">All leads →</Link>
         </div>
 
-        <div className="bg-coal border border-neutral-800 p-5">
-          <h2 className="text-white mb-4 text-sm uppercase tracking-wider">Listings per month</h2>
+        <div className="panel-dark p-5">
+          <h2 className="text-white mb-4 text-sm font-semibold">Listings per month</h2>
           <div className="flex items-end gap-3 h-40">
             {bars.map((b, i) => (
               <div key={i} className="flex-1 flex flex-col items-center justify-end gap-1 h-full">
-                <div className="w-full bg-gold/80 hover:bg-gold transition-colors" style={{ height: `${b * 10}px` }} />
+                <div className="w-full bg-gold/70 hover:bg-gold rounded-t-md transition-colors" style={{ height: `${b * 10}px` }} />
                 <span className="text-[10px] text-neutral-500">{months[i]}</span>
               </div>
             ))}
@@ -54,12 +54,12 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="mt-6 bg-coal border border-neutral-800 p-5">
-        <h2 className="text-white mb-4 text-sm uppercase tracking-wider">Recently added properties</h2>
+      <div className="mt-6 panel-dark p-5">
+        <h2 className="text-white mb-4 text-sm font-semibold">Recently added properties</h2>
         <div className="flex gap-4 overflow-x-auto no-scrollbar">
           {properties.slice(0, 6).map(p => (
             <Link key={p.id} to="/admin/properties" className="shrink-0 w-44">
-              <img src={p.images[0]} alt="" className="w-44 h-28 object-cover mb-2" />
+              <img src={p.images[0]} alt="" className="w-44 h-28 object-cover rounded-lg mb-2" />
               <div className="text-xs text-neutral-300 line-clamp-2">{p.title}</div>
             </Link>
           ))}

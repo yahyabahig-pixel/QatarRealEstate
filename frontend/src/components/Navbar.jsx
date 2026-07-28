@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { IconChevronDown, IconMenu, IconUser, IconX } from './icons'
 
 const MENUS = [
   { label: 'Rent', to: '/rent', items: ['Apartments for Rent', 'Villas for Rent', 'Offices for Rent', 'Studios for Rent'] },
@@ -41,33 +42,37 @@ export default function Navbar({ overHero = false }) {
   const solid = scrolled || !overHero || mobileOpen
 
   return (
-    <header className={`fixed top-0 inset-x-0 z-50 transition-colors duration-300 ${solid ? 'bg-ink/95 backdrop-blur shadow-lg' : 'bg-transparent'}`}>
+    <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${solid ? 'bg-ink/95 backdrop-blur-md shadow-lg shadow-black/10' : 'bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16 text-white">
-        <Link to="/" className="h-serif text-xl tracking-wide">
+        <Link to="/" className="h-serif text-lg tracking-tight">
           {settings.siteName.split(' ')[0]} <span className="text-gold">{settings.siteName.split(' ').slice(1).join(' ')}</span>
         </Link>
 
         {/* desktop menu */}
-        <nav className="hidden lg:flex items-center gap-6 text-sm">
+        <nav className="hidden lg:flex items-center gap-1 text-sm">
           {MENUS.map(m => (
             <div key={m.label} className="relative group">
-              <NavLink to={m.to} className="gold-link py-5 inline-block uppercase tracking-wider text-[13px]">{m.label}</NavLink>
-              <div className="absolute left-1/2 -translate-x-1/2 top-full hidden group-hover:block pt-0">
-                <div className="bg-ink border border-neutral-800 shadow-2xl p-5 min-w-[240px]">
+              <NavLink to={m.to}
+                className={({ isActive }) => `inline-flex items-center gap-1 rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors ${isActive ? 'text-gold' : 'text-white/85 hover:text-white hover:bg-white/8'}`}>
+                {m.label}
+                <IconChevronDown className="w-3 h-3 opacity-60 transition-transform group-hover:rotate-180" />
+              </NavLink>
+              <div className="absolute left-1/2 -translate-x-1/2 top-full hidden group-hover:block pt-2">
+                <div className="bg-ink/98 backdrop-blur border border-white/10 rounded-xl shadow-2xl shadow-black/30 p-5 min-w-[240px]">
                   {m.twoCol ? (
                     <div className="grid grid-cols-2 gap-6">
                       {['rent', 'buy'].map(col => (
                         <div key={col}>
                           <div className="eyebrow mb-3">{col === 'rent' ? 'For Rent' : 'For Buy'}</div>
-                          <ul className="space-y-2">
-                            {m[col].map(x => <li key={x}><Link to={col === 'rent' ? '/rent' : '/buy'} className="hover:text-gold whitespace-nowrap">{x}</Link></li>)}
+                          <ul className="space-y-1">
+                            {m[col].map(x => <li key={x}><Link to={col === 'rent' ? '/rent' : '/buy'} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-gold hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
                           </ul>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <ul className="space-y-2">
-                      {m.items.map(x => <li key={x}><Link to={itemLink(x)} className="hover:text-gold whitespace-nowrap">{x}</Link></li>)}
+                    <ul className="space-y-1">
+                      {m.items.map(x => <li key={x}><Link to={itemLink(x)} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-gold hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
                     </ul>
                   )}
                 </div>
@@ -76,42 +81,46 @@ export default function Navbar({ overHero = false }) {
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-4 text-sm">
-          <Link to="/admin" aria-label="Account" className="hover:text-gold">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-5 h-5"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.5 20.1a8.25 8.25 0 0 1 15 0"/></svg>
+        <div className="hidden lg:flex items-center gap-3 text-sm">
+          <Link to="/admin" aria-label="Account" className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:text-gold hover:bg-white/8 transition-colors">
+            <IconUser className="w-[18px] h-[18px]" />
           </Link>
-          <span className="text-neutral-400">EN</span>
-          <select className="bg-transparent border border-neutral-600 rounded px-1 py-0.5 text-xs" defaultValue="QAR" aria-label="Currency">
+          <span className="text-white/40 text-xs font-medium">EN</span>
+          <select className="bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs font-medium hover:border-white/40 transition-colors" defaultValue="QAR" aria-label="Currency">
             <option className="text-black">QAR</option><option className="text-black">USD</option><option className="text-black">EUR</option>
           </select>
         </div>
 
         {/* hamburger */}
-        <button className="lg:hidden" onClick={() => setMobileOpen(o => !o)} aria-label="Menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="w-6 h-6">
-            {mobileOpen ? <path d="M6 6l12 12M18 6L6 18"/> : <path d="M3 6h18M3 12h18M3 18h18"/>}
-          </svg>
+        <button className="lg:hidden w-10 h-10 -mr-2 flex items-center justify-center rounded-lg hover:bg-white/10 transition-colors" onClick={() => setMobileOpen(o => !o)} aria-label="Menu" aria-expanded={mobileOpen}>
+          {mobileOpen ? <IconX className="w-5 h-5" /> : <IconMenu className="w-5 h-5" />}
         </button>
       </div>
 
       {/* mobile drawer with accordions */}
       {mobileOpen && (
-        <div className="lg:hidden bg-ink text-white border-t border-neutral-800 max-h-[80vh] overflow-y-auto">
+        <div className="lg:hidden bg-ink text-white border-t border-white/10 max-h-[80vh] overflow-y-auto">
           {MENUS.map(m => (
-            <div key={m.label} className="border-b border-neutral-800">
+            <div key={m.label} className="border-b border-white/8">
               <button onClick={() => setOpenAccordion(a => a === m.label ? null : m.label)}
-                className="w-full flex justify-between items-center px-5 py-4 uppercase tracking-wider text-sm">
-                {m.label}<span className="text-gold">{openAccordion === m.label ? '−' : '+'}</span>
+                className="w-full flex justify-between items-center px-5 py-4 text-sm font-semibold" aria-expanded={openAccordion === m.label}>
+                {m.label}
+                <IconChevronDown className={`w-4 h-4 text-gold transition-transform ${openAccordion === m.label ? 'rotate-180' : ''}`} />
               </button>
               {openAccordion === m.label && (
-                <ul className="px-5 pb-4 space-y-2 text-sm text-neutral-300">
+                <ul className="px-5 pb-4 space-y-1 text-sm text-white/70">
                   {(m.items || [...m.rent, ...m.buy]).map(x => (
-                    <li key={x}><Link to={itemLink(x)} onClick={() => setMobileOpen(false)} className="hover:text-gold">{x}</Link></li>
+                    <li key={x}><Link to={itemLink(x)} onClick={() => setMobileOpen(false)} className="block py-1.5 hover:text-gold transition-colors">{x}</Link></li>
                   ))}
                 </ul>
               )}
             </div>
           ))}
+          <div className="px-5 py-4">
+            <Link to="/admin" onClick={() => setMobileOpen(false)} className="btn-outline !border-white/20 !bg-transparent !text-white w-full">
+              <IconUser className="w-4 h-4" /> Account
+            </Link>
+          </div>
         </div>
       )}
     </header>

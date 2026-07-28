@@ -5,6 +5,7 @@ using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Properties.Admin.ListPropertiesForAdmin;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
 using RealEstate.Application.Properties.Admin.Queries.ListPropertiesForAdmin.Inputs;
+using RealEstate.Application.Properties.User.Queries.GetPropertiesForMap;
 using RealEstate.Application.Properties.User.Queries.GetPropertyDetails.Dtos;
 using RealEstate.Application.Properties.User.Queries.SearchProperties;
 using RealEstate.Domain.Entities;
@@ -106,6 +107,69 @@ public sealed class PropertyQueries : IPropertyQueries
         return new PagedResult<PropertyListItem>(items, criteria.Page, criteria.PageSize, totalCount);
     }
 
+    // Pins inside a map viewport. The bounding box runs against the real float columns on
+    // Properties, not against Location_X / Location_Y: those are nvarchar and a range
+    // predicate over them would parse every row in the table on every pan of the map.
+    public async Task<IReadOnlyList<PropertyMapItem>> GetForMapAsync(
+        MapViewportCriteria criteria, CancellationToken ct = default)
+    {
+        var query = _db.Properties
+            .AsNoTracking()
+            // Same visibility rule as the public search. A pin the user cannot open is worse
+            // than no pin at all.
+            .Where(p => p.Status == PropertyStatus.Published && p.IsActive)
+            // Null coordinates mean the address was never geocoded. Excluding them is also
+            // what keeps IX_Properties_LatLng seekable instead of scanned.
+            .Where(p => p.Latitude != null && p.Longitude != null)
+            .Where(p => p.Latitude >= criteria.MinLat && p.Latitude <= criteria.MaxLat)
+            .Where(p => p.Longitude >= criteria.MinLng && p.Longitude <= criteria.MaxLng);
+
+        if (criteria.ListingKind is { } kind)
+            query = query.Where(p => p.ListingKind == kind);
+
+        if (criteria.PropertyTypeId is { } typeId)
+            query = query.Where(p => p.PropertyTypeId == typeId);
+
+        // Effective price, same coalesce the search query uses: an accepted offer wins over
+        // the asking price, otherwise sale or rent, whichever the listing carries.
+        if (criteria.MinPrice is { } minPrice)
+            query = query.Where(p => (p.Offer != null ? p.Offer.Amount
+                                    : p.SaleTerms != null ? p.SaleTerms.Price.Amount
+                                    : p.RentTerms != null ? p.RentTerms.Price.Amount : 0) >= minPrice);
+
+        if (criteria.MaxPrice is { } maxPrice)
+            query = query.Where(p => (p.Offer != null ? p.Offer.Amount
+                                    : p.SaleTerms != null ? p.SaleTerms.Price.Amount
+                                    : p.RentTerms != null ? p.RentTerms.Price.Amount : 0) <= maxPrice);
+
+        return await query
+            // Take() has to cut something when a viewport holds more than MaxPins listings.
+            // Ordering first makes that cut deliberate -- exclusives survive it -- rather
+            // than whatever the storage engine happened to hand back.
+            .OrderByDescending(p => p.IsFeatured)
+            .ThenByDescending(p => p.CreatedAtUtc)
+            .Take(criteria.Take)
+            .Select(p => new PropertyMapItem(
+                p.Id,
+                p.Title,
+                _db.Areas.Where(a => a.Id == p.AreaId).Select(a => a.Name).FirstOrDefault()
+                    ?? p.Location.CityName,
+                p.Offer != null ? (decimal?)p.Offer.Amount
+                    : p.SaleTerms != null ? (decimal?)p.SaleTerms.Price.Amount
+                    : p.RentTerms != null ? (decimal?)p.RentTerms.Price.Amount : null,
+                p.SaleTerms != null ? p.SaleTerms.Price.Currency
+                    : p.RentTerms != null ? p.RentTerms.Price.Currency : null,
+                p.PropertySpecs.NumberOfRooms,
+                p.PropertySpecs.AreaInSquareMeters,
+                p.Latitude!.Value,
+                p.Longitude!.Value,
+                p.Media.Where(m => m.IsPrimary).Select(m => m.Url).FirstOrDefault()
+                    ?? p.Media.OrderBy(m => m.Order).Select(m => m.Url).FirstOrDefault(),
+                p.IsFeatured,
+                p.IsOffPlan))
+            .ToListAsync(ct);
+    }
+
     public async Task<IReadOnlyList<PropertyListItem>> GetFeaturedAsync(int take, CancellationToken ct = default) =>
         await _db.Properties
             .AsNoTracking()
@@ -156,7 +220,13 @@ public sealed class PropertyQueries : IPropertyQueries
                           (pf, f) => new FeatureDto(f.Id, f.Name, f.Icon, pf.Value))
                     .ToList(),
                 p.AreaId,
-                _db.Areas.Where(a => a.Id == p.AreaId).Select(a => a.Name).FirstOrDefault()))
+                _db.Areas.Where(a => a.Id == p.AreaId).Select(a => a.Name).FirstOrDefault())
+            {
+                // Object initialiser, not constructor arguments: Latitude/Longitude are init
+                // members on the record so adding them here changed no existing call site.
+                Latitude = p.Latitude,
+                Longitude = p.Longitude,
+            })
             .FirstOrDefaultAsync(ct);
     }
 

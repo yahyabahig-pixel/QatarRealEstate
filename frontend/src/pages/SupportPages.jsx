@@ -4,6 +4,7 @@ import { useData } from '../store/DataContext'
 import { useToast } from '../components/Toast'
 import { InquiryForm, LogoMarquee } from '../components/misc'
 import { WhatsAppIcon } from '../components/ui'
+import { IconCheck, IconMail, IconMap, IconPhone } from '../components/icons'
 import { PROPERTY_TYPES } from '../data/mockData'
 
 const OFFICE = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?auto=format&fit=crop&w=1600&q=80'
@@ -25,7 +26,7 @@ export function AboutUs() {
         <p>We verify before we list, we answer before you ask twice, and we treat every transaction — a studio lease or a beachfront estate — as a future reference.</p>
         <div className="grid sm:grid-cols-3 gap-4 !mt-10">
           {[['Trust', 'Verified listings, transparent data'], ['Speed', 'Response inside one business hour'], ['Discretion', 'Off-market handled quietly']].map(([t, d]) => (
-            <div key={t} className="border border-neutral-200 p-5 text-center">
+            <div key={t} className="card p-5 text-center">
               <div className="h-serif text-xl text-gold mb-1">{t}</div>
               <div className="text-xs text-neutral-500">{d}</div>
             </div>
@@ -52,15 +53,15 @@ export function ContactUs() {
           <InquiryForm source="Contact page" />
         </div>
         <div className="space-y-4">
-          <div className="border border-neutral-200 p-6">
+          <div className="card p-6">
             <h3 className="h-serif text-xl mb-2">Head Office</h3>
             <p className="text-neutral-600 text-sm">Tornado Tower, Floor 22<br />West Bay, Doha, Qatar</p>
           </div>
-          <div className="border border-neutral-200 h-52 bg-neutral-100 flex items-center justify-center text-neutral-400">🗺 Map placeholder</div>
+          <div className="card h-52 bg-neutral-100 flex items-center justify-center gap-2 text-neutral-400"><IconMap className="w-5 h-5" /> Map placeholder</div>
           <div className="flex flex-wrap gap-3">
-            <a href={`tel:${settings.phone}`} className="btn-dark">📞 {settings.phone}</a>
-            <a href={`https://wa.me/${settings.whatsapp}`} className="bg-green-600 hover:bg-green-700 text-white px-5 py-2.5 text-sm flex items-center gap-2 transition-colors"><WhatsAppIcon /> WhatsApp</a>
-            <a href={`mailto:${settings.email}`} className="btn-outline">✉ {settings.email}</a>
+            <a href={`tel:${settings.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> {settings.phone}</a>
+            <a href={`https://wa.me/${settings.whatsapp}`} className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> WhatsApp</a>
+            <a href={`mailto:${settings.email}`} className="btn-outline"><IconMail className="w-4 h-4" /> {settings.email}</a>
           </div>
         </div>
       </div>
@@ -80,14 +81,14 @@ export function ListProperty() {
           <div className="eyebrow mb-2">Owners & landlords</div>
           <h1 className="h-serif text-4xl mb-6">List your property with us</h1>
           <ul className="space-y-4 text-neutral-700">
-            <li>✦ <b>Qualified buyers, not clicks</b> — inquiries are screened before they reach you.</li>
-            <li>✦ <b>Professional media included</b> — photography, floor plans and video at our cost.</li>
-            <li>✦ <b>Priced from evidence</b> — valuations built on closed transactions, not hopes.</li>
-            <li>✦ <b>One point of contact</b> — a named consultant owns your listing end to end.</li>
-            <li>✦ <b>Off-market on request</b> — sell quietly to our private client list.</li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Qualified buyers, not clicks</b> — inquiries are screened before they reach you.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Professional media included</b> — photography, floor plans and video at our cost.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Priced from evidence</b> — valuations built on closed transactions, not hopes.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>One point of contact</b> — a named consultant owns your listing end to end.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Off-market on request</b> — sell quietly to our private client list.</span></li>
           </ul>
         </div>
-        <form className="border border-neutral-200 p-6 space-y-3" onSubmit={e => {
+        <form className="card p-6 space-y-3" onSubmit={e => {
           e.preventDefault()
           addInquiry({ name: f.name, phone: f.phone, email: f.email, message: `[${f.purpose}] ${f.type} in ${f.location}: ${f.message}`, source: 'List your property' })
           toast('Received — a consultant will call you today.')

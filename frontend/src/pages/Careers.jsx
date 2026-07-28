@@ -21,12 +21,12 @@ export default function Careers() {
           <h1 className="h-serif text-4xl md:text-5xl mb-4">Build Your Career with {settings.siteName}</h1>
           <p className="text-neutral-600">Join the team defining how Qatar buys, sells and rents its finest homes.</p>
         </div>
-        <img src={TEAM} alt="Our team" className="w-full h-80 object-cover mb-12" />
+        <img src={TEAM} alt="Our team" className="w-full h-80 object-cover rounded-2xl mb-12" />
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-8 justify-center">
           {departments.map(d => (
             <button key={d} onClick={() => setDept(d)}
-              className={`shrink-0 rounded-full border px-4 py-1.5 text-sm transition-colors ${dept === d ? 'bg-ink text-gold border-ink' : 'border-neutral-300 hover:border-gold'}`}>{d}</button>
+              className={`chip ${dept === d ? 'chip-active' : ''}`}>{d}</button>
           ))}
         </div>
 
@@ -35,10 +35,10 @@ export default function Careers() {
           : (
             <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
               {visible.map(j => (
-                <div key={j.id} className="border border-neutral-200 p-6 lift">
+                <div key={j.id} className="card p-6 lift">
                   <div className="flex gap-2 mb-3">
-                    <span className="bg-neutral-100 text-xs px-2 py-1 uppercase tracking-wider">{j.department}</span>
-                    <span className="bg-gold/10 text-gold text-xs px-2 py-1 uppercase tracking-wider">{j.type}</span>
+                    <span className="badge badge-neutral">{j.department}</span>
+                    <span className="badge badge-gold">{j.type}</span>
                   </div>
                   <h3 className="h-serif text-xl mb-1">{j.title}</h3>
                   <p className="text-xs text-neutral-400 mb-2">{j.location}</p>
@@ -49,7 +49,7 @@ export default function Careers() {
             </div>
           )}
 
-        <div className="text-center mt-16 bg-ink text-white py-12 px-4">
+        <div className="text-center mt-16 bg-ink text-white py-14 px-4 rounded-2xl">
           <h2 className="h-serif text-3xl mb-3">Don't See the Right Role?</h2>
           <p className="text-neutral-400 mb-6">Exceptional people always have a seat here — introduce yourself.</p>
           <a href={`mailto:${settings.email}?subject=Open application`} className="btn-gold">Send Your CV</a>

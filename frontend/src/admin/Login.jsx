@@ -29,8 +29,8 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-ink flex items-center justify-center px-4"
-      style={{ backgroundImage: 'radial-gradient(ellipse at top, #1a1a1a, #0d0d0d)' }}>
-      <div className="w-full max-w-sm bg-coal border border-neutral-800 p-8 shadow-2xl">
+      style={{ backgroundImage: 'radial-gradient(ellipse at top, #1c2026, #101216)' }}>
+      <div className="w-full max-w-sm panel-dark !rounded-2xl p-8 shadow-2xl shadow-black/40">
         <div className="text-center mb-8">
           <div className="h-serif text-2xl text-white">Prime<span className="text-gold">Admin</span></div>
           <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest">Command Center</p>
@@ -42,7 +42,7 @@ export default function Login() {
             <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="accent-gold" />
             Remember me
           </label>
-          {error && <p className="text-red-400 text-sm bg-red-950/40 border border-red-900 px-3 py-2">{error}</p>}
+          {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5">{error}</p>}
           <button disabled={busy} className="btn-gold w-full disabled:opacity-50">{busy ? 'Signing in…' : 'Sign In'}</button>
         </form>
         {MOCK_MODE && (

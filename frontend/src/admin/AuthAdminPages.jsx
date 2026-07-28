@@ -34,14 +34,14 @@ export function AdminsAdmin() {
     <div>
       <PageTitle title="Admins"
         action={hasPermission('Admin.Create') && <button className="btn-gold !py-2" onClick={() => setCreating(true)}>+ Create Admin</button>} />
-      <div className="overflow-x-auto border border-neutral-800">
+      <div className="overflow-x-auto panel-dark !rounded-xl">
         <table className="w-full text-sm">
-          <thead className="bg-ink text-neutral-400 text-left text-xs uppercase tracking-wider">
+          <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
             <tr>{['Name', 'Email', 'Position', 'Status', 'Actions'].map(h => <th key={h} className="px-4 py-3">{h}</th>)}</tr>
           </thead>
-          <tbody className="divide-y divide-neutral-800">
+          <tbody className="divide-y divide-white/6">
             {rows.map(a => (
-              <tr key={a.id} className="hover:bg-neutral-900/60">
+              <tr key={a.id} className="hover:bg-white/4 transition-colors">
                 <td className="px-4 py-3">
                   <Link to={`/admin/admins/${a.id}`} className="text-white hover:text-gold">{a.fullName}</Link>
                   {a.isMainAdmin && <span className="ml-2 text-gold text-xs border border-gold/40 px-1.5 py-0.5">★ MAIN ADMIN</span>}
@@ -49,7 +49,7 @@ export function AdminsAdmin() {
                 </td>
                 <td className="px-4 py-3 text-neutral-400">{a.email}</td>
                 <td className="px-4 py-3">{a.positionName || <span className="text-neutral-600">—</span>}</td>
-                <td className="px-4 py-3"><StatusBadge value={a.isActive ? 'active' : 'inactive'} map={{ active: 'bg-green-900 text-green-300', inactive: 'bg-red-900 text-red-300' }} /></td>
+                <td className="px-4 py-3"><StatusBadge value={a.isActive ? 'active' : 'inactive'} map={{ active: 'bg-green-500/15 text-green-400', inactive: 'bg-red-900 text-red-300' }} /></td>
                 <td className="px-4 py-3 whitespace-nowrap">
                   {/* The UI never offers destructive actions against the Main Admin —
                       and the backend would refuse them anyway (Admin.MainAdminProtected). */}
@@ -115,10 +115,10 @@ export function AdminDetail() {
   return (
     <div className="max-w-2xl">
       <PageTitle title={admin.fullName} />
-      <div className="bg-coal border border-neutral-800 p-6 space-y-5">
+      <div className="panel-dark p-6 space-y-5">
         <div className="flex flex-wrap gap-3 items-center text-sm">
           <span className="text-neutral-400">{admin.email}</span>
-          <StatusBadge value={admin.isActive ? 'active' : 'inactive'} map={{ active: 'bg-green-900 text-green-300', inactive: 'bg-red-900 text-red-300' }} />
+          <StatusBadge value={admin.isActive ? 'active' : 'inactive'} map={{ active: 'bg-green-500/15 text-green-400', inactive: 'bg-red-900 text-red-300' }} />
           {admin.isMainAdmin && <span className="text-gold text-xs border border-gold/40 px-2 py-0.5">★ MAIN ADMIN — full access, protected account</span>}
         </div>
 
@@ -178,7 +178,7 @@ export function PositionsAdmin() {
         action={hasPermission('Position.Create') && <button className="btn-gold !py-2" onClick={() => { setEditing({}); setForm({ name: '', description: '' }) }}>+ Create Position</button>} />
       <div className="grid md:grid-cols-2 gap-4">
         {rows.map(p => (
-          <div key={p.id} className="bg-coal border border-neutral-800 p-5">
+          <div key={p.id} className="panel-dark p-5">
             <div className="flex justify-between items-start mb-2">
               <Link to={`/admin/positions/${p.id}`} className="h-serif text-lg text-white hover:text-gold">{p.name}</Link>
               <span className="text-xs text-neutral-500">{p.adminCount} admin(s)</span>
@@ -276,7 +276,7 @@ export function PermissionsAdmin() {
       <p className="text-neutral-400 text-sm mb-6">Every permission the system knows. Permissions are granted to <Link to="/admin/positions" className="text-gold">Positions</Link>, never directly to people — and never by the person themselves.</p>
       <div className="space-y-6">
         {groups.map(g => (
-          <div key={g} className="bg-coal border border-neutral-800 p-5">
+          <div key={g} className="panel-dark p-5">
             <div className="eyebrow mb-3">{g}</div>
             <div className="flex flex-wrap gap-2">
               {catalog.filter(p => p.startsWith(g + '.')).map(p => (

@@ -11,7 +11,7 @@ export function AreasIndex() {
       <h1 className="h-serif text-4xl mb-8">Explore Qatar's Areas</h1>
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
         {areas.map(a => (
-          <Link key={a.id} to={`/areas/${a.slug}`} className="group relative h-72 overflow-hidden lift">
+          <Link key={a.id} to={`/areas/${a.slug}`} className="group relative h-72 overflow-hidden rounded-xl lift">
             <img src={a.photo} alt={a.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
             <div className="absolute bottom-0 p-5 text-white">
@@ -50,7 +50,7 @@ export function AreaDetail() {
         <p className="max-w-3xl text-lg text-neutral-700 leading-relaxed mb-10">{a.intro}</p>
         <div className="grid sm:grid-cols-3 gap-4 max-w-xl mb-14">
           {[['Total properties', all.length], ['For rent', forRent.length], ['For sale', forSale.length]].map(([k, v]) => (
-            <div key={k} className="border border-neutral-200 p-5 text-center">
+            <div key={k} className="card p-5 text-center">
               <div className="h-serif text-3xl text-gold">{v}</div>
               <div className="text-xs uppercase tracking-wider text-neutral-500 mt-1">{k}</div>
             </div>
