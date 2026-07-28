@@ -4,6 +4,7 @@ using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Properties.Admin.ListPropertiesForAdmin;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
+using RealEstate.Application.Properties.Admin.Queries.GetMostViewedProperties;
 using RealEstate.Application.Properties.Admin.Queries.ListPropertiesForAdmin.Inputs;
 using RealEstate.Application.Properties.User.Queries.GetPropertiesForMap;
 using RealEstate.Application.Properties.User.Queries.GetPropertyDetails.Dtos;
@@ -160,6 +161,8 @@ public sealed class PropertyQueries : IPropertyQueries
                 p.SaleTerms != null ? p.SaleTerms.Price.Currency
                     : p.RentTerms != null ? p.RentTerms.Price.Currency : null,
                 p.PropertySpecs.NumberOfRooms,
+                p.PropertySpecs.Bathrooms,
+                _db.PropertyTypes.Where(t => t.Id == p.PropertyTypeId).Select(t => t.Name).FirstOrDefault(),
                 p.PropertySpecs.AreaInSquareMeters,
                 p.Latitude!.Value,
                 p.Longitude!.Value,
@@ -253,6 +256,39 @@ public sealed class PropertyQueries : IPropertyQueries
             .Take(take)
             .Select(ProjectToListItem())
             .ToListAsync(ct);
+    }
+
+    public async Task<MostViewedPropertiesDto> GetMostViewedAsync(
+        int take, Guid? ownerScopeUserId, CancellationToken ct = default)
+    {
+        IQueryable<Property> query = _db.Properties.AsNoTracking();
+        if (ownerScopeUserId.HasValue)
+            query = query.Where(p => p.CreatedBy == ownerScopeUserId.Value);
+
+        // ViewsCount is the aggregate PropertyViewRecorder maintains with a single UPDATE
+        // per view, so "most viewed" is an ORDER BY on an int column and "total" is a SUM —
+        // both run entirely in SQL, no view rows ever travel to the app.
+        var totalViews = await query.SumAsync(p => (long)p.ViewsCount, ct);
+
+        var items = await query
+            .OrderByDescending(p => p.ViewsCount)
+            .ThenByDescending(p => p.CreatedAtUtc)
+            .Take(take)
+            .Select(p => new MostViewedPropertyItemDto(
+                p.Id,
+                p.Title,
+                p.Location.CityName,
+                p.ListingKind,
+                p.Status,
+                p.SaleTerms != null ? (decimal?)p.SaleTerms.Price.Amount
+                    : p.RentTerms != null ? (decimal?)p.RentTerms.Price.Amount : null,
+                p.SaleTerms != null ? p.SaleTerms.Price.Currency
+                    : p.RentTerms != null ? p.RentTerms.Price.Currency : null,
+                p.Media.Where(m => m.IsPrimary).Select(m => m.Url).FirstOrDefault(),
+                p.ViewsCount))
+            .ToListAsync(ct);
+
+        return new MostViewedPropertiesDto(totalViews, items);
     }
 
     public async Task<PagedResult<AdminPropertyListItemDto>> ListForAdminAsync(

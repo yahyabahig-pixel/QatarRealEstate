@@ -13,6 +13,8 @@ public sealed record PropertyMapItem(
     decimal? Price,
     string? Currency,
     int Beds,
+    int Bathrooms,
+    string? PropertyType,
     decimal SizeM2,
     double Lat,
     double Lng,

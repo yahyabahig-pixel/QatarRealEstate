@@ -227,3 +227,37 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
 .qre-popup-price { font-weight: 700; font-size: 14px; }
 .qre-popup-title { font-size: 12px; color: var(--muted); margin: 2px 0 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .qre-popup-link { color: var(--gold); font-size: 12px; font-weight: 600; }
+
+/* ---- cluster bubbles + rich pin popup ---- */
+.pin-cluster {
+  background: var(--ink); color: #fff; border: 2px solid var(--gold);
+  font-weight: 700; font-size: 13px;
+  min-width: 40px; height: 40px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; padding: 0 10px;
+}
+.pin-cluster:hover { transform: scale(1.08); }
+
+.qre-popup { width: 260px; }
+.qre-popup-media { position: relative; }
+.qre-popup-media img { width: 100%; height: 130px; object-fit: cover; display: block; }
+.qre-popup-media-empty { height: 34px; }
+.qre-popup-body { padding: 11px 13px 13px; }
+.qre-popup-loc {
+  display: flex; align-items: center; gap: 4px;
+  font-size: 11px; color: var(--muted); margin-top: 2px;
+}
+.qre-popup-loc svg { width: 12px; height: 12px; color: var(--gold); flex: none; }
+.qre-popup-specs {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+  font-size: 11.5px; color: var(--muted); margin: 8px 0 10px;
+}
+.qre-popup-specs span { display: inline-flex; align-items: center; gap: 4px; }
+.qre-popup-specs svg { width: 14px; height: 14px; }
+.qre-popup-type { font-weight: 600; color: var(--ink); }
+.qre-popup-btn {
+  display: block; text-align: center; background: var(--ink); color: #fff;
+  border-radius: 8px; padding: 8px 10px; font-size: 12.5px; font-weight: 600;
+  transition: background-color .15s;
+}
+.qre-popup-btn:hover { background: var(--gold); color: #fff; }
+.mapboxgl-popup-close-button { width: 22px; height: 22px; font-size: 14px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); }

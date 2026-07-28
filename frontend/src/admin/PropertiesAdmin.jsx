@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useAuth } from '../store/AuthContext'
-import { IconChevronLeft, IconChevronRight, IconX } from '../components/icons'
+import { IconChevronDown, IconChevronLeft, IconChevronRight, IconEye, IconX } from '../components/icons'
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE } from '../api/client'
@@ -35,6 +35,22 @@ export default function PropertiesAdmin() {
   const [notice, setNotice] = useState(null)       // { kind: 'success'|'error', message }
   const fileInput = useRef(null)
 
+  // Viewers column. LIVE: the admin list DTO carries the aggregate ViewsCount (the same
+  // counter the view recorder increments) — fetched once and joined by id, because the
+  // shared `properties` slice serves the public pages and stays on the public shape.
+  // MOCK: viewsCount comes from the seeds. `viewSort` cycles off → desc → asc.
+  const [viewCounts, setViewCounts] = useState(null)
+  const [viewSort, setViewSort] = useState(null)
+  useEffect(() => {
+    if (MOCK_MODE) return
+    let on = true
+    propertiesAdminApi.list({ pageSize: 100 })
+      .then(page => { if (on) setViewCounts(Object.fromEntries((page?.items || []).map(i => [i.id, i.viewsCount ?? 0]))) })
+      .catch(() => {})
+    return () => { on = false }
+  }, [properties])   // eslint-disable-line react-hooks/exhaustive-deps
+  const viewsOf = (p) => viewCounts?.[p.id] ?? p.viewsCount ?? 0
+
   // Amenity chips come from the backend feature catalog (Features admin section),
   // never a hardcoded list. Only active features are offered on the form.
   const featureOptions = useMemo(() => features.filter(f => f.active !== false), [features])
@@ -45,13 +61,18 @@ export default function PropertiesAdmin() {
     if (apiError) { toast(apiError, 'error'); clearApiError() }
   }, [apiError])   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const rows = useMemo(() => properties.filter(p =>
-    (!filters.q || p.title.toLowerCase().includes(filters.q.toLowerCase())) &&
-    (!filters.purpose || p.purpose === filters.purpose) &&
-    (!filters.type || p.type === filters.type) &&
-    (!filters.status || p.status === filters.status) &&
-    (!filters.agentId || p.agentId === filters.agentId)
-  ), [properties, filters])
+  const rows = useMemo(() => {
+    const filtered = properties.filter(p =>
+      (!filters.q || p.title.toLowerCase().includes(filters.q.toLowerCase())) &&
+      (!filters.purpose || p.purpose === filters.purpose) &&
+      (!filters.type || p.type === filters.type) &&
+      (!filters.status || p.status === filters.status) &&
+      (!filters.agentId || p.agentId === filters.agentId))
+    if (!viewSort) return filtered
+    return [...filtered].sort((a, b) => viewSort === 'desc'
+      ? viewsOf(b) - viewsOf(a)
+      : viewsOf(a) - viewsOf(b))
+  }, [properties, filters, viewSort, viewCounts])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target?.type === 'number' ? +e.target.value : e.target.value }))
 
@@ -195,7 +216,16 @@ export default function PropertiesAdmin() {
       <div className="overflow-x-auto panel-dark !rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
-            <tr>{['', 'Title', 'Type', 'Purpose', 'Location', 'Price', 'Status', 'Agent', 'Actions'].map(h => <th key={h} className="px-3 py-3 whitespace-nowrap">{h}</th>)}</tr>
+            <tr>{['', 'Title', 'Type', 'Purpose', 'Location', 'Price', 'Status', 'Viewers', 'Agent', 'Actions'].map(h => h === 'Viewers' ? (
+              <th key={h} className="px-3 py-3 whitespace-nowrap">
+                <button type="button" className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-gold transition-colors"
+                  title="Sort by views"
+                  onClick={() => setViewSort(s => s === null ? 'desc' : s === 'desc' ? 'asc' : null)}>
+                  Viewers
+                  {viewSort && <IconChevronDown className={`w-3 h-3 transition-transform ${viewSort === 'asc' ? 'rotate-180' : ''}`} />}
+                </button>
+              </th>
+            ) : <th key={h} className="px-3 py-3 whitespace-nowrap">{h}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-white/6">
             {rows.map(p => (
@@ -207,6 +237,11 @@ export default function PropertiesAdmin() {
                 <td className="px-3 py-2 text-neutral-400">{p.area || p.city}</td>
                 <td className="px-3 py-2 text-gold whitespace-nowrap">{p.priceOnRequest ? 'On request' : `${p.price.toLocaleString()} ${p.currency}`}</td>
                 <td className="px-3 py-2"><StatusBadge value={p.status} /></td>
+                <td className="px-3 py-2 whitespace-nowrap">
+                  <span className="inline-flex items-center gap-1.5 text-neutral-300">
+                    <IconEye className="w-4 h-4 text-neutral-500" /> {viewsOf(p).toLocaleString()}
+                  </span>
+                </td>
                 <td className="px-3 py-2 text-neutral-400 whitespace-nowrap">{agents.find(a => a.id === p.agentId)?.name || '—'}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {hasPermission('Property.Update') && <button className="text-gold hover:underline mr-3" onClick={() => open(p)}>Edit</button>}

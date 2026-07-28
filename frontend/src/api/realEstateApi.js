@@ -96,6 +96,8 @@ export const mapPropertyMapItem = (p) => ({
   price: p.price ?? null,
   currency: p.currency || 'QAR',
   beds: p.beds ?? 0,
+  bathrooms: p.bathrooms ?? 0,
+  type: p.propertyType || '',
   sizeM2: Number(p.sizeM2) || 0,
   lat: p.lat,
   lng: p.lng,
@@ -299,6 +301,20 @@ export const jobsAdminApi = {
 
 export const propertiesAdminApi = {
   list: (filters = {}) => http(`/api/admin/properties${qs(filters)}`),
+  // Dashboard analytics. All-time only: the backend keeps ONE aggregate counter per
+  // property (Properties.ViewsCount) — no per-view timeline exists to range-filter yet.
+  async mostViewed(take = 5) {
+    const d = await http(`/api/admin/properties/most-viewed${qs({ take })}`)
+    return {
+      totalViews: d?.totalViews ?? 0,
+      items: (d?.items || []).map(p => ({
+        id: p.id, title: p.title, city: p.city || '',
+        purpose: kindToPurpose(p.listingKind), status: statusToUi(p.status),
+        price: p.price, currency: p.currency, thumb: p.coverImageUrl || '',
+        views: p.viewsCount ?? 0,
+      })),
+    }
+  },
   details: (id) => publicApi.propertyDetails(id),   // same DTO serves both sides
   create: (command) => http('/api/admin/properties', { method: 'POST', body: command }),
   update: (id, command) => http(`/api/admin/properties/${id}`, { method: 'PUT', body: command }),

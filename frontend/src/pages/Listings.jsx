@@ -148,6 +148,8 @@ export default function Listings({ purpose, offMarket = false }) {
         price: p.priceOnRequest ? null : p.price,
         currency: p.currency || 'QAR',
         beds: p.bedrooms ?? 0,
+        bathrooms: p.bathrooms ?? 0,
+        type: p.type || '',
         sizeM2: p.sizeSqm || 0,
         lat: p.lat,
         lng: p.lng,
