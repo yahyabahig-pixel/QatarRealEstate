@@ -268,6 +268,8 @@ export function DataProvider({ children }) {
     inquiries, settings, recentlyViewed,
     loading, apiError, clearApiError: () => setApiError(null),
     areaCount, trackView, addInquiry, setSettings,
+    // Refresh the shared public slice after direct admin API calls (no-op in mock mode).
+    reloadProperties: MOCK_MODE ? () => {} : reloadProperties,
 
     propertyActions: MOCK_MODE
       ? {

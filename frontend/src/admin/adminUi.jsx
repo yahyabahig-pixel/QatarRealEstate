@@ -274,6 +274,6 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
 }
 
 export const StatusBadge = ({ value, map }) => {
-  const colors = map || { available: 'bg-green-500/15 text-green-400', reserved: 'bg-amber-500/15 text-amber-400', sold: 'bg-red-500/15 text-red-400', New: 'bg-blue-500/15 text-blue-400', Contacted: 'bg-amber-500/15 text-amber-400', Closed: 'bg-white/10 text-neutral-400' }
+  const colors = map || { available: 'bg-green-500/15 text-green-400', reserved: 'bg-amber-500/15 text-amber-400', sold: 'bg-red-500/15 text-red-400', New: 'bg-blue-500/15 text-blue-400', Contacted: 'bg-amber-500/15 text-amber-400', Closed: 'bg-white/10 text-neutral-400', draft: 'bg-white/10 text-neutral-300', archived: 'bg-orange-500/15 text-orange-400' }
   return <span className={`inline-flex items-center text-[11px] font-semibold px-2.5 py-0.5 rounded-full ${colors[value] || 'bg-white/10 text-neutral-300'}`}>{value}</span>
 }

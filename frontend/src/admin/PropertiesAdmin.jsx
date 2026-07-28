@@ -5,7 +5,7 @@ import { IconChevronDown, IconChevronLeft, IconChevronRight, IconEye, IconX } fr
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE } from '../api/client'
-import { imagesAdminApi, imageUrl, propertiesAdminApi } from '../api/realEstateApi'
+import { imagesAdminApi, imageUrl, mapAdminPropertyRow, propertiesAdminApi } from '../api/realEstateApi'
 import LocationPicker from '../components/LocationPicker'
 import { resolveFeatureIcon } from '../lib/featureIcons'
 
@@ -23,7 +23,7 @@ const EMPTY = {
 }
 
 export default function PropertiesAdmin() {
-  const { properties, agents, areas, features, propertyTypes, propertyActions, apiError, clearApiError } = useData()
+  const { properties, agents, areas, features, propertyTypes, propertyActions, apiError, clearApiError, reloadProperties } = useData()
   const { hasPermission } = useAuth()
   const toast = useToast()
   const [confirm, confirmDialog] = useConfirm()
@@ -35,21 +35,39 @@ export default function PropertiesAdmin() {
   const [notice, setNotice] = useState(null)       // { kind: 'success'|'error', message }
   const fileInput = useRef(null)
 
-  // Viewers column. LIVE: the admin list DTO carries the aggregate ViewsCount (the same
-  // counter the view recorder increments) — fetched once and joined by id, because the
-  // shared `properties` slice serves the public pages and stays on the public shape.
-  // MOCK: viewsCount comes from the seeds. `viewSort` cycles off → desc → asc.
-  const [viewCounts, setViewCounts] = useState(null)
+  // LIVE rows come from the ADMIN endpoint: unlike the shared public slice (published
+  // listings only), it includes drafts and archived properties — which is exactly what
+  // status management needs to show — plus the real ViewsCount per row.
+  // MOCK rows come from the seeds. `viewSort` cycles off → desc → asc.
+  const [adminRows, setAdminRows] = useState(null)
   const [viewSort, setViewSort] = useState(null)
+  const [statusMenuFor, setStatusMenuFor] = useState(null)
   useEffect(() => {
     if (MOCK_MODE) return
     let on = true
     propertiesAdminApi.list({ pageSize: 100 })
-      .then(page => { if (on) setViewCounts(Object.fromEntries((page?.items || []).map(i => [i.id, i.viewsCount ?? 0]))) })
+      .then(page => { if (on) setAdminRows((page?.items || []).map(mapAdminPropertyRow)) })
       .catch(() => {})
     return () => { on = false }
   }, [properties])   // eslint-disable-line react-hooks/exhaustive-deps
-  const viewsOf = (p) => viewCounts?.[p.id] ?? p.viewsCount ?? 0
+  const viewsOf = (p) => p.viewsCount ?? 0
+
+  // Status changes ride the EXISTING publication/archive commands — the backend's domain
+  // rules decide whether a transition is legal (e.g. only Published can become Sold) and
+  // an illegal one surfaces as the real error, with nothing changed locally.
+  const STATUS_OPTIONS = [['available', 'Published'], ['draft', 'Draft'], ['archived', 'Archived'], ['sold', 'Sold'], ['rented', 'Rented']]
+  const applyStatus = async (p, status) => {
+    setStatusMenuFor(null)
+    if (MOCK_MODE) { propertyActions.update(p.id, { status }); toast('Status updated.'); return }
+    try {
+      if (status === 'archived') await propertiesAdminApi.archive(p.id)
+      else await propertiesAdminApi.publication(p.id, { available: 'Publish', draft: 'Unpublish', sold: 'MarkSold', rented: 'MarkRented' }[status])
+      toast('Status updated.')
+      await reloadProperties()
+    } catch (err) {
+      setNotice({ kind: 'error', message: err?.problem?.title || err.message })
+    }
+  }
 
   // Amenity chips come from the backend feature catalog (Features admin section),
   // never a hardcoded list. Only active features are offered on the form.
@@ -62,7 +80,8 @@ export default function PropertiesAdmin() {
   }, [apiError])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = useMemo(() => {
-    const filtered = properties.filter(p =>
+    const source = MOCK_MODE ? properties : (adminRows ?? properties)
+    const filtered = source.filter(p =>
       (!filters.q || p.title.toLowerCase().includes(filters.q.toLowerCase())) &&
       (!filters.purpose || p.purpose === filters.purpose) &&
       (!filters.type || p.type === filters.type) &&
@@ -72,7 +91,7 @@ export default function PropertiesAdmin() {
     return [...filtered].sort((a, b) => viewSort === 'desc'
       ? viewsOf(b) - viewsOf(a)
       : viewsOf(a) - viewsOf(b))
-  }, [properties, filters, viewSort, viewCounts])   // eslint-disable-line react-hooks/exhaustive-deps
+  }, [properties, adminRows, filters, viewSort])   // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target?.type === 'number' ? +e.target.value : e.target.value }))
 
@@ -245,6 +264,27 @@ export default function PropertiesAdmin() {
                 <td className="px-3 py-2 text-neutral-400 whitespace-nowrap">{agents.find(a => a.id === p.agentId)?.name || '—'}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {hasPermission('Property.Update') && <button className="text-gold hover:underline mr-3" onClick={() => open(p)}>Edit</button>}
+                  {hasPermission('Property.Publish') && (
+                    <span className="relative inline-block mr-3">
+                      <button className="text-neutral-300 hover:text-gold hover:underline" aria-haspopup="menu" aria-expanded={statusMenuFor === p.id}
+                        onClick={() => setStatusMenuFor(id => id === p.id ? null : p.id)}>Status ▾</button>
+                      {statusMenuFor === p.id && (
+                        <>
+                          <div className="fixed inset-0 z-20" onClick={() => setStatusMenuFor(null)} />
+                          <div className="absolute right-0 top-6 z-30 panel-dark !rounded-lg shadow-2xl shadow-black/50 py-1 w-36" role="menu">
+                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-neutral-500">Change status</div>
+                            {STATUS_OPTIONS.filter(([v]) => v !== p.status).map(([v, label]) => (
+                              <button key={v} role="menuitem"
+                                className="w-full text-left px-3 py-1.5 text-sm text-neutral-200 hover:bg-white/8 hover:text-gold transition-colors"
+                                onClick={() => applyStatus(p, v)}>
+                                {p.status === 'archived' && v === 'available' ? 'Restore (Publish)' : label}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </span>
+                  )}
                   {hasPermission('Property.Publish') && <button className="text-red-400 hover:underline"
                     onClick={() => confirm(`Archive "${p.title}"? It disappears from the site but stays in the database.`, () => archive(p))}>Archive</button>}
                 </td>

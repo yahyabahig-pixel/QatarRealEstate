@@ -299,8 +299,31 @@ export const jobsAdminApi = {
   remove: (id) => http(`/api/admin/jobs/${id}`, { method: 'DELETE' }),
 }
 
+// Admin table row from the ADMIN list DTO — includes drafts/archived (the public search
+// only ever returns published listings) plus the aggregate view counter.
+export const mapAdminPropertyRow = (p) => ({
+  id: p.id,
+  referenceNo: `QP-${String(p.id).slice(0, 8).toUpperCase()}`,
+  title: p.title,
+  purpose: kindToPurpose(p.listingKind),
+  status: statusToUi(p.status),
+  exclusive: !!p.isFeatured,
+  active: p.isActive !== false,
+  price: p.price ?? 0,
+  currency: p.currency || 'QAR',
+  priceOnRequest: p.price == null,
+  city: p.city || '', area: p.area || '', district: '',
+  type: p.propertyType || '',
+  images: p.coverImageUrl ? [p.coverImageUrl] : [],
+  viewsCount: p.viewsCount ?? 0,
+  amenities: [], agentId: null, bedrooms: 0, bathrooms: 0, sizeSqm: 0,
+  addedOn: String(p.createdOnUtc || '').slice(0, 10),
+})
+
 export const propertiesAdminApi = {
   list: (filters = {}) => http(`/api/admin/properties${qs(filters)}`),
+  // Monthly platform statistics for one year — real data, grouped in SQL.
+  dashboardStatistics: (year) => http(`/api/admin/properties/dashboard-statistics${qs({ year })}`),
   // Dashboard analytics. All-time only: the backend keeps ONE aggregate counter per
   // property (Properties.ViewsCount) — no per-view timeline exists to range-filter yet.
   async mostViewed(take = 5) {

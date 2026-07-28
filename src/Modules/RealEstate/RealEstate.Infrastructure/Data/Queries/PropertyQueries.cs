@@ -4,6 +4,7 @@ using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Properties.Admin.ListPropertiesForAdmin;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
+using RealEstate.Application.Properties.Admin.Queries.GetDashboardStatistics;
 using RealEstate.Application.Properties.Admin.Queries.GetMostViewedProperties;
 using RealEstate.Application.Properties.Admin.Queries.ListPropertiesForAdmin.Inputs;
 using RealEstate.Application.Properties.User.Queries.GetPropertiesForMap;
@@ -258,6 +259,56 @@ public sealed class PropertyQueries : IPropertyQueries
             .ToListAsync(ct);
     }
 
+    public async Task<DashboardStatisticsDto> GetDashboardStatisticsAsync(
+        int year, Guid? ownerScopeUserId, CancellationToken ct = default)
+    {
+        IQueryable<Property> props = _db.Properties.AsNoTracking();
+        if (ownerScopeUserId.HasValue)
+            props = props.Where(p => p.CreatedBy == ownerScopeUserId.Value);
+
+        // NEW properties: the month the row was CREATED. Grouped in SQL (DATEPART).
+        var created = await props
+            .Where(p => p.CreatedAtUtc.Year == year)
+            .GroupBy(p => p.CreatedAtUtc.Month)
+            .Select(g => new { Month = g.Key, Count = g.Count() })
+            .ToListAsync(ct);
+
+        // STATUS events: the month the status CHANGED, from the history trail the
+        // publication commands already write — never inferred from CreatedAtUtc.
+        IQueryable<PropertyStatusHistory> hist = _db.PropertyStatusHistories.AsNoTracking();
+        if (ownerScopeUserId.HasValue)
+            hist = hist.Where(h => _db.Properties.Any(
+                p => p.Id == h.PropertyId && p.CreatedBy == ownerScopeUserId.Value));
+
+        var events = await hist
+            .Where(h => h.CreatedAtUtc.Year == year)
+            .GroupBy(h => new { h.CreatedAtUtc.Month, h.NewStatus })
+            .Select(g => new { g.Key.Month, g.Key.NewStatus, Count = g.Count() })
+            .ToListAsync(ct);
+
+        var firstYear = await props.MinAsync(p => (int?)p.CreatedAtUtc.Year, ct)
+            ?? DateTime.UtcNow.Year;
+        var availableYears = Enumerable
+            .Range(firstYear, Math.Max(1, DateTime.UtcNow.Year - firstYear + 1))
+            .Reverse()
+            .ToList();
+
+        int EventCount(int month, PropertyStatus status) =>
+            events.FirstOrDefault(e => e.Month == month && e.NewStatus == status)?.Count ?? 0;
+
+        // Always 12 months, zero-filled — an empty month is information, not noise.
+        var months = Enumerable.Range(1, 12).Select(m => new MonthlyStatisticsDto(
+            m,
+            System.Globalization.CultureInfo.InvariantCulture.DateTimeFormat.GetMonthName(m),
+            created.FirstOrDefault(c => c.Month == m)?.Count ?? 0,
+            EventCount(m, PropertyStatus.Published),
+            EventCount(m, PropertyStatus.Sold),
+            EventCount(m, PropertyStatus.Rented),
+            EventCount(m, PropertyStatus.Archived))).ToList();
+
+        return new DashboardStatisticsDto(year, availableYears, months);
+    }
+
     public async Task<MostViewedPropertiesDto> GetMostViewedAsync(
         int take, Guid? ownerScopeUserId, CancellationToken ct = default)
     {
@@ -331,6 +382,10 @@ public sealed class PropertyQueries : IPropertyQueries
                 p.SaleTerms != null ? p.SaleTerms.Price.Currency
                     : p.RentTerms != null ? p.RentTerms.Price.Currency : null,
                 p.Location.CityName,
+                _db.Areas.Where(a => a.Id == p.AreaId).Select(a => a.Name).FirstOrDefault(),
+                _db.PropertyTypes.Where(t => t.Id == p.PropertyTypeId).Select(t => t.Name).FirstOrDefault(),
+                p.Media.Where(m => m.IsPrimary).Select(m => m.Url).FirstOrDefault()
+                    ?? p.Media.OrderBy(m => m.Order).Select(m => m.Url).FirstOrDefault(),
                 p.ViewsCount,
                 p.CreatedBy,
                 p.CreatedAtUtc.DateTime))

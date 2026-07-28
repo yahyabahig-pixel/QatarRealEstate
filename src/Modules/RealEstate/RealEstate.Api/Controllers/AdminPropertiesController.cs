@@ -12,6 +12,7 @@ using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatured;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatures;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyOffer;
 using RealEstate.Application.Properties.Admin.Command.UpdateProperty;
+using RealEstate.Application.Properties.Admin.Queries.GetDashboardStatistics;
 using RealEstate.Application.Properties.Admin.Queries.GetMostViewedProperties;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
 using RealEstate.Application.Properties.Admin.RemovePropertyMedia;
@@ -26,6 +27,13 @@ public sealed class AdminPropertiesController : ApiControllerBase
     [HttpGet]
     [HasPermission(AppPermissions.Property.Read)]
     public async Task<IActionResult> List([FromQuery] ListPropertiesForAdminQuery query, CancellationToken ct)
+        => (await Sender.Send(query, ct)).ToOk();
+
+    // GET /api/admin/properties/dashboard-statistics?year=2026 — 12 zero-filled months of
+    // real monthly activity (new listings + status-change events), grouped in the database.
+    [HttpGet("dashboard-statistics")]
+    [HasPermission(AppPermissions.Property.Read)]
+    public async Task<IActionResult> DashboardStatistics([FromQuery] GetDashboardStatisticsQuery query, CancellationToken ct)
         => (await Sender.Send(query, ct)).ToOk();
 
     // GET /api/admin/properties/most-viewed?take=5 — dashboard analytics: top listings by

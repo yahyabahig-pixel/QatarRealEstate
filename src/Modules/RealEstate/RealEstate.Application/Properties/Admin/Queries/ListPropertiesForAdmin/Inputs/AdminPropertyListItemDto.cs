@@ -11,6 +11,9 @@ public sealed record AdminPropertyListItemDto(
     decimal? Price,
     string? Currency,
     string City,
+    string? Area,
+    string? PropertyType,
+    string? CoverImageUrl,
     int ViewsCount,
     Guid? CreatedBy,
     DateTime CreatedOnUtc);

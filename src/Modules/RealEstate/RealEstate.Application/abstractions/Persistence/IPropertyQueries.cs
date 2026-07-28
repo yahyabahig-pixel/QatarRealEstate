@@ -2,6 +2,7 @@
 using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
+using RealEstate.Application.Properties.Admin.Queries.GetDashboardStatistics;
 using RealEstate.Application.Properties.Admin.Queries.GetMostViewedProperties;
 using RealEstate.Application.Properties.Admin.Queries.ListPropertiesForAdmin.Inputs;
 using RealEstate.Application.Properties.User.Queries.GetPropertiesForMap;
@@ -17,6 +18,11 @@ public interface IPropertyQueries
     Task<PropertyDetailsDto?> GetDetailsAsync(Guid id, CancellationToken ct = default);
     Task<IReadOnlyList<PropertyListItem>> GetRelatedAsync(Guid id, int take, CancellationToken ct = default);
     Task<IReadOnlyList<PropertyMapItem>> GetForMapAsync(MapViewportCriteria criteria, CancellationToken ct = default);
+    // Admin analytics: 12 zero-filled months of real activity for one year, grouped in
+    // SQL (properties by CreatedAtUtc, status events by their history timestamps).
+    Task<DashboardStatisticsDto> GetDashboardStatisticsAsync(
+        int year, Guid? ownerScopeUserId, CancellationToken ct = default);
+
     // Admin analytics: top-N by the aggregate ViewsCount, plus the portfolio total.
     // Sorting/aggregation happen in SQL — never by loading properties into memory.
     Task<MostViewedPropertiesDto> GetMostViewedAsync(

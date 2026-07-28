@@ -193,6 +193,47 @@ public sealed class RealEstateDbSeeder
             await _db.SaveChangesAsync(ct);
             _log?.LogInformation("Seed: inserted {Count} development(s).", added);
         }
+
+        // -----------------------------------------------------------------------------------
+        // Backfill for rows migrated from the AreaName era. The EF-generated migration
+        // renamed AreaName into Location_Street and left city/state/coordinates empty, so
+        // any development still carrying that placeholder shape gets the catalog's full
+        // location (including real coordinates) by slug. Idempotent: once healed, the
+        // Where clause never matches again.
+        var placeholders = await _db.Developments
+            .Where(d => d.Location.CityName == "")
+            .ToListAsync(ct);
+
+        if (placeholders.Count > 0)
+        {
+            var bySlug = DevelopmentSeedCatalog.Developments.ToDictionary(x => x.Slug, StringComparer.Ordinal);
+            var healed = 0;
+
+            foreach (var dev in placeholders)
+            {
+                if (!bySlug.TryGetValue(dev.Slug, out var seed))
+                    continue;
+
+                var location = Must(
+                    Domain.ValueObjects.Location.Create(
+                        "Qatar", "Doha", seed.Area, "00000", seed.Area,
+                        seed.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                        seed.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                    $"Development location backfill '{dev.Name}'");
+
+                Must(dev.Update(dev.Name, location, dev.DeliveryYear, dev.CoverImageUrl, dev.Slug,
+                                dev.Description, dev.UnitsCount, dev.DeveloperName,
+                                dev.StartingPrice, dev.PaymentPlan),
+                     $"Development backfill '{dev.Name}'");
+                healed++;
+            }
+
+            if (healed > 0)
+            {
+                await _db.SaveChangesAsync(ct);
+                _log?.LogInformation("Seed: backfilled location on {Count} development(s).", healed);
+            }
+        }
     }
 
     // -----------------------------------------------------------------------------------------
