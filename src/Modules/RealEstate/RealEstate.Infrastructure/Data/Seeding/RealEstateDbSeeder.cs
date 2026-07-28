@@ -170,8 +170,16 @@ public sealed class RealEstateDbSeeder
             if (known.Contains(seed.Slug))
                 continue;
 
+            // X = longitude, Y = latitude, invariant culture — same convention as Property.
+            var location = Must(
+                Domain.ValueObjects.Location.Create(
+                    "Qatar", "Doha", seed.Area, "00000", seed.Area,
+                    seed.Lng.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    seed.Lat.ToString(System.Globalization.CultureInfo.InvariantCulture)),
+                $"Development location '{seed.Name}'");
+
             var development = Must(
-                Development.Create(seed.Name, seed.AreaName, seed.DeliveryYear, seed.CoverImageUrl,
+                Development.Create(seed.Name, location, seed.DeliveryYear, seed.CoverImageUrl,
                                    seed.Slug, seed.Description, seed.UnitsCount, seed.DeveloperName,
                                    seed.StartingPrice, seed.PaymentPlan),
                 $"Development '{seed.Name}'");

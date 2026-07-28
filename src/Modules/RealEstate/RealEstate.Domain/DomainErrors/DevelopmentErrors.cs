@@ -10,8 +10,8 @@ public static class DevelopmentErrors
     public static Error NameRequired =>
         Error.Validation("Development.NameRequired", "Development name is required.");
 
-    public static Error AreaRequired =>
-        Error.Validation("Development.AreaRequired", "Development area/location is required.");
+    public static Error LocationRequired =>
+        Error.Validation("Development.LocationRequired", "Development location is required.");
 
     public static Error CoverImageRequired =>
         Error.Validation("Development.CoverImageRequired", "Development cover image URL is required.");

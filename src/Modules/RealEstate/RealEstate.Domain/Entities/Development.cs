@@ -2,6 +2,7 @@ using BuildingBlocks.Domain.Common;
 using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Domain.Common;
 using RealEstate.Domain.DomainErros;
+using RealEstate.Domain.ValueObjects;
 
 namespace RealEstate.Domain.Entities;
 
@@ -11,13 +12,18 @@ namespace RealEstate.Domain.Entities;
 //  page is either in the catalog or it isn't. StartingPrice is a plain decimal in QAR (single
 //  currency platform), deliberately NOT the Money value object: it's marketing copy for a
 //  card ("from QAR 780,000"), not a transactable amount with payment terms.
+//
+//  Location is the SAME value object Property uses (Location VO, owned by the aggregate,
+//  X = longitude / Y = latitude as strings) — one location model across the whole domain,
+//  never a Development-specific copy. The old free-text AreaName is gone; human-readable
+//  area labels are derived from Location (street/state + city) at the presentation layer.
 // ---------------------------------------------------------------------------------------------
 
 public class Development : AuditableEntity
 {
     public string Name { get; private set; } = string.Empty;
     public string Slug { get; private set; } = string.Empty;      // public URL segment, unique
-    public string AreaName { get; private set; } = string.Empty;  // "The Pearl", "Fox Hills"
+    public Location Location { get; private set; } = null!;
     public int DeliveryYear { get; private set; }
     public string CoverImageUrl { get; private set; } = string.Empty;
     public string? Description { get; private set; }
@@ -30,7 +36,7 @@ public class Development : AuditableEntity
 
     public static Result<Development> Create(
         string name,
-        string areaName,
+        Location location,
         int deliveryYear,
         string coverImageUrl,
         string? slug = null,
@@ -40,7 +46,7 @@ public class Development : AuditableEntity
         decimal startingPrice = 0m,
         string? paymentPlan = null)
     {
-        var validated = Validate(name, areaName, deliveryYear, coverImageUrl, unitsCount, startingPrice);
+        var validated = Validate(name, location, deliveryYear, coverImageUrl, unitsCount, startingPrice);
         if (validated.IsError) return validated.TopError;
 
         var normalizedSlug = SlugHelper.Normalize(string.IsNullOrWhiteSpace(slug) ? name : slug);
@@ -50,7 +56,7 @@ public class Development : AuditableEntity
         {
             Name = name.Trim(),
             Slug = normalizedSlug,
-            AreaName = areaName.Trim(),
+            Location = location,
             DeliveryYear = deliveryYear,
             CoverImageUrl = coverImageUrl.Trim(),
             Description = Clean(description),
@@ -63,7 +69,7 @@ public class Development : AuditableEntity
 
     public Result<Updated> Update(
         string name,
-        string areaName,
+        Location location,
         int deliveryYear,
         string coverImageUrl,
         string? slug,
@@ -73,7 +79,7 @@ public class Development : AuditableEntity
         decimal startingPrice,
         string? paymentPlan)
     {
-        var validated = Validate(name, areaName, deliveryYear, coverImageUrl, unitsCount, startingPrice);
+        var validated = Validate(name, location, deliveryYear, coverImageUrl, unitsCount, startingPrice);
         if (validated.IsError) return validated.TopError;
 
         var normalizedSlug = SlugHelper.Normalize(string.IsNullOrWhiteSpace(slug) ? name : slug);
@@ -81,7 +87,7 @@ public class Development : AuditableEntity
 
         Name = name.Trim();
         Slug = normalizedSlug;
-        AreaName = areaName.Trim();
+        Location = location;
         DeliveryYear = deliveryYear;
         CoverImageUrl = coverImageUrl.Trim();
         Description = Clean(description);
@@ -93,11 +99,11 @@ public class Development : AuditableEntity
     }
 
     private static Result<Updated> Validate(
-        string name, string areaName, int deliveryYear, string coverImageUrl,
+        string name, Location location, int deliveryYear, string coverImageUrl,
         int unitsCount, decimal startingPrice)
     {
         if (string.IsNullOrWhiteSpace(name)) return DevelopmentErrors.NameRequired;
-        if (string.IsNullOrWhiteSpace(areaName)) return DevelopmentErrors.AreaRequired;
+        if (location is null) return DevelopmentErrors.LocationRequired;
         if (string.IsNullOrWhiteSpace(coverImageUrl)) return DevelopmentErrors.CoverImageRequired;
         if (deliveryYear is < 2000 or > 2100) return DevelopmentErrors.DeliveryYearInvalid;
         if (unitsCount < 0) return DevelopmentErrors.UnitsCountInvalid;

@@ -1,9 +1,11 @@
+using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
+
 namespace RealEstate.Api.Requests;
 
 // PUT body — the id comes from the route, everything else from here.
 public sealed record UpdateDevelopmentRequest(
     string Name,
-    string AreaName,
+    LocationInput Location,
     int DeliveryYear,
     string CoverImageUrl,
     string? Slug,

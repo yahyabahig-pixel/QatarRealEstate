@@ -31,6 +31,11 @@ public sealed class DevelopmentQueries : IDevelopmentQueries
     // Single projection shared by every query — SQL-translatable, no entity materialization.
     private static readonly System.Linq.Expressions.Expression<Func<Development, DevelopmentDto>> Projection =
         d => new DevelopmentDto(
-            d.Id, d.Name, d.Slug, d.AreaName, d.DeliveryYear, d.CoverImageUrl,
+            d.Id, d.Name, d.Slug,
+            new DevelopmentLocationDto(
+                d.Location.CountryName, d.Location.CityName, d.Location.StreetName,
+                d.Location.State, d.Location.XCoordinate, d.Location.YCoordinate,
+                d.Location.Description),
+            d.DeliveryYear, d.CoverImageUrl,
             d.Description, d.UnitsCount, d.DeveloperName, d.StartingPrice, d.PaymentPlan);
 }

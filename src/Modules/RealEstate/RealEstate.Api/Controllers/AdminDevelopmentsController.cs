@@ -41,7 +41,7 @@ public sealed class AdminDevelopmentsController : ApiControllerBase
     [HasPermission(AppPermissions.Development.Update)]
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdateDevelopmentRequest body, CancellationToken ct)
         => (await Sender.Send(new UpdateDevelopmentCommand(
-                id, body.Name, body.AreaName, body.DeliveryYear, body.CoverImageUrl,
+                id, body.Name, body.Location, body.DeliveryYear, body.CoverImageUrl,
                 body.Slug, body.Description, body.UnitsCount, body.DeveloperName,
                 body.StartingPrice, body.PaymentPlan), ct))
             .ToNoContent();
