@@ -141,7 +141,16 @@ export const mapPropertyDetails = (p) => ({
   features: p.features || [],                 // full objects, for the admin feature editor
   balcony: false,
   furnishing: '',
-  agentId: null,
+  agentId: p.agent?.id || null,
+  // Full "Listed by" card data straight from the details DTO (live mode). Mock mode has
+  // no p.agent — the details page falls back to looking the agent up by agentId.
+  agent: p.agent
+    ? {
+        id: p.agent.id, name: p.agent.name, title: p.agent.jobTitle,
+        photo: p.agent.photoUrl, slug: p.agent.slug,
+        phone: p.agent.phone, whatsapp: p.agent.whatsApp,
+      }
+    : null,
   addedOn: '',
 })
 
@@ -213,6 +222,7 @@ export const propertyCommand = (f, typeIdByName, areaIdByName) => {
       bathrooms: Number(f.bathrooms) || 0,
     },
     areaId: areaIdByName[f.area] || null,
+    agentId: f.agentId || null,
   }
 }
 
@@ -316,7 +326,9 @@ export const mapAdminPropertyRow = (p) => ({
   type: p.propertyType || '',
   images: p.coverImageUrl ? [p.coverImageUrl] : [],
   viewsCount: p.viewsCount ?? 0,
-  amenities: [], agentId: null, bedrooms: 0, bathrooms: 0, sizeSqm: 0,
+  amenities: [], bedrooms: 0, bathrooms: 0, sizeSqm: 0,
+  agentId: p.agentId || null,
+  agentName: p.agentName || null,     // joined in the admin projection — no client lookup
   addedOn: String(p.createdOnUtc || '').slice(0, 10),
 })
 
@@ -419,6 +431,8 @@ export const propertiesAdminApi = {
   setFeatured: (id, isFeatured) => http(`/api/admin/properties/${id}/featured`, { method: 'PUT', body: { isFeatured } }),
   publication: (id, action, reason = null) => http(`/api/admin/properties/${id}/publication`, { method: 'POST', body: { action, reason } }),
   archive: (id) => http(`/api/admin/properties/${id}/archive`, { method: 'POST' }),
+  // PERMANENT delete — distinct from archive. The UI always confirms first.
+  remove: (id) => http(`/api/admin/properties/${id}`, { method: 'DELETE' }),
   toggleActive: (id, active) => http(`/api/admin/properties/${id}/active`, { method: 'PUT', body: { isActive: active } }),
   history: (id) => http(`/api/admin/properties/${id}/history`),
 }

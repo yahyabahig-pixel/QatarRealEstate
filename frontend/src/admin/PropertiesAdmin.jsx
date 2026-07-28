@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useAuth } from '../store/AuthContext'
-import { IconChevronDown, IconChevronLeft, IconChevronRight, IconEye, IconX } from '../components/icons'
+import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconEye, IconPencil, IconTrash, IconX } from '../components/icons'
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE } from '../api/client'
@@ -204,10 +204,12 @@ export default function PropertiesAdmin() {
     })
   }
 
-  const archive = async (p) => {
+  // PERMANENT delete — always behind the confirmation dialog, never one click.
+  // Archiving is not this: it lives in the status dropdown like any other status.
+  const removeProperty = async (p) => {
     const res = await Promise.resolve(propertyActions.remove(p.id))
     if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
-    else toast('Property archived.', 'error')
+    else toast('Property deleted.', 'error')
   }
 
   return (
@@ -225,7 +227,7 @@ export default function PropertiesAdmin() {
           <option value="">Type (all)</option>{typeNames.map(t => <option key={t}>{t}</option>)}
         </select>
         <select className="field-dark" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
-          <option value="">Status (all)</option><option>available</option><option>draft</option><option>sold</option><option>rented</option>
+          <option value="">Status (all)</option><option>available</option><option>draft</option><option>sold</option><option>rented</option><option>archived</option>
         </select>
         <select className="field-dark" value={filters.agentId} onChange={e => setFilters({ ...filters, agentId: e.target.value })}>
           <option value="">Agent (all)</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
@@ -261,32 +263,55 @@ export default function PropertiesAdmin() {
                     <IconEye className="w-4 h-4 text-neutral-500" /> {viewsOf(p).toLocaleString()}
                   </span>
                 </td>
-                <td className="px-3 py-2 text-neutral-400 whitespace-nowrap">{agents.find(a => a.id === p.agentId)?.name || '—'}</td>
+                <td className="px-3 py-2 text-neutral-400 whitespace-nowrap">{p.agentName || agents.find(a => a.id === p.agentId)?.name || '—'}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {hasPermission('Property.Update') && <button className="text-gold hover:underline mr-3" onClick={() => open(p)}>Edit</button>}
-                  {hasPermission('Property.Publish') && (
-                    <span className="relative inline-block mr-3">
-                      <button className="text-neutral-300 hover:text-gold hover:underline" aria-haspopup="menu" aria-expanded={statusMenuFor === p.id}
-                        onClick={() => setStatusMenuFor(id => id === p.id ? null : p.id)}>Status ▾</button>
-                      {statusMenuFor === p.id && (
-                        <>
-                          <div className="fixed inset-0 z-20" onClick={() => setStatusMenuFor(null)} />
-                          <div className="absolute right-0 top-6 z-30 panel-dark !rounded-lg shadow-2xl shadow-black/50 py-1 w-36" role="menu">
-                            <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-neutral-500">Change status</div>
-                            {STATUS_OPTIONS.filter(([v]) => v !== p.status).map(([v, label]) => (
-                              <button key={v} role="menuitem"
-                                className="w-full text-left px-3 py-1.5 text-sm text-neutral-200 hover:bg-white/8 hover:text-gold transition-colors"
-                                onClick={() => applyStatus(p, v)}>
-                                {p.status === 'archived' && v === 'available' ? 'Restore (Publish)' : label}
-                              </button>
-                            ))}
-                          </div>
-                        </>
+                  <div className="flex flex-col gap-1.5 w-36">
+                    {/* Row 1 — current status, changeable in place */}
+                    {hasPermission('Property.Publish') && (
+                      <span className="relative block">
+                        <button type="button" title="Change status"
+                          className="w-full flex items-center justify-between gap-2 border border-white/12 rounded-lg px-2.5 py-1.5 hover:border-gold transition-colors"
+                          aria-haspopup="menu" aria-expanded={statusMenuFor === p.id}
+                          onClick={() => setStatusMenuFor(id => id === p.id ? null : p.id)}>
+                          <StatusBadge value={p.status} />
+                          <IconChevronDown className={`w-3.5 h-3.5 text-neutral-400 transition-transform ${statusMenuFor === p.id ? 'rotate-180' : ''}`} />
+                        </button>
+                        {statusMenuFor === p.id && (
+                          <>
+                            <div className="fixed inset-0 z-20" onClick={() => setStatusMenuFor(null)} />
+                            <div className="absolute right-0 top-9 z-30 panel-dark !rounded-lg shadow-2xl shadow-black/50 py-1 w-44" role="menu">
+                              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-neutral-500">Change status</div>
+                              {STATUS_OPTIONS.map(([v, label]) => (
+                                <button key={v} role="menuitem" disabled={v === p.status}
+                                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-2 transition-colors ${v === p.status ? 'text-neutral-500 cursor-default' : 'text-neutral-200 hover:bg-white/8 hover:text-gold'}`}
+                                  onClick={() => applyStatus(p, v)}>
+                                  {p.status === 'archived' && v === 'available' ? 'Restore (Publish)' : label}
+                                  {v === p.status && <IconCheck className="w-3.5 h-3.5 text-gold" />}
+                                </button>
+                              ))}
+                            </div>
+                          </>
+                        )}
+                      </span>
+                    )}
+                    {/* Row 2 — edit / delete */}
+                    <div className="flex gap-1.5">
+                      {hasPermission('Property.Update') && (
+                        <button type="button" title="Edit property"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 border border-white/12 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-200 hover:border-gold hover:text-gold transition-colors"
+                          onClick={() => open(p)}>
+                          <IconPencil className="w-3.5 h-3.5" /> Edit
+                        </button>
                       )}
-                    </span>
-                  )}
-                  {hasPermission('Property.Publish') && <button className="text-red-400 hover:underline"
-                    onClick={() => confirm(`Archive "${p.title}"? It disappears from the site but stays in the database.`, () => archive(p))}>Archive</button>}
+                      {hasPermission('Property.Delete') && (
+                        <button type="button" title="Delete property permanently"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 border border-white/12 rounded-lg px-2 py-1.5 text-xs font-medium text-red-400 hover:border-red-400/60 hover:bg-red-400/10 transition-colors"
+                          onClick={() => confirm(`Delete "${p.title}"? This action cannot be undone.`, () => removeProperty(p))}>
+                          <IconTrash className="w-3.5 h-3.5" /> Delete
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </td>
               </tr>
             ))}

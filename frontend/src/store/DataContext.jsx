@@ -274,7 +274,9 @@ export function DataProvider({ children }) {
       }
       await reloadProperties()
     }),
-    remove: guard(async (id) => { await propertiesAdminApi.archive(id); await reloadProperties() }),
+    // PERMANENT delete (backend DELETE /api/admin/properties/{id}); archiving is a
+    // status change handled by the admin page's status dropdown, not by remove().
+    remove: guard(async (id) => { await propertiesAdminApi.remove(id); await reloadProperties() }),
   }
 
   const value = useMemo(() => ({

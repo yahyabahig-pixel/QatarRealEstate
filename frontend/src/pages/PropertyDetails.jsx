@@ -11,6 +11,19 @@ import { resolveFeatureIcon } from '../lib/featureIcons'
 import { MOCK_MODE } from '../api/client'
 import { publicApi } from '../api/realEstateApi'
 
+// ---- WhatsApp deep link ---------------------------------------------------------------
+// wa.me accepts DIGITS ONLY — "+974 5512-3456" must become "97455123456". The message is
+// the professional template with the REAL property title, fully URL-encoded. Numbers and
+// names come from the Agent record; nothing here is hardcoded.
+const waDigits = (n) => String(n || '').replace(/\D/g, '')
+const waHref = (agent, p) => {
+  const num = waDigits(agent?.whatsapp || agent?.phone)
+  if (!num || !p) return null
+  const firstName = String(agent.name || '').trim().split(/\s+/)[0]
+  const text = `Hello ${firstName}, I am interested in this property: ${p.title}.`
+  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`
+}
+
 export default function PropertyDetails() {
   const { id } = useParams()
   const { properties, agents, areas, areaCount, trackView, features: featureCatalog } = useData()
@@ -42,7 +55,9 @@ export default function PropertyDetails() {
 
   useEffect(() => { if (p) trackView(p.id) }, [p?.id])
 
-  const agent = agents.find(a => a.id === p?.agentId)
+  // Live mode: the details DTO carries the full agent record (p.agent) — one API call.
+  // Mock mode: seeds carry only agentId, so fall back to the agents slice.
+  const agent = p?.agent || agents.find(a => a.id === p?.agentId) || null
   const areaObj = areas.find(a => a.name === p?.area)
   const similar = useMemo(() => MOCK_MODE
     ? properties.filter(x => x.id !== id && x.area === p?.area && x.status === 'available').slice(0, 4)
@@ -204,22 +219,33 @@ export default function PropertyDetails() {
           <div className="card p-6">
             <div className="text-2xl font-bold tracking-tight text-ink mb-4">{fmtPrice(p)}</div>
             {agent && (
-              <div className="flex items-center gap-3 border-t border-neutral-100 pt-4 mb-4">
-                <img src={agent.photo} alt={agent.name} className="w-14 h-14 rounded-full object-cover" />
-                <div>
-                  <Link to={`/find-agent/${agent.slug}`} className="font-medium hover:text-gold">{agent.name}</Link>
-                  <div className="text-xs text-neutral-500">{agent.title}</div>
-                  {agent.rating > 0 && <div className="text-xs text-gold flex items-center gap-1"><Star /> {agent.rating.toFixed(1)} · verified reviews</div>}
+              <div className="border-t border-neutral-100 pt-4 mb-4">
+                <div className="eyebrow mb-2.5">Listed by</div>
+                <div className="flex items-center gap-3">
+                  <img src={agent.photo} alt={agent.name} className="w-14 h-14 rounded-full object-cover bg-neutral-100" />
+                  <div className="min-w-0">
+                    <Link to={`/find-agent/${agent.slug}`} className="font-medium hover:text-gold block truncate">{agent.name}</Link>
+                    <div className="text-xs text-neutral-500 truncate">{agent.title}</div>
+                    {agent.rating > 0 && <div className="text-xs text-gold flex items-center gap-1"><Star /> {agent.rating.toFixed(1)} · verified reviews</div>}
+                  </div>
                 </div>
               </div>
             )}
-            <div className="grid grid-cols-2 gap-2">
-              <a href={`tel:${agent?.phone || ''}`} className="btn-dark !py-2"><IconPhone className="w-4 h-4" /> Call</a>
-              <a href={`https://wa.me/${agent?.whatsapp || ''}?text=Regarding ${p.referenceNo}`} target="_blank" rel="noreferrer"
-                className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-semibold py-2 transition-colors">
-                <WhatsAppIcon /> WhatsApp
-              </a>
-            </div>
+            {/* Contact buttons render ONLY when the agent actually has that channel —
+                never a broken tel:/wa.me link to nowhere. */}
+            {agent && (agent.phone || waHref(agent, p)) && (
+              <div className={`grid gap-2 ${agent.phone && waHref(agent, p) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {agent.phone && (
+                  <a href={`tel:${waDigits(agent.phone)}`} className="btn-dark !py-2"><IconPhone className="w-4 h-4" /> Call</a>
+                )}
+                {waHref(agent, p) && (
+                  <a href={waHref(agent, p)} target="_blank" rel="noreferrer"
+                    className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-semibold py-2 transition-colors">
+                    <WhatsAppIcon /> WhatsApp
+                  </a>
+                )}
+              </div>
+            )}
             <button onClick={() => setShowInquiry(s => !s)} className="btn-gold w-full mt-2">Submit Inquiry</button>
             {showInquiry && <div className="mt-4"><InquiryForm compact propertyId={p.id} agentId={agent?.id} source="Property inquiry" /></div>}
           </div>
@@ -230,8 +256,14 @@ export default function PropertyDetails() {
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-ink text-white flex items-center justify-between px-4 py-3">
         <span className="text-gold font-semibold text-sm">{fmtPrice(p)}</span>
         <div className="flex gap-2">
-          <a href={`tel:${agent?.phone || ''}`} className="btn-gold !py-1.5 text-xs">Call</a>
-          <a href={`https://wa.me/${agent?.whatsapp || ''}`} className="bg-[#25d366] rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center">WhatsApp</a>
+          {agent?.phone && <a href={`tel:${waDigits(agent.phone)}`} className="btn-gold !py-1.5 text-xs">Call</a>}
+          {waHref(agent, p) && (
+            <a href={waHref(agent, p)} target="_blank" rel="noreferrer"
+              className="bg-[#25d366] rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">
+              <WhatsAppIcon /> WhatsApp
+            </a>
+          )}
+          {!agent && <button onClick={() => setShowInquiry(true)} className="btn-gold !py-1.5 text-xs">Inquire</button>}
         </div>
       </div>
 
