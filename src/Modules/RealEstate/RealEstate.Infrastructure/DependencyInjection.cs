@@ -49,6 +49,7 @@ public static class DependencyInjection
         services.AddScoped<IDevelopmentQueries, DevelopmentQueries>();
         services.AddScoped<IAreaQueries, AreaQueries>();
         services.AddScoped<IJobQueries, JobQueries>();
+        services.AddScoped<ICatalogQueries, CatalogQueries>();
         services.AddScoped<IPropertyViewRecorder, PropertyViewRecorder>();
 
         return services;

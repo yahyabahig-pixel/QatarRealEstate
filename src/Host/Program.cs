@@ -36,6 +36,20 @@ builder.Services.AddAuthApi();                                       // controll
 // ---- authorization: permission policies for ALL modules -------------------------------
 builder.Services.AddPermissionAuthorization();
 
+// ---- CORS: let the React dev server (a different origin) call this API ----------------
+// Browsers block cross-origin fetches unless the server opts in. Origins come from
+// "Cors:AllowedOrigins" in appsettings; the fallback covers Vite's default dev ports.
+// AllowAnyHeader is needed for Authorization + Content-Type on the JWT'd admin calls.
+const string FrontendCorsPolicy = "Frontend";
+var allowedOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+    ?? ["http://localhost:5173", "http://127.0.0.1:5173"];
+
+builder.Services.AddCors(options =>
+    options.AddPolicy(FrontendCorsPolicy, policy =>
+        policy.WithOrigins(allowedOrigins)
+              .AllowAnyHeader()
+              .AllowAnyMethod()));
+
 // ---- the safety net -------------------------------------------------------------------
 builder.Services.AddProblemDetails();
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
@@ -59,6 +73,8 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.UseCors(FrontendCorsPolicy);   // before auth: even 401s need the CORS headers
 
 app.UseAuthentication();   // who are you?  (validates the JWT, fills HttpContext.User)
 app.UseAuthorization();    // may you?      (permission policies + [Authorize])

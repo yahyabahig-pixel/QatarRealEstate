@@ -2,11 +2,14 @@ import { useState } from 'react'
 import { useData } from '../store/DataContext'
 import { EmptyState } from '../components/ui'
 
-const DEPARTMENTS = ['All Departments', 'Marketing', 'Operations', 'Sales', 'Technology']
 const TEAM = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1800&q=80'
 
 export default function Careers() {
-  const { jobs, settings } = useData()
+  // Filter chips come from the store (GET /api/jobs/departments in live mode, derived
+  // from the seeds in mock mode) — never a hardcoded list that rots the day HR opens
+  // a role in a department this file has never heard of.
+  const { jobs, settings, jobDepartments } = useData()
+  const departments = ['All Departments', ...jobDepartments]
   const [dept, setDept] = useState('All Departments')
   const visible = jobs.filter(j => j.active && (dept === 'All Departments' || j.department === dept))
 
@@ -21,7 +24,7 @@ export default function Careers() {
         <img src={TEAM} alt="Our team" className="w-full h-80 object-cover mb-12" />
 
         <div className="flex gap-2 overflow-x-auto no-scrollbar pb-2 mb-8 justify-center">
-          {DEPARTMENTS.map(d => (
+          {departments.map(d => (
             <button key={d} onClick={() => setDept(d)}
               className={`shrink-0 rounded-full border px-4 py-1.5 text-sm transition-colors ${dept === d ? 'bg-ink text-gold border-ink' : 'border-neutral-300 hover:border-gold'}`}>{d}</button>
           ))}

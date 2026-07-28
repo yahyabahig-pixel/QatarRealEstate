@@ -27,14 +27,18 @@ let onUnauthorized = () => {}
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn }
 
 export async function http(path, { method = 'GET', body, auth = true } = {}) {
-  const headers = { 'Content-Type': 'application/json' }
+  const headers = {}
   const token = tokenStore.get()
   if (auth && token) headers.Authorization = `Bearer ${token}`
+
+  // FormData (image upload) sets its own multipart boundary — only JSON-encode plain bodies.
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData
+  if (body !== undefined && !isForm) headers['Content-Type'] = 'application/json'
 
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : (isForm ? body : JSON.stringify(body)),
   })
 
   if (res.status === 204) return null
@@ -46,4 +50,12 @@ export async function http(path, { method = 'GET', body, auth = true } = {}) {
 
   if (res.status === 401) onUnauthorized()   // token expired/invalid → route to login
   throw new ApiError(res.status, payload)
+}
+
+// Build "?a=1&b=2" from an object, skipping null/undefined/'' so the backend's
+// record-constructor binding sees genuinely absent parameters, not empty strings.
+export const qs = (params = {}) => {
+  const pairs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
+  if (pairs.length === 0) return ''
+  return '?' + new URLSearchParams(Object.fromEntries(pairs)).toString()
 }
