@@ -1,24 +1,206 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useToast } from '../components/Toast'
-import { CrudPage, PageTitle, Modal, StatusBadge, Field } from './adminUi'
+import { CenterNotice, CrudPage, Field, Modal, PageTitle, Spinner, StatusBadge, useConfirm } from './adminUi'
+import LocationPicker from '../components/LocationPicker'
+import { MOCK_MODE } from '../api/client'
+import { imagesAdminApi, imageUrl } from '../api/realEstateApi'
+
+// ---------------------------------------------------------------------------------------
+// Developments now carry the SAME Location object as properties, picked with the SAME
+// LocationPicker — no second map implementation. The cover image is uploaded from the
+// admin's computer through the existing media system (imagesAdminApi), never pasted as
+// a URL. This page is a dedicated form (not the generic CrudPage) because it needs both.
+// ---------------------------------------------------------------------------------------
+const DEV_EMPTY = {
+  name: '', slug: '', deliveryYear: 2027, unitsCount: 0, developer: '', coverImage: '',
+  startingPrice: 0, paymentPlan: '', description: '', area: '',
+  city: '', street: '', locCountry: 'Qatar', locState: '', locDescription: '',
+  x: '', y: '', lat: null, lng: null,
+}
 
 export function DevelopmentsAdmin() {
   const { developments, developmentActions } = useData()
-  return <CrudPage title="Developments" rows={developments} actions={developmentActions}
-    defaults={{ name: '', area: '', deliveryYear: 2027, coverImage: '', description: '', unitsCount: 0, developer: '', startingPrice: 0, paymentPlan: '', slug: '' }}
-    columns={[
-      { key: 'coverImage', label: '', render: r => <img src={r.coverImage} alt="" className="w-16 h-11 object-cover" /> },
-      { key: 'name', label: 'Project' }, { key: 'area', label: 'Area' },
-      { key: 'deliveryYear', label: 'Delivery' }, { key: 'unitsCount', label: 'Units' }, { key: 'developer', label: 'Developer' },
-    ]}
-    fields={[
-      { key: 'name', label: 'Project name', required: true }, { key: 'area', label: 'Location / area', required: true },
-      { key: 'deliveryYear', label: 'Delivery year', type: 'number' }, { key: 'unitsCount', label: 'Units count', type: 'number' },
-      { key: 'developer', label: 'Developer' }, { key: 'coverImage', label: 'Cover image URL', required: true },
-      { key: 'startingPrice', label: 'Starting price (QAR)', type: 'number' }, { key: 'paymentPlan', label: 'Payment plan' },
-      { key: 'slug', label: 'Slug (url name)' }, { key: 'description', label: 'Description', type: 'textarea' },
-    ]} />
+  const toast = useToast()
+  const [confirm, confirmDialog] = useConfirm()
+  const [editing, setEditing] = useState(null)      // null | {} | row
+  const [form, setForm] = useState(DEV_EMPTY)
+  const [search, setSearch] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
+  const [notice, setNotice] = useState(null)
+  const fileInput = useRef(null)
+
+  const rows = search
+    ? developments.filter(d => JSON.stringify(d).toLowerCase().includes(search.toLowerCase()))
+    : developments
+
+  const open = (row) => {
+    setEditing(row ?? {})
+    if (!row) { setForm(DEV_EMPTY); return }
+    setForm({
+      ...DEV_EMPTY, ...row,
+      x: row.x || (row.lng != null ? String(row.lng) : ''),
+      y: row.y || (row.lat != null ? String(row.lat) : ''),
+      locState: row.locState || row.state || '',
+      locCountry: row.locCountry || 'Qatar',
+    })
+  }
+
+  // Same picker→form adapter shape as PropertiesAdmin.
+  const applyLocation = (patch) => setForm(f => ({ ...f,
+    ...(patch.x !== undefined ? { x: patch.x, y: patch.y, lat: patch.lat, lng: patch.lng } : {}),
+    ...(patch.country !== undefined ? { locCountry: patch.country } : {}),
+    ...(patch.city !== undefined ? { city: patch.city } : {}),
+    ...(patch.street !== undefined ? { street: patch.street } : {}),
+    ...(patch.state !== undefined ? { locState: patch.state } : {}),
+    ...(patch.description !== undefined ? { locDescription: patch.description } : {}),
+  }))
+
+  // Cover image: validated on the client, uploaded through the EXISTING media system.
+  const onCover = async (e) => {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    if (!file.type.startsWith('image/')) { setNotice({ kind: 'error', message: 'Please choose an image file (JPG, PNG, WebP…).' }); return }
+    if (file.size > 8 * 1024 * 1024) { setNotice({ kind: 'error', message: 'Image is too large — maximum size is 8 MB.' }); return }
+    setUploading(true)
+    try {
+      if (MOCK_MODE) {
+        const dataUrl = await new Promise((resolve, reject) => {
+          const r = new FileReader()
+          r.onload = () => resolve(r.result); r.onerror = reject
+          r.readAsDataURL(file)
+        })
+        setForm(f => ({ ...f, coverImage: dataUrl }))
+      } else {
+        const id = await imagesAdminApi.upload(file)
+        setForm(f => ({ ...f, coverImage: imageUrl(id) }))
+      }
+    } catch (err) {
+      setNotice({ kind: 'error', message: 'Upload failed — ' + (err?.problem?.title || err.message) })
+    } finally { setUploading(false) }
+  }
+
+  const save = async (e) => {
+    e.preventDefault()
+    if (saving) return
+    if (!form.coverImage) { setNotice({ kind: 'error', message: 'Upload a cover image before saving.' }); return }
+    if (!form.x || !form.y) { setNotice({ kind: 'error', message: 'Select the project location on the map before saving.\nSearch for the area or click the map in the Location section.' }); return }
+    setSaving(true)
+    // Human-readable label for cards/chips, derived from the Location — never typed.
+    const area = [form.street || form.locState, form.city].filter(Boolean).join(', ') || form.area
+    const isEdit = !!editing?.id
+    const res = await Promise.resolve(isEdit
+      ? developmentActions.update(editing.id, { ...form, area })
+      : developmentActions.add({ ...form, area }))
+    setSaving(false)
+    if (res && res.ok === false) { setNotice({ kind: 'error', message: res.error }); return }
+    setEditing(null)
+    setNotice({ kind: 'success', message: `Development ${isEdit ? 'updated' : 'added'} successfully.` })
+    setTimeout(() => setNotice(n => (n?.kind === 'success' ? null : n)), 2200)
+  }
+
+  const remove = async (id) => {
+    const res = await Promise.resolve(developmentActions.remove(id))
+    if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
+    else toast('Deleted.', 'error')
+  }
+
+  return (
+    <div>
+      <PageTitle title="Developments"
+        action={<button className="btn-gold !py-2" onClick={() => open(null)}>+ Add Development</button>} />
+      <input placeholder="Search developments…" className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
+
+      {rows.length === 0 ? (
+        <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
+          Nothing here yet.
+          <div className="mt-4"><button className="btn-gold !py-2" onClick={() => open(null)}>+ Add</button></div>
+        </div>
+      ) : (
+        <div className="overflow-x-auto panel-dark !rounded-xl">
+          <table className="w-full text-sm">
+            <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
+              <tr>{['', 'Project', 'Location', 'Delivery', 'Units', 'Developer', 'Actions'].map(h => <th key={h} className="px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
+            </thead>
+            <tbody className="divide-y divide-white/6">
+              {rows.map(d => (
+                <tr key={d.id} className="hover:bg-white/4 transition-colors">
+                  <td className="px-4 py-2"><img src={d.coverImage} alt="" className="w-16 h-11 object-cover rounded" /></td>
+                  <td className="px-4 py-2 text-white">{d.name}</td>
+                  <td className="px-4 py-2 text-neutral-400">{d.area || '—'}</td>
+                  <td className="px-4 py-2">{d.deliveryYear}</td>
+                  <td className="px-4 py-2">{d.unitsCount}</td>
+                  <td className="px-4 py-2 text-neutral-400">{d.developer || '—'}</td>
+                  <td className="px-4 py-2 whitespace-nowrap">
+                    <button className="text-gold hover:underline mr-3" onClick={() => open(d)}>Edit</button>
+                    <button className="text-red-400 hover:underline"
+                      onClick={() => confirm(`Delete "${d.name}"? This cannot be undone.`, () => remove(d.id))}>Delete</button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {editing !== null && (
+        <Modal title={editing.id ? `Edit — ${form.name}` : 'Add Development'} onClose={() => !saving && setEditing(null)} wide>
+          <form onSubmit={save} className="grid md:grid-cols-2 gap-4">
+            <div className="md:col-span-2"><Field label="Project name"><input required className="field-dark" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field></div>
+            <Field label="Delivery year"><input type="number" min="2000" max="2100" className="field-dark" value={form.deliveryYear} onChange={e => setForm({ ...form, deliveryYear: +e.target.value })} /></Field>
+            <Field label="Units count"><input type="number" min="0" className="field-dark" value={form.unitsCount} onChange={e => setForm({ ...form, unitsCount: +e.target.value })} /></Field>
+            <Field label="Developer"><input className="field-dark" value={form.developer} onChange={e => setForm({ ...form, developer: e.target.value })} /></Field>
+            <Field label="Starting price (QAR — 0 means “price on request”)"><input type="number" min="0" className="field-dark" value={form.startingPrice} onChange={e => setForm({ ...form, startingPrice: +e.target.value })} /></Field>
+            <Field label="Payment plan"><input className="field-dark" value={form.paymentPlan} onChange={e => setForm({ ...form, paymentPlan: e.target.value })} placeholder="e.g. 20/80 over 4 years" /></Field>
+            <Field label="Slug (URL name)"><input className="field-dark" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} placeholder="derived from the name if empty" /></Field>
+            <div className="md:col-span-2"><Field label="Description"><textarea rows="3" className="field-dark" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></Field></div>
+
+            <div className="md:col-span-2">
+              <Field label="Location (search or click the map — the address fills in automatically)">
+                <LocationPicker
+                  value={{ x: form.x, y: form.y, country: form.locCountry, city: form.city, street: form.street, state: form.locState, description: form.locDescription }}
+                  onChange={applyLocation}
+                />
+              </Field>
+            </div>
+
+            <div className="md:col-span-2">
+              <Field label="Cover image (uploaded from your device)">
+                <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={onCover} />
+                {form.coverImage ? (
+                  <div className="relative inline-block group">
+                    <img src={form.coverImage} alt="Cover preview" className="w-64 h-40 object-cover rounded-lg border border-white/10" />
+                    <div className="absolute inset-0 bg-black/60 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center gap-2 transition-opacity">
+                      <button type="button" className="btn-outline !bg-transparent !border-white/40 !text-white !py-1.5 !px-3 text-xs" onClick={() => fileInput.current?.click()}>Replace</button>
+                      <button type="button" className="btn-danger !py-1.5 !px-3 text-xs" onClick={() => setForm(f => ({ ...f, coverImage: '' }))}>Remove</button>
+                    </div>
+                  </div>
+                ) : (
+                  <button type="button" disabled={uploading}
+                    className="w-64 h-40 rounded-lg border-2 border-dashed border-white/15 hover:border-gold text-neutral-500 hover:text-gold text-sm flex flex-col items-center justify-center gap-2 transition-colors"
+                    onClick={() => fileInput.current?.click()}>
+                    {uploading ? <><Spinner /> Uploading…</> : <>Choose image…<span className="text-[11px]">JPG / PNG / WebP, up to 8 MB</span></>}
+                  </button>
+                )}
+                {uploading && form.coverImage && <p className="text-xs text-gold mt-2 flex items-center gap-2"><Spinner /> Uploading…</p>}
+              </Field>
+            </div>
+
+            <div className="md:col-span-2 flex justify-end gap-3 pt-2">
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn-gold flex items-center gap-2" disabled={saving || uploading}>
+                {saving && <Spinner />}{saving ? 'Saving…' : 'Save Development'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {notice && <CenterNotice kind={notice.kind} message={notice.message} onClose={() => setNotice(null)} />}
+      {confirmDialog}
+    </div>
+  )
 }
 
 export function AreasAdmin() {

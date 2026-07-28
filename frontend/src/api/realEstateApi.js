@@ -36,11 +36,26 @@ export const mapArea = (a) => ({
   propertyCount: a.propertyCount,          // computed by the backend — no client counting
 })
 
-export const mapDevelopment = (d) => ({
-  id: d.id, name: d.name, slug: d.slug, area: d.areaName, deliveryYear: d.deliveryYear,
-  coverImage: d.coverImageUrl, description: d.description, unitsCount: d.unitsCount,
-  developer: d.developerName, startingPrice: d.startingPrice, paymentPlan: d.paymentPlan,
-})
+export const mapDevelopment = (d) => {
+  // Same Location dialect as properties: x = LONGITUDE, y = LATITUDE, strings.
+  // 0/0 is the legacy "no exact location yet" placeholder, not an address.
+  const loc = d.location || null
+  const lng = loc ? Number(loc.x) : NaN
+  const lat = loc ? Number(loc.y) : NaN
+  const hasCoords = Number.isFinite(lat) && Number.isFinite(lng) && !(lat === 0 && lng === 0)
+  return {
+    id: d.id, name: d.name, slug: d.slug,
+    // Human-readable label for cards, chips and headers — never raw coordinates.
+    area: loc ? ([loc.street || loc.state, loc.city].filter(Boolean).join(', ') || loc.city) : (d.areaName || ''),
+    city: loc?.city || '', street: loc?.street || '', locState: loc?.state || '',
+    locCountry: loc?.country || 'Qatar', locDescription: loc?.description || '',
+    lat: hasCoords ? lat : null, lng: hasCoords ? lng : null,
+    x: hasCoords ? String(lng) : '', y: hasCoords ? String(lat) : '',
+    deliveryYear: d.deliveryYear,
+    coverImage: d.coverImageUrl, description: d.description, unitsCount: d.unitsCount,
+    developer: d.developerName, startingPrice: d.startingPrice, paymentPlan: d.paymentPlan,
+  }
+}
 
 export const mapJob = (j) => ({
   id: j.id, title: j.title, department: j.department, type: j.employmentType,
@@ -141,9 +156,21 @@ const areaBody = (f) => ({
 })
 
 const developmentBody = (f) => ({
-  name: f.name, areaName: f.area, deliveryYear: Number(f.deliveryYear) || new Date().getFullYear(),
+  name: f.name,
+  // Same LocationInput the property commands use. X = LONGITUDE, Y = LATITUDE.
+  location: {
+    country: f.locCountry || 'Qatar',
+    city: f.city || 'Doha',
+    street: f.street || f.district || f.area || f.city || 'Doha',
+    postalCode: '00000',
+    state: f.locState || f.city || 'Doha',
+    x: f.x !== undefined && f.x !== '' && f.x !== null ? String(f.x) : '0',
+    y: f.y !== undefined && f.y !== '' && f.y !== null ? String(f.y) : '0',
+    description: f.locDescription || null,
+  },
+  deliveryYear: Number(f.deliveryYear) || new Date().getFullYear(),
   coverImageUrl: f.coverImage, slug: f.slug || null, description: f.description || null,
-  unitsCount: Number(f.unitsCount) || 0, developerName: f.developer || null,
+  unitsCount: Number(f.unitsCount) || 0, developerName: f.developer || f.developerName || null,
   startingPrice: Number(f.startingPrice) || 0, paymentPlan: f.paymentPlan || null,
 })
 

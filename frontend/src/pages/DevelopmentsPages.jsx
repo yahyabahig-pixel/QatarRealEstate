@@ -4,6 +4,8 @@ import { useData } from '../store/DataContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, EmptyState } from '../components/ui'
 import { InquiryForm } from '../components/misc'
+import PropertyLocation from '../components/PropertyLocation'
+import { fallbackQatarCoord } from '../lib/geo'
 
 export function DevelopmentsIndex() {
   const { developments } = useData()
@@ -47,7 +49,10 @@ export function DevelopmentDetail() {
   const d = developments.find(x => x.slug === slug)
   if (!d) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">Development not found</h1></div>
 
-  const units = properties.filter(p => p.area === d.area && p.offPlan && p.status === 'available')
+  // d.area is now a Location-derived label ("The Pearl, Doha"); property areas are
+  // catalog names ("The Pearl"), so match by containment rather than strict equality.
+  const units = properties.filter(p => p.offPlan && p.status === 'available' && p.area &&
+    (p.area === d.area || d.area.includes(p.area)))
 
   return (
     <div>
@@ -72,6 +77,24 @@ export function DevelopmentDetail() {
               </div>
             ))}
           </div>
+          {/* Location — same map block the property pages use; real coordinates when
+              saved, deterministic in-Qatar fallback (labelled approximate) otherwise. */}
+          {(() => {
+            const hasReal = d.lat != null && d.lng != null
+            const fb = hasReal ? null : fallbackQatarCoord(d.id)
+            return (
+              <div className="mb-2">
+                <PropertyLocation
+                  lat={hasReal ? d.lat : fb.lat}
+                  lng={hasReal ? d.lng : fb.lng}
+                  approx={!hasReal}
+                  title={d.name}
+                  areaLabel={[d.street || d.locState, d.city].filter(Boolean).join(', ') || d.area}
+                />
+              </div>
+            )
+          })()}
+
           <SectionHeading eyebrow="Inventory" title="Available Units" />
           {units.length === 0
             ? <EmptyState message="Units for this project are released in phases — register interest for the next release." />
