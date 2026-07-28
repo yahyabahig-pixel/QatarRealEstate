@@ -12,11 +12,11 @@ const MENUS = [
   },
   { label: 'Developments', to: '/developments', items: ['All Developments', 'The Pearl', 'Lusail', 'Qetaifan Island'] },
   { label: 'Agents', to: '/find-agent', items: ['Find an Agent', 'Careers'] },
-  { label: 'Resources', to: '/learn', items: ['Learning Hub', 'About Us', 'Contact Us', 'List Your Property', 'Off-Market Opportunities'] },
+  { label: 'Resources', to: '/about-us', items: ['About Us', 'Contact Us', 'List Your Property', 'Off-Market Opportunities'] },
 ]
 const itemLink = (label) => {
   const map = {
-    'Find an Agent': '/find-agent', Careers: '/careers', 'Learning Hub': '/learn', 'About Us': '/about-us',
+    'Find an Agent': '/find-agent', Careers: '/careers', 'About Us': '/about-us',
     'Contact Us': '/contact-us', 'List Your Property': '/list-property',
     'Off-Market Opportunities': '/off-market-opportunities', 'All Developments': '/developments',
   }

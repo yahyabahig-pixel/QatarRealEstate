@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Catalog;
+using RealEstate.Application.Features;
 
 namespace RealEstate.Infrastructure.Data.Queries;
 
@@ -22,5 +23,12 @@ public sealed class CatalogQueries : ICatalogQueries
             .Where(f => f.IsActive)
             .OrderBy(f => f.Name)
             .Select(f => new FeatureCatalogItemDto(f.Id, f.Name, f.ValueType, f.Icon))
+            .ToListAsync(ct);
+
+    // Admin sees everything, deactivated included — that's the whole point of the flag.
+    public async Task<IReadOnlyList<FeatureAdminDto>> ListFeaturesForAdminAsync(CancellationToken ct = default) =>
+        await _db.Features.AsNoTracking()
+            .OrderBy(f => f.Name)
+            .Select(f => new FeatureAdminDto(f.Id, f.Name, f.ValueType, f.Icon, f.IsActive))
             .ToListAsync(ct);
 }

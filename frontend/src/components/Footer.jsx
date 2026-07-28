@@ -42,7 +42,7 @@ export default function Footer() {
         {[
           { title: 'Discover', links: [['For Rent', '/rent'], ['For Sale', '/buy'], ['New Developments', '/developments'], ['Areas', '/areas'], ['Off-Market', '/off-market-opportunities']] },
           { title: 'Company', links: [['About Us', '/about-us'], ['Find an Agent', '/find-agent'], ['Careers', '/careers'], ['Contact', '/contact-us']] },
-          { title: 'Resources', links: [['Learning Hub', '/learn'], ['List Your Property', '/list-property'], ['Investor Guide', '/learn/investors-guide'], ["Seller's Guide", '/learn/sellers-guide']] },
+          { title: 'Resources', links: [['List Your Property', '/list-property'], ['New Developments', '/developments'], ['Area Guides', '/areas'], ['Careers', '/careers']] },
         ].map(col => (
           <div key={col.title}>
             <h4 className="text-white uppercase tracking-wider text-sm mb-4">{col.title}</h4>

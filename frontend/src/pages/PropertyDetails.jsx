@@ -4,22 +4,50 @@ import { useData } from '../store/DataContext'
 import PropertyCard from '../components/PropertyCard'
 import { Breadcrumb, SectionHeading, fmtPrice, WhatsAppIcon, Star } from '../components/ui'
 import { InquiryForm, RecentlyViewed } from '../components/misc'
+import { MOCK_MODE } from '../api/client'
+import { publicApi } from '../api/realEstateApi'
 
 export default function PropertyDetails() {
   const { id } = useParams()
   const { properties, agents, areas, areaCount, trackView } = useData()
-  const p = properties.find(x => x.id === id)
   const [lightbox, setLightbox] = useState(null)
   const [showAllAmenities, setShowAllAmenities] = useState(false)
   const [showInquiry, setShowInquiry] = useState(false)
 
-  useEffect(() => { if (p) trackView(p.id); window.scrollTo(0, 0) }, [p?.id])
+  // LIVE MODE: the list slice only holds thin search cards (no description, media set,
+  // or amenities — the backend keeps the list query to one SQL row per card), so this
+  // page fetches the full record from GET /api/properties/{id}. MOCK MODE: the seed
+  // objects are already complete, so the store lookup is enough.
+  const [fetched, setFetched] = useState(null)
+  const [related, setRelated] = useState([])
+  const [loadState, setLoadState] = useState(MOCK_MODE ? 'done' : 'loading')
+
+  const p = MOCK_MODE ? properties.find(x => x.id === id) : fetched
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+    if (MOCK_MODE) return
+    let on = true
+    setFetched(null); setRelated([]); setLoadState('loading')
+    publicApi.propertyDetails(id)
+      .then(d => { if (on) { setFetched(d); setLoadState('done') } })
+      .catch(() => { if (on) setLoadState('error') })
+    publicApi.relatedProperties(id).then(r => { if (on) setRelated(r) }).catch(() => {})
+    return () => { on = false }
+  }, [id])
+
+  useEffect(() => { if (p) trackView(p.id) }, [p?.id])
 
   const agent = agents.find(a => a.id === p?.agentId)
   const areaObj = areas.find(a => a.name === p?.area)
-  const similar = useMemo(() =>
-    properties.filter(x => x.id !== id && x.area === p?.area && x.status === 'available').slice(0, 4),
-    [properties, id, p?.area])
+  const similar = useMemo(() => MOCK_MODE
+    ? properties.filter(x => x.id !== id && x.area === p?.area && x.status === 'available').slice(0, 4)
+    : related,
+    [properties, id, p?.area, related])
+
+  if (!MOCK_MODE && loadState === 'loading') return (
+    <div className="pt-32 pb-20 text-center text-neutral-400">Loading listing…</div>
+  )
 
   if (!p) return (
     <div className="pt-32 pb-20 text-center">
@@ -28,12 +56,14 @@ export default function PropertyDetails() {
     </div>
   )
 
-  const amenities = showAllAmenities ? p.amenities : p.amenities.slice(0, 6)
+  const allAmenities = p.amenities || []
+  const amenities = showAllAmenities ? allAmenities : allAmenities.slice(0, 6)
+  const images = p.images?.length ? p.images : ['data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="800" height="500"%3E%3Crect fill="%23e5e5e5" width="800" height="500"/%3E%3C/svg%3E']
   const info = [
-    ['Reference No.', p.referenceNo], ['Type', p.type], ['Purpose', p.purpose === 'rent' ? 'For Rent' : 'For Sale'],
-    ['Added on', p.addedOn], ['Bedrooms', p.type === 'Land' ? '—' : (p.bedrooms === 0 ? 'Studio' : p.bedrooms)],
-    ['Bathrooms', p.type === 'Land' ? '—' : p.bathrooms], ['Unit Size', `${p.sizeSqm.toLocaleString()} sqm`],
-    ['Furnishing', p.furnishing], ['Parking', p.parking], ['Balcony', p.balcony ? 'Yes' : 'No'],
+    ['Reference No.', p.referenceNo], ['Type', p.type || '—'], ['Purpose', p.purpose === 'rent' ? 'For Rent' : 'For Sale'],
+    ['Added on', p.addedOn || '—'], ['Bedrooms', p.type === 'Land' ? '—' : (p.bedrooms === 0 ? 'Studio' : p.bedrooms)],
+    ['Bathrooms', p.type === 'Land' ? '—' : p.bathrooms], ['Unit Size', `${(p.sizeSqm || 0).toLocaleString()} sqm`],
+    ['Furnishing', p.furnishing || '—'], ['Parking', p.parking ?? '—'], ['Balcony', p.balcony ? 'Yes' : 'No'],
   ]
 
   return (
@@ -41,15 +71,15 @@ export default function PropertyDetails() {
       {/* GALLERY */}
       <section className="max-w-7xl mx-auto px-4">
         <div className="relative grid md:grid-cols-[2fr_1fr] gap-2">
-          <img src={p.images[0]} alt={p.title} onClick={() => setLightbox(0)}
+          <img src={images[0]} alt={p.title} onClick={() => setLightbox(0)}
             className="w-full h-[420px] object-cover cursor-pointer" />
           <div className="hidden md:grid grid-rows-2 gap-2">
-            {p.images.slice(1, 3).map((img, i) => (
+            {images.slice(1, 3).map((img, i) => (
               <img key={i} src={img} alt="" onClick={() => setLightbox(i + 1)} className="w-full h-full max-h-[206px] object-cover cursor-pointer" />
             ))}
           </div>
           <button onClick={() => setLightbox(0)} className="absolute bottom-4 left-4 bg-black/70 text-white px-4 py-2 text-sm hover:bg-black">
-            🖼 Gallery ({p.images.length})
+            🖼 Gallery ({images.length})
           </button>
           <div className="absolute top-4 right-4 flex gap-2">
             <button className="bg-white/90 w-9 h-9 flex items-center justify-center hover:text-gold" title="Share">↗</button>
@@ -62,10 +92,10 @@ export default function PropertyDetails() {
       {lightbox !== null && (
         <div className="fixed inset-0 z-[90] bg-black/95 flex items-center justify-center" onClick={() => setLightbox(null)}>
           <button className="absolute top-6 right-6 text-white text-2xl" aria-label="Close">✕</button>
-          <button onClick={e => { e.stopPropagation(); setLightbox(i => (i - 1 + p.images.length) % p.images.length) }}
+          <button onClick={e => { e.stopPropagation(); setLightbox(i => (i - 1 + images.length) % images.length) }}
             className="absolute left-6 text-white text-4xl">‹</button>
-          <img src={p.images[lightbox]} alt="" className="max-h-[85vh] max-w-[85vw] object-contain" onClick={e => e.stopPropagation()} />
-          <button onClick={e => { e.stopPropagation(); setLightbox(i => (i + 1) % p.images.length) }}
+          <img src={images[lightbox]} alt="" className="max-h-[85vh] max-w-[85vw] object-contain" onClick={e => e.stopPropagation()} />
+          <button onClick={e => { e.stopPropagation(); setLightbox(i => (i + 1) % images.length) }}
             className="absolute right-6 text-white text-4xl">›</button>
         </div>
       )}
@@ -74,7 +104,8 @@ export default function PropertyDetails() {
         <div>
           <Breadcrumb items={[
             { label: 'Home', to: '/' }, { label: p.purpose === 'rent' ? 'Rent' : 'Buy', to: `/${p.purpose}` },
-            { label: p.area, to: areaObj ? `/areas/${areaObj.slug}` : undefined }, { label: p.referenceNo },
+            ...(p.area ? [{ label: p.area, to: areaObj ? `/areas/${areaObj.slug}` : undefined }] : []),
+            { label: p.referenceNo },
           ]} />
           <h1 className="h-serif text-3xl md:text-4xl mt-3 mb-6">{p.title}</h1>
 
@@ -91,27 +122,31 @@ export default function PropertyDetails() {
           {/* DESCRIPTION */}
           <h2 className="eyebrow mb-3">Description</h2>
           <div className="prose-sm text-neutral-700 leading-relaxed whitespace-pre-line mb-10">
-            {p.description.split('\n').map((line, i) =>
+            {(p.description || '').split('\n').map((line, i) =>
               line.endsWith(':') ? <p key={i} className="font-semibold text-ink mt-4">{line}</p> : <p key={i}>{line}</p>)}
           </div>
 
           {/* AMENITIES */}
-          <h2 className="eyebrow mb-3">Amenities & Services</h2>
-          <div className="flex flex-wrap gap-2 mb-3">
-            {amenities.map(a => (
-              <span key={a} className="border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm">✦ {a}</span>
-            ))}
-          </div>
-          {p.amenities.length > 6 && (
-            <button onClick={() => setShowAllAmenities(s => !s)} className="text-gold text-sm gold-link mb-10">
-              {showAllAmenities ? 'Show less' : `Show all ${p.amenities.length}`}
-            </button>
+          {allAmenities.length > 0 && (
+            <>
+              <h2 className="eyebrow mb-3">Amenities & Services</h2>
+              <div className="flex flex-wrap gap-2 mb-3">
+                {amenities.map(a => (
+                  <span key={a} className="border border-neutral-200 bg-neutral-50 px-3 py-1.5 text-sm">✦ {a}</span>
+                ))}
+              </div>
+              {allAmenities.length > 6 && (
+                <button onClick={() => setShowAllAmenities(s => !s)} className="text-gold text-sm gold-link mb-10">
+                  {showAllAmenities ? 'Show less' : `Show all ${allAmenities.length}`}
+                </button>
+              )}
+            </>
           )}
 
           {/* LOCATION */}
           <h2 className="eyebrow mb-3 mt-6">Location</h2>
           <div className="border border-neutral-200 h-56 bg-neutral-100 flex items-center justify-center relative mb-4">
-            <span className="text-neutral-400">🗺 Map placeholder — {p.district}, {p.area}</span>
+            <span className="text-neutral-400">🗺 Map placeholder — {[p.district, p.area || p.city].filter(Boolean).join(', ')}</span>
             <button className="absolute bottom-3 right-3 btn-dark !py-1.5 text-xs">View on Map</button>
           </div>
           {areaObj && (
@@ -141,8 +176,8 @@ export default function PropertyDetails() {
               </div>
             )}
             <div className="grid grid-cols-2 gap-2">
-              <a href={`tel:${agent?.phone}`} className="btn-dark !py-2">📞 Call</a>
-              <a href={`https://wa.me/${agent?.whatsapp}?text=Regarding ${p.referenceNo}`} target="_blank" rel="noreferrer"
+              <a href={`tel:${agent?.phone || ''}`} className="btn-dark !py-2">📞 Call</a>
+              <a href={`https://wa.me/${agent?.whatsapp || ''}?text=Regarding ${p.referenceNo}`} target="_blank" rel="noreferrer"
                 className="bg-green-600 hover:bg-green-700 text-white flex items-center justify-center gap-2 text-sm py-2 transition-colors">
                 <WhatsAppIcon /> WhatsApp
               </a>
@@ -157,15 +192,15 @@ export default function PropertyDetails() {
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-ink text-white flex items-center justify-between px-4 py-3">
         <span className="text-gold font-semibold text-sm">{fmtPrice(p)}</span>
         <div className="flex gap-2">
-          <a href={`tel:${agent?.phone}`} className="btn-gold !py-1.5 text-xs">Call</a>
-          <a href={`https://wa.me/${agent?.whatsapp}`} className="bg-green-600 px-3 py-1.5 text-xs flex items-center">WhatsApp</a>
+          <a href={`tel:${agent?.phone || ''}`} className="btn-gold !py-1.5 text-xs">Call</a>
+          <a href={`https://wa.me/${agent?.whatsapp || ''}`} className="bg-green-600 px-3 py-1.5 text-xs flex items-center">WhatsApp</a>
         </div>
       </div>
 
       {/* SIMILAR */}
       {similar.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 py-14">
-          <SectionHeading eyebrow={p.area} title="Similar Properties" />
+          <SectionHeading eyebrow={p.area || 'More like this'} title="Similar Properties" />
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {similar.map(sp => <PropertyCard key={sp.id} p={sp} />)}
           </div>

@@ -9,7 +9,7 @@ const NAV = [
   { to: '/admin/areas', label: 'Areas', icon: '🗺' },
   { to: '/admin/agents', label: 'Agents', icon: '👥' },
   { to: '/admin/jobs', label: 'Jobs', icon: '💼' },
-  { to: '/admin/articles', label: 'Articles', icon: '📰' },
+  { to: '/admin/features', label: 'Features', icon: '✦' },
   { to: '/admin/leads', label: 'Leads', icon: '📩' },
   { to: '/admin/admins', label: 'Admins', icon: '🛡', perm: 'Admin.Read' },
   { to: '/admin/positions', label: 'Positions', icon: '🎖', perm: 'Position.Read' },

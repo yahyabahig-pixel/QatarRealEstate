@@ -1,4 +1,4 @@
-import { http, qs } from './client'
+import { API_URL, http, qs } from './client'
 
 // ---------------------------------------------------------------------------------------
 // Real API bindings for the RealEstate module + mappers between backend DTOs and the UI
@@ -252,11 +252,36 @@ export const propertiesAdminApi = {
 }
 
 export const imagesAdminApi = {
-  // multipart upload → { id }; the served URL is /api/media/images/{id}
+  // multipart upload (field name "file", per AdminImagesController) → 201 with the new id.
+  // Handle both body shapes ({ id } or a bare guid) so a serializer tweak can't break us.
   async upload(file) {
     const form = new FormData()
     form.append('file', file)
-    return http('/api/admin/media/images', { method: 'POST', body: form })
+    const res = await http('/api/admin/media/images', { method: 'POST', body: form })
+    return res?.id ?? res
   },
   remove: (id) => http(`/api/admin/media/images/${id}`, { method: 'DELETE' }),
+}
+
+// The public URL an uploaded image is served from (GET /api/media/images/{id}) —
+// this is what goes into Property media and Agent photo fields.
+export const imageUrl = (id) => `${API_URL}/api/media/images/${id}`
+
+// ---- feature (amenity) catalog management ---------------------------------------------
+
+export const mapFeature = (f) => ({
+  id: f.id, name: f.name, valueType: f.valueType, icon: f.icon,
+  active: f.isActive ?? true,          // the public catalog omits the flag: it's always active
+})
+
+const featureBody = (f) => ({
+  name: f.name, valueType: f.valueType || 'Boolean', icon: f.icon || null,
+})
+
+export const featuresAdminApi = {
+  async list() { return (await http('/api/admin/features') || []).map(mapFeature) },
+  create: (f) => http('/api/admin/features', { method: 'POST', body: featureBody(f) }),
+  update: (id, f) => http(`/api/admin/features/${id}`, { method: 'PUT', body: featureBody(f) }),
+  toggleActive: (id, active) => http(`/api/admin/features/${id}/active`, { method: 'PUT', body: { isActive: active } }),
+  remove: (id) => http(`/api/admin/features/${id}`, { method: 'DELETE' }),   // 409 Feature.InUse if assigned
 }

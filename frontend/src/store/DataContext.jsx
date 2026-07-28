@@ -1,27 +1,34 @@
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import {
   seedProperties, seedDevelopments, seedAreas, seedAgents, seedJobs,
-  seedArticles, seedSettings, seedInquiries, refFor,
+  seedSettings, seedInquiries, refFor, AMENITIES, PROPERTY_TYPES,
 } from '../data/mockData'
 import { MOCK_MODE, tokenStore } from '../api/client'
 import {
-  publicApi, catalogApi, propertyCommand,
-  agentsAdminApi, areasAdminApi, developmentsAdminApi, jobsAdminApi, propertiesAdminApi,
+  publicApi, catalogApi, propertyCommand, mapFeature,
+  agentsAdminApi, areasAdminApi, developmentsAdminApi, jobsAdminApi,
+  propertiesAdminApi, featuresAdminApi,
 } from '../api/realEstateApi'
 
 // ---------------------------------------------------------------------------------------
 // The SHARED store. The public site reads from it; the admin panel writes to it.
 //
 // TWO MODES, one component-facing shape:
-//   MOCK (no VITE_API_URL)  — seeds + in-memory CRUD, exactly as before.
+//   MOCK (no VITE_API_URL)  — seeds + in-memory CRUD.
 //   LIVE (VITE_API_URL set) — slices load from the API on mount; every admin action calls
 //     the API and then re-fetches its slice, so what you see is what the database holds.
 //
 // STILL LOCAL IN BOTH MODES (no backend module yet — deliberately, they're next):
-//   settings, articles, inquiries.
+//   settings, inquiries.
+// Articles were removed from the application entirely.
 // ---------------------------------------------------------------------------------------
 const DataContext = createContext(null)
 const uid = () => Math.random().toString(36).slice(2, 10)
+
+// Mock features derive from the old hardcoded amenity list, shaped like FeatureAdminDto.
+const mockFeatures = AMENITIES.map((name, i) => ({
+  id: `f${i + 1}`, name, valueType: 'Boolean', icon: null, active: true,
+}))
 
 export function DataProvider({ children }) {
   const [properties, setProperties] = useState(MOCK_MODE ? seedProperties : [])
@@ -31,21 +38,19 @@ export function DataProvider({ children }) {
   const [jobs, setJobs] = useState(MOCK_MODE ? seedJobs : [])
   const [jobDepartments, setJobDepartments] = useState(
     MOCK_MODE ? [...new Set(seedJobs.filter(j => j.active).map(j => j.department))].sort() : [])
-  const [articles, setArticles] = useState(seedArticles)
+  const [features, setFeatures] = useState(MOCK_MODE ? mockFeatures : [])
+  const [propertyTypes, setPropertyTypes] = useState(
+    MOCK_MODE ? PROPERTY_TYPES.map(n => ({ id: n, name: n })) : [])
   const [inquiries, setInquiries] = useState(seedInquiries)
   const [settings, setSettings] = useState(seedSettings)
   const [recentlyViewed, setRecentlyViewed] = useState([])
   const [loading, setLoading] = useState(!MOCK_MODE)
   const [apiError, setApiError] = useState(null)
 
-  // Catalogs (live only): name → id lookups the property form mapper needs.
-  const [typeIdByName, setTypeIdByName] = useState({})
-  const [featureIdByName, setFeatureIdByName] = useState({})
-
   // ---- live loaders -------------------------------------------------------------------
-  // A logged-in admin gets the unfiltered admin lists (closed jobs, deactivated agents);
-  // anonymous visitors get the public ones. Falls back to public if the token lacks the
-  // permission — the public site must never break because an admin token went stale.
+  // A logged-in admin gets the unfiltered admin lists (closed jobs, deactivated agents,
+  // inactive features); anonymous visitors get the public ones. Falls back to public if
+  // the token lacks the permission — the public site must never break on a stale token.
   const authed = () => !!tokenStore.get()
 
   const reloadProperties = useCallback(async () => {
@@ -54,10 +59,9 @@ export function DataProvider({ children }) {
   }, [])
 
   const reloadAgents = useCallback(async () => {
-    const list = authed()
+    setAgents(authed()
       ? await agentsAdminApi.list().catch(() => publicApi.agents())
-      : await publicApi.agents()
-    setAgents(list)
+      : await publicApi.agents())
   }, [])
 
   const reloadAreas = useCallback(async () => {
@@ -69,11 +73,16 @@ export function DataProvider({ children }) {
   }, [])
 
   const reloadJobs = useCallback(async () => {
-    const list = authed()
+    setJobs(authed()
       ? await jobsAdminApi.list().catch(() => publicApi.jobs())
-      : await publicApi.jobs()
-    setJobs(list)
+      : await publicApi.jobs())
     setJobDepartments(await publicApi.jobDepartments().catch(() => []))
+  }, [])
+
+  const reloadFeatures = useCallback(async () => {
+    setFeatures(authed()
+      ? await featuresAdminApi.list().catch(async () => (await catalogApi.features()).map(mapFeature))
+      : (await catalogApi.features()).map(mapFeature))
   }, [])
 
   useEffect(() => {
@@ -81,11 +90,9 @@ export function DataProvider({ children }) {
     let cancelled = false
     ;(async () => {
       const results = await Promise.allSettled([
-        reloadProperties(), reloadAgents(), reloadAreas(), reloadDevelopments(), reloadJobs(),
-        catalogApi.propertyTypes().then(ts => !cancelled &&
-          setTypeIdByName(Object.fromEntries(ts.map(t => [t.name, t.id])))),
-        catalogApi.features().then(fs => !cancelled &&
-          setFeatureIdByName(Object.fromEntries(fs.map(f => [f.name, f.id])))),
+        reloadProperties(), reloadAgents(), reloadAreas(), reloadDevelopments(),
+        reloadJobs(), reloadFeatures(),
+        catalogApi.propertyTypes().then(ts => !cancelled && setPropertyTypes(ts)),
       ])
       if (cancelled) return
       const failed = results.filter(r => r.status === 'rejected')
@@ -96,7 +103,15 @@ export function DataProvider({ children }) {
       setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs])
+  }, [reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures])
+
+  // Name → id lookups the property form mapper needs (see realEstateApi.propertyCommand).
+  const typeIdByName = useMemo(
+    () => Object.fromEntries(propertyTypes.map(t => [t.name, t.id])), [propertyTypes])
+  const featureIdByName = useMemo(
+    () => Object.fromEntries(features.map(f => [f.name, f.id])), [features])
+  const areaIdByName = useMemo(
+    () => Object.fromEntries(areas.map(a => [a.name, a.id])), [areas])
 
   // ---- helpers used across the site --------------------------------------------------
   const areaCount = useCallback(
@@ -114,7 +129,7 @@ export function DataProvider({ children }) {
     setInquiries(prev => [{ id: uid(), status: 'New', date: new Date().toISOString().slice(0, 10), ...inq }, ...prev])
   }, [])
 
-  // ---- mock CRUD (unchanged) ----------------------------------------------------------
+  // ---- mock CRUD ----------------------------------------------------------------------
   const mockCrud = (setter) => ({
     add: (item) => { const withId = { id: uid(), ...item }; setter(prev => [withId, ...prev]); return withId },
     update: (id, patch) => setter(prev => prev.map(x => x.id === id ? { ...x, ...patch } : x)),
@@ -124,23 +139,23 @@ export function DataProvider({ children }) {
   // ---- live CRUD ----------------------------------------------------------------------
   // Same call signatures the admin pages already use: add(form), update(id, patch),
   // remove(id). Each action hits the API, then re-fetches the slice — the store never
-  // guesses at what the database did. Errors land in apiError instead of exploding
-  // in a component that never awaited the promise.
+  // guesses at what the database did. Errors land in apiError (surfaced as a toast by
+  // the admin pages) instead of exploding in a component that never awaited the promise.
   const guard = (fn) => (...args) =>
     fn(...args).catch(err => {
       console.error(err)
-      setApiError(err?.problem?.title || err?.message || 'The API rejected the request.')
+      const validation = err?.errors && typeof err.errors === 'object'
+        ? ' ' + Object.values(err.errors).flat().join(' ') : ''
+      setApiError((err?.problem?.title || err?.message || 'The API rejected the request.') + validation)
     })
 
-  const liveCrud = (api, reload, { toggleKey } = {}) => ({
+  const liveCrud = (api, reload, rows, { toggleKey } = {}) => ({
     add: guard(async (form) => { await api.create(form); await reload() }),
     update: guard(async (id, patch) => {
-      const current = (({ agents, areas, developments, jobs }) =>
-        [...agents, ...areas, ...developments, ...jobs])({ agents, areas, developments, jobs })
-        .find(x => x.id === id) || {}
+      const current = rows.find(x => x.id === id) || {}
       const merged = { ...current, ...patch }
-      // A lone active-flag flip goes to the dedicated toggle endpoint, not a full PUT.
       const keys = Object.keys(patch)
+      // A lone active-flag flip goes to the dedicated toggle endpoint, not a full PUT.
       if (toggleKey && keys.length === 1 && keys[0] === toggleKey) {
         await api.toggleActive(id, patch[toggleKey])
       } else {
@@ -157,9 +172,13 @@ export function DataProvider({ children }) {
   // Properties speak a different dialect (see realEstateApi.propertyCommand) and have a
   // richer lifecycle: create → attach media → set amenities → publish. No hard delete on
   // the backend — remove() archives, which is the domain-correct end of a listing.
+  const toFeatureSelection = (names = []) => names
+    .map(name => featureIdByName[name] && ({ featureId: featureIdByName[name], value: 'Yes' }))
+    .filter(Boolean)
+
   const livePropertyActions = {
     add: guard(async (form) => {
-      const created = await propertiesAdminApi.create(propertyCommand(form, typeIdByName, areaIdByName()))
+      const created = await propertiesAdminApi.create(propertyCommand(form, typeIdByName, areaIdByName))
       const id = created?.id ?? created
       if (form.images?.length) {
         await propertiesAdminApi.addMedia(id, form.images.map((url, i) => ({
@@ -167,9 +186,7 @@ export function DataProvider({ children }) {
         })))
       }
       if (form.amenities?.length) {
-        const sel = form.amenities
-          .map(name => featureIdByName[name] && ({ featureId: featureIdByName[name], value: 'Yes' }))
-          .filter(Boolean)
+        const sel = toFeatureSelection(form.amenities)
         if (sel.length) await propertiesAdminApi.setFeatures(id, sel)
       }
       if (form.status === 'available') await propertiesAdminApi.publication(id, 'Publish')
@@ -179,12 +196,23 @@ export function DataProvider({ children }) {
     update: guard(async (id, patch) => {
       const current = await propertiesAdminApi.details(id)
       const merged = { ...current, ...patch }
-      await propertiesAdminApi.update(id, propertyCommand(merged, typeIdByName, areaIdByName()))
+      await propertiesAdminApi.update(id, propertyCommand(merged, typeIdByName, areaIdByName))
       if ('amenities' in patch) {
-        const sel = merged.amenities
-          .map(name => featureIdByName[name] && ({ featureId: featureIdByName[name], value: 'Yes' }))
-          .filter(Boolean)
-        await propertiesAdminApi.setFeatures(id, sel)
+        await propertiesAdminApi.setFeatures(id, toFeatureSelection(merged.amenities))
+      }
+      if ('images' in patch) {
+        // Sync media by URL: remove what the admin removed, add what they added.
+        const keep = new Set(patch.images)
+        const removed = (current.media || []).filter(m => !keep.has(m.url))
+        const existing = new Set((current.media || []).map(m => m.url))
+        const added = patch.images.filter(u => !existing.has(u))
+        for (const m of removed) await propertiesAdminApi.removeMedia(id, m.id)
+        if (added.length) {
+          await propertiesAdminApi.addMedia(id, added.map((url, i) => ({
+            url, mediaType: 'Image', width: 1200, height: 800,
+            order: (current.media?.length || 0) + i, isPrimary: false,
+          })))
+        }
       }
       if ('status' in patch && patch.status !== current.status) {
         const action = { available: 'Publish', sold: 'MarkSold', rented: 'MarkRented', draft: 'Unpublish' }[patch.status]
@@ -194,11 +222,10 @@ export function DataProvider({ children }) {
     }),
     remove: guard(async (id) => { await propertiesAdminApi.archive(id); await reloadProperties() }),
   }
-  const areaIdByName = () => Object.fromEntries(areas.map(a => [a.name, a.id]))
 
   const value = useMemo(() => ({
-    properties, developments, areas, agents, jobs, jobDepartments,
-    articles, inquiries, settings, recentlyViewed,
+    properties, developments, areas, agents, jobs, jobDepartments, features, propertyTypes,
+    inquiries, settings, recentlyViewed,
     loading, apiError, clearApiError: () => setApiError(null),
     areaCount, trackView, addInquiry, setSettings,
 
@@ -215,11 +242,11 @@ export function DataProvider({ children }) {
 
     developmentActions: MOCK_MODE
       ? mockCrud(setDevelopments)
-      : liveCrud(developmentsAdminApi, reloadDevelopments),
+      : liveCrud(developmentsAdminApi, reloadDevelopments, developments),
 
     areaActions: MOCK_MODE
       ? mockCrud(setAreas)
-      : liveCrud(areasAdminApi, reloadAreas),
+      : liveCrud(areasAdminApi, reloadAreas, areas),
 
     agentActions: MOCK_MODE
       ? {
@@ -229,25 +256,22 @@ export function DataProvider({ children }) {
             setAgents(prev => [withId, ...prev]); return withId
           },
         }
-      : liveCrud(agentsAdminApi, reloadAgents, { toggleKey: 'active' }),
+      : liveCrud(agentsAdminApi, reloadAgents, agents, { toggleKey: 'active' }),
 
     jobActions: MOCK_MODE
       ? mockCrud(setJobs)
-      : liveCrud(jobsAdminApi, reloadJobs, { toggleKey: 'active' }),
+      : liveCrud(jobsAdminApi, reloadJobs, jobs, { toggleKey: 'active' }),
 
-    // No backend modules yet for these three — in-memory in both modes, on purpose.
-    articleActions: {
-      ...mockCrud(setArticles),
-      add: (item) => {
-        const withId = { id: uid(), slug: item.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').slice(0, 60), ...item }
-        setArticles(prev => [withId, ...prev]); return withId
-      },
-    },
+    featureActions: MOCK_MODE
+      ? mockCrud(setFeatures)
+      : liveCrud(featuresAdminApi, reloadFeatures, features, { toggleKey: 'active' }),
+
+    // No backend module yet — in-memory in both modes, on purpose.
     inquiryActions: mockCrud(setInquiries),
-  }), [properties, developments, areas, agents, jobs, jobDepartments, articles, inquiries,
-       settings, recentlyViewed, loading, apiError, areaCount, trackView, addInquiry,
-       typeIdByName, featureIdByName,
-       reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs])
+  }), [properties, developments, areas, agents, jobs, jobDepartments, features, propertyTypes,
+       inquiries, settings, recentlyViewed, loading, apiError, areaCount, trackView, addInquiry,
+       typeIdByName, featureIdByName, areaIdByName,
+       reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures])
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>
 }

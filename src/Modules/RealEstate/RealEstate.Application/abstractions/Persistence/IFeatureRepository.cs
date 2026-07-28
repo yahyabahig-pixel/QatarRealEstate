@@ -10,6 +10,8 @@ public interface IFeatureRepository
     Task<IReadOnlyList<Feature>> GetActiveByIdsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct = default);
 
     // For the admin catalog CRUD:
-    Task<bool> ExistsByNameAsync(string name, CancellationToken ct = default);   // block duplicate feature names
+    Task<bool> ExistsByNameAsync(string name, Guid? exceptId = null, CancellationToken ct = default);   // block duplicate feature names
+    Task<bool> IsInUseAsync(Guid featureId, CancellationToken ct = default);   // any PropertyFeature rows pointing at it?
     Task AddAsync(Feature feature, CancellationToken ct = default);
+    void Remove(Feature feature);
 }

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authorization;
 using RealEstate.Application.Media.Admin.Command.DeleteImage;
 using RealEstate.Application.Media.Admin.Command.UploadImage;
 using RealEstate.Domain.Entities;
+using Microsoft.AspNetCore.Http;
 
 namespace RealEstate.Api.Controllers;
 

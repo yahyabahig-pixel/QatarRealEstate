@@ -14,14 +14,13 @@ import { DevelopmentsIndex, DevelopmentDetail } from './pages/DevelopmentsPages'
 import { AreasIndex, AreaDetail } from './pages/AreasPages'
 import { AgentsIndex, AgentProfile } from './pages/AgentsPages'
 import Careers from './pages/Careers'
-import { LearnHub, ArticlePage } from './pages/LearnPages'
 import { AboutUs, ContactUs, ListProperty, NotFound } from './pages/SupportPages'
 
 import AdminLayout from './admin/AdminLayout'
 import Login from './admin/Login'
 import Dashboard from './admin/Dashboard'
 import PropertiesAdmin from './admin/PropertiesAdmin'
-import { DevelopmentsAdmin, AreasAdmin, AgentsAdmin, JobsAdmin, ArticlesAdmin, LeadsAdmin, SettingsAdmin } from './admin/CrudPages'
+import { DevelopmentsAdmin, AreasAdmin, AgentsAdmin, JobsAdmin, FeaturesAdmin, LeadsAdmin, SettingsAdmin } from './admin/CrudPages'
 import { AdminsAdmin, AdminDetail, PositionsAdmin, PositionDetail, PermissionsAdmin } from './admin/AuthAdminPages'
 import { ProtectedRoute, PermissionRoute } from './admin/guards'
 
@@ -59,8 +58,6 @@ export default function App() {
                 <Route path="/find-agent" element={<AgentsIndex />} />
                 <Route path="/find-agent/:slug" element={<AgentProfile />} />
                 <Route path="/careers" element={<Careers />} />
-                <Route path="/learn" element={<LearnHub />} />
-                <Route path="/learn/:slug" element={<ArticlePage />} />
                 <Route path="/about-us" element={<AboutUs />} />
                 <Route path="/contact-us" element={<ContactUs />} />
                 <Route path="/list-property" element={<ListProperty />} />
@@ -77,7 +74,7 @@ export default function App() {
                 <Route path="areas" element={<AreasAdmin />} />
                 <Route path="agents" element={<AgentsAdmin />} />
                 <Route path="jobs" element={<JobsAdmin />} />
-                <Route path="articles" element={<ArticlesAdmin />} />
+                <Route path="features" element={<FeaturesAdmin />} />
                 <Route path="leads" element={<LeadsAdmin />} />
                 <Route path="settings" element={<SettingsAdmin />} />
                 <Route path="admins" element={<PermissionRoute permission="Admin.Read"><AdminsAdmin /></PermissionRoute>} />

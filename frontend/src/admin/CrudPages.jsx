@@ -74,21 +74,25 @@ export function JobsAdmin() {
     ]} />
 }
 
-export function ArticlesAdmin() {
-  const { articles, articleActions } = useData()
-  return <CrudPage title="Articles" rows={articles} actions={articleActions}
-    defaults={{ title: '', category: 'agents', coverImage: '', body: '', published: true }}
+export function FeaturesAdmin() {
+  // The feature (amenity) catalog offered on the property form. Backed by
+  // /api/admin/features — create/edit/deactivate/delete flow through featureActions.
+  // Deleting a feature that listings still use returns 409 Feature.InUse from the API;
+  // deactivating is the safe everyday way to retire one.
+  const { features, featureActions } = useData()
+  return <CrudPage title="Property Features" rows={features} actions={featureActions}
+    defaults={{ name: '', valueType: 'Boolean', icon: '', active: true }}
     columns={[
-      { key: 'coverImage', label: '', render: r => <img src={r.coverImage} alt="" className="w-16 h-11 object-cover" /> },
-      { key: 'title', label: 'Title' }, { key: 'category', label: 'Category' },
-      { key: 'published', label: 'Published', render: r => <StatusBadge value={r.published ? 'live' : 'draft'} map={{ live: 'bg-green-900 text-green-300', draft: 'bg-neutral-800 text-neutral-400' }} /> },
+      { key: 'name', label: 'Feature' },
+      { key: 'valueType', label: 'Value type' },
+      { key: 'icon', label: 'Icon', render: r => r.icon || '—' },
+      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-900 text-green-300', retired: 'bg-neutral-800 text-neutral-400' }} /> },
     ]}
     fields={[
-      { key: 'title', label: 'Title', required: true },
-      { key: 'category', label: 'Category', type: 'select', options: [['agents', 'Agents'], ['investors', 'Investors'], ['clients', 'Clients']] },
-      { key: 'coverImage', label: 'Cover image URL', required: true },
-      { key: 'published', label: 'Published', type: 'toggle' },
-      { key: 'body', label: 'Body (short lines become headings)', type: 'textarea', required: true },
+      { key: 'name', label: 'Feature name (e.g. Swimming Pool)', required: true },
+      { key: 'valueType', label: 'Value type', type: 'select', options: [['Boolean', 'Yes / No (presence only)'], ['Text', 'Text value (e.g. floor type)'], ['Number', 'Numeric value (e.g. parking count)'] ] },
+      { key: 'icon', label: 'Icon key or URL (optional)' },
+      { key: 'active', label: 'Active (offered on new listings)', type: 'toggle' },
     ]} />
 }
 

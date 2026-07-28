@@ -133,7 +133,7 @@ public sealed class RealEstateDbSeeder
 
         foreach (var property in unfiled)
         {
-            var haystack = $"{property.Title} {property.Location.Street}";
+            var haystack = $"{property.Title} {property.Location.StreetName}";
 
             foreach (var (slug, keywords) in AreaSeedCatalog.BackfillKeywords)
             {

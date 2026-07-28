@@ -43,6 +43,16 @@ public static class AppPermissions
         public const string Delete = "Area.Delete";
     }
 
+    // The amenity/feature catalog offered on the property form ("Swimming Pool", "Parking"...).
+    // Owned by whoever manages listings — a bad catalog corrupts every future listing.
+    public static class Feature
+    {
+        public const string Read   = "Feature.Read";
+        public const string Create = "Feature.Create";
+        public const string Update = "Feature.Update";   // also covers activate/deactivate
+        public const string Delete = "Feature.Delete";
+    }
+
     // Job adverts on the Careers page. Deliberately its own permission set rather than folded into
     // Area/Agent: whoever writes area guides is not necessarily whoever may post a vacancy.
     public static class Job
@@ -96,6 +106,7 @@ public static class AppPermissions
         Agent.Read, Agent.Create, Agent.Update, Agent.Delete,
         Development.Read, Development.Create, Development.Update, Development.Delete,
         Area.Read, Area.Create, Area.Update, Area.Delete,
+        Feature.Read, Feature.Create, Feature.Update, Feature.Delete,
         Job.Read, Job.Create, Job.Update, Job.Delete,
         Media.Upload, Media.Delete,
         User.Read, User.Update, User.Delete,
