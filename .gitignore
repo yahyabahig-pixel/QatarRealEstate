@@ -482,3 +482,9 @@ $RECYCLE.BIN/
 
 # Vim temporary swap files
 *.swp
+
+# frontend
+frontend/node_modules/
+frontend/dist/
+build.log
+_to_delete/
