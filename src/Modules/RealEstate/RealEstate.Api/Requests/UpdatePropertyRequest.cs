@@ -11,4 +11,5 @@ public sealed record UpdatePropertyRequest(
     LocationInput Location,
     SaleTermsInput? Sale,
     RentTermsInput? Rent,
-    PropertySpecsInput? Specs);
+    PropertySpecsInput? Specs,
+    Guid? AreaId = null);

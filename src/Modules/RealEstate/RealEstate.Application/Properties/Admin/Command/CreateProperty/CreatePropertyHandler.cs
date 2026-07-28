@@ -13,15 +13,18 @@ using RealEstate.Domain.ValueObjects;
 public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyCommand, Guid>
 {
     private readonly IPropertyRepository _properties;
+    private readonly IAreaRepository _areas;
     private readonly IUnitOfWork _unitOfWork;
     private readonly PropertyAuthorizationPolicy _authorization;
 
     public CreatePropertyHandler(
            IPropertyRepository properties,
+           IAreaRepository areas,
            IUnitOfWork unitOfWork,
            PropertyAuthorizationPolicy authorization)
     {
         _properties = properties;
+        _areas = areas;
         _unitOfWork = unitOfWork;
         _authorization = authorization;
     }
@@ -80,6 +83,17 @@ public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyComman
             rent: rent,
             specs: specs);
         if (property.IsError) return property.TopError;
+
+        // Area is a CATALOG reference: when provided it must be one of the defined Areas.
+        if (request.AreaId is { } areaId && areaId != Guid.Empty)
+        {
+            if (await _areas.GetByIdAsync(areaId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AreaErrors.NotFound;
+
+            var assigned = property.Value.AssignArea(areaId);
+            if (assigned.IsError) return assigned.TopError;
+        }
+
         await _properties.AddAsync(property.Value, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return property.Value.Id;

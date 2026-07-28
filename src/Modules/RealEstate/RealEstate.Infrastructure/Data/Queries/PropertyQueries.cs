@@ -154,7 +154,9 @@ public sealed class PropertyQueries : IPropertyQueries
                 p.PropertyFeatures
                     .Join(_db.Features, pf => pf.FeatureId, f => f.Id,
                           (pf, f) => new FeatureDto(f.Id, f.Name, f.Icon, pf.Value))
-                    .ToList()))
+                    .ToList(),
+                p.AreaId,
+                _db.Areas.Where(a => a.Id == p.AreaId).Select(a => a.Name).FirstOrDefault()))
             .FirstOrDefaultAsync(ct);
     }
 

@@ -21,6 +21,13 @@ public sealed class Property : AuditableEntity
     public SaleTerms? SaleTerms { get; private set; }
     public RentTerms? RentTerms { get; private set; }
     public Guid PropertyTypeId { get; private set; }
+
+    // Link to the curated Areas catalog ("The Pearl", "West Bay", ...). Nullable: a listing
+    // can exist before it is filed under an area, but WHEN set it must reference a real Area
+    // row — the application handler validates it and the database enforces it as an FK.
+    // Location (below) stays the street-level ADDRESS; AreaId is the catalog classification.
+    public Guid? AreaId { get; private set; }
+
     public PropertyStatus Status { get; private set; } = PropertyStatus.Draft;
 
     public bool IsAvailable => Status == PropertyStatus.Published;
@@ -88,6 +95,14 @@ public sealed class Property : AuditableEntity
         SaleTerms = kind == ListingKind.Sale ? sale : null;
         RentTerms = kind == ListingKind.Rent ? rent : null;
 
+        return Result.Updated;
+    }
+
+    /// <summary>Files this listing under a catalog Area (or clears it with null). Existence
+    /// of the area is the application layer's job — the aggregate cannot see other tables.</summary>
+    public Result<Updated> AssignArea(Guid? areaId)
+    {
+        AreaId = areaId == Guid.Empty ? null : areaId;
         return Result.Updated;
     }
 

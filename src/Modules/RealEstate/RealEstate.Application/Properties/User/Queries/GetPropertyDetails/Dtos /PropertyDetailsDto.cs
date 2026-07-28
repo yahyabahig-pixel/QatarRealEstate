@@ -18,4 +18,6 @@ public sealed record PropertyDetailsDto(
     bool IsActive,
     int ViewsCount,
     IReadOnlyList<MediaDto> Media,
-    IReadOnlyList<FeatureDto> Features);
+    IReadOnlyList<FeatureDto> Features,
+    Guid? AreaId = null,          // catalog Area link (null = not filed under an area)
+    string? AreaName = null);

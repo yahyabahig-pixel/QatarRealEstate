@@ -12,4 +12,5 @@ public sealed record CreatePropertyCommand(
     LocationInput Location,
     SaleTermsInput? Sale,
     RentTermsInput? Rent,
-    PropertySpecsInput? Specs) : ICommand<Guid>;
+    PropertySpecsInput? Specs,
+    Guid? AreaId = null) : ICommand<Guid>;    // optional: file the listing under a catalog Area

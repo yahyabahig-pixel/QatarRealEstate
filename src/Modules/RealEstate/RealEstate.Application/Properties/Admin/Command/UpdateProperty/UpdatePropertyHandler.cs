@@ -14,13 +14,16 @@ namespace RealEstate.Application.Properties.Admin.UpdateProperty;
 public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyCommand, Updated>
 {
     private readonly IPropertyRepository _properties;
+    private readonly IAreaRepository _areas;
     private readonly IUnitOfWork _unitOfWork;
     private readonly PropertyOwnershipPolicy _ownership;
 
     public UpdatePropertyHandler(
-        IPropertyRepository properties, IUnitOfWork unitOfWork, PropertyOwnershipPolicy ownership)
+        IPropertyRepository properties, IAreaRepository areas,
+        IUnitOfWork unitOfWork, PropertyOwnershipPolicy ownership)
     {
         _properties = properties;
+        _areas = areas;
         _unitOfWork = unitOfWork;
         _ownership = ownership;
     }
@@ -71,6 +74,16 @@ public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyComman
             });
             if (specsResult.IsError) return specsResult.TopError;
         }
+
+        // Area is a CATALOG reference: when provided it must be one of the defined Areas.
+        // null clears the assignment.
+        if (request.AreaId is { } areaId && areaId != Guid.Empty)
+        {
+            if (await _areas.GetByIdAsync(areaId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AreaErrors.NotFound;
+        }
+        var areaAssigned = property.AssignArea(request.AreaId);
+        if (areaAssigned.IsError) return areaAssigned.TopError;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Updated;

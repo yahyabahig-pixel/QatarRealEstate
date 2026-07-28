@@ -14,4 +14,5 @@ public sealed record UpdatePropertyCommand(
     LocationInput Location,
     SaleTermsInput? Sale,
     RentTermsInput? Rent,
-    PropertySpecsInput? Specs) : ICommand<Updated>;
+    PropertySpecsInput? Specs,
+    Guid? AreaId = null) : ICommand<Updated>;    // optional: file the listing under a catalog Area

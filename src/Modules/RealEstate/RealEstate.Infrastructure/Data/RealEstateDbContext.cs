@@ -13,6 +13,7 @@ public sealed class RealEstateDbContext : DbContext
     public DbSet<Agent> Agents => Set<Agent>();
     public DbSet<StoredImage> StoredImages => Set<StoredImage>();
     public DbSet<Development> Developments => Set<Development>();
+    public DbSet<Area> Areas => Set<Area>();
     // Media & PropertyFeature are reached through the Property aggregate — no public DbSet needed.
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)

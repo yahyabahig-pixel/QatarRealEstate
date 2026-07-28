@@ -43,9 +43,84 @@ public sealed class RealEstateDbSeeder
     {
         var propertyTypeIds = await SeedPropertyTypesAsync(ct);
         var featureIds = await SeedFeaturesAsync(ct);
+
+        // Areas run BEFORE properties so the backfill below always has a catalog to file into.
+        await SeedAreasAsync(ct);
+
         await SeedPropertiesAsync(propertyTypeIds, featureIds, ct);
+        await BackfillPropertyAreasAsync(ct);
         await SeedAgentsAsync(ct);
         await SeedDevelopmentsAsync(ct);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    //  areas  (matched on Slug — uniquely indexed, so this check is DB-backed)
+    // -----------------------------------------------------------------------------------------
+    private async Task SeedAreasAsync(CancellationToken ct)
+    {
+        var existing = await _db.Areas.Select(a => a.Slug).ToListAsync(ct);
+        var known = new HashSet<string>(existing, StringComparer.Ordinal);
+        var added = 0;
+
+        foreach (var seed in AreaSeedCatalog.Areas)
+        {
+            if (known.Contains(seed.Slug))
+                continue;
+
+            var area = Must(
+                Area.Create(seed.Name, seed.PhotoUrl, seed.Slug, seed.Intro),
+                $"Area '{seed.Name}'");
+
+            _db.Areas.Add(area);
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log?.LogInformation("Seed: inserted {Count} area(s).", added);
+        }
+    }
+
+    // -----------------------------------------------------------------------------------------
+    //  Files any listing that still has no AreaId under an area, by keyword.
+    //
+    //  Only ever touches rows where AreaId IS NULL, so an area an admin picked by hand is never
+    //  overwritten, and a listing an admin deliberately un-filed gets re-filed at most once —
+    //  after which it keeps whatever the admin last set unless they clear it again.
+    // -----------------------------------------------------------------------------------------
+    private async Task BackfillPropertyAreasAsync(CancellationToken ct)
+    {
+        var unfiled = await _db.Properties.Where(p => p.AreaId == null).ToListAsync(ct);
+        if (unfiled.Count == 0)
+            return;
+
+        var areaIdsBySlug = await _db.Areas.ToDictionaryAsync(a => a.Slug, a => a.Id, StringComparer.Ordinal, ct);
+        var filed = 0;
+
+        foreach (var property in unfiled)
+        {
+            var haystack = $"{property.Title} {property.Location.Street}";
+
+            foreach (var (slug, keywords) in AreaSeedCatalog.BackfillKeywords)
+            {
+                if (!keywords.Any(k => haystack.Contains(k, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                if (!areaIdsBySlug.TryGetValue(slug, out var areaId))
+                    break;      // area was deleted by an admin — leave the listing unfiled
+
+                MustSucceed(property.AssignArea(areaId), $"filing '{property.Title}' under '{slug}'");
+                filed++;
+                break;          // first match wins — see AreaSeedCatalog.BackfillKeywords
+            }
+        }
+
+        if (filed > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log?.LogInformation("Seed: filed {Count} listing(s) under an area.", filed);
+        }
     }
 
     // -----------------------------------------------------------------------------------------

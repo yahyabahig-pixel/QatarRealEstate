@@ -38,6 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IAgentRepository, AgentRepository>();
         services.AddScoped<IStoredImageRepository, StoredImageRepository>();
         services.AddScoped<IDevelopmentRepository, DevelopmentRepository>();
+        services.AddScoped<IAreaRepository, AreaRepository>();
         services.AddScoped<IUnitOfWork, EfUnitOfWork>();
 
         // --- read side ------------------------------------------------------------------
@@ -45,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IAgentQueries, AgentQueries>();
         services.AddScoped<IStoredImageQueries, StoredImageQueries>();
         services.AddScoped<IDevelopmentQueries, DevelopmentQueries>();
+        services.AddScoped<IAreaQueries, AreaQueries>();
         services.AddScoped<IPropertyViewRecorder, PropertyViewRecorder>();
 
         return services;
