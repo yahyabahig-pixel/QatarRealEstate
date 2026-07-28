@@ -245,6 +245,9 @@ export const propertiesAdminApi = {
   removeMedia: (id, mediaId) => http(`/api/admin/properties/${id}/media/${mediaId}`, { method: 'DELETE' }),
   setFeatures: (id, features) => http(`/api/admin/properties/${id}/features`, { method: 'PUT', body: { features } }),
   setOffer: (id, offer) => http(`/api/admin/properties/${id}/offer`, { method: 'PUT', body: { offer } }),
+  // "Exclusive" toggle → the domain's IsFeatured. Only a published listing can be
+  // featured (backend enforces it); unfeaturing always works.
+  setFeatured: (id, isFeatured) => http(`/api/admin/properties/${id}/featured`, { method: 'PUT', body: { isFeatured } }),
   publication: (id, action, reason = null) => http(`/api/admin/properties/${id}/publication`, { method: 'POST', body: { action, reason } }),
   archive: (id) => http(`/api/admin/properties/${id}/archive`, { method: 'POST' }),
   toggleActive: (id, active) => http(`/api/admin/properties/${id}/active`, { method: 'PUT', body: { isActive: active } }),

@@ -213,24 +213,72 @@ public sealed class Property : AuditableEntity
 
     // ---- features (encapsulated exactly like media) -------------------------
 
+    // Identity for a feature link is the CATALOG FeatureId, never object identity.
+    // PropertyFeature has no value equality, so List.Contains() compares REFERENCES: a
+    // freshly built link is never "equal" to the one already loaded from the database.
+    // Leaning on it is what let duplicate rows through to UX_PropertyFeature_NoDuplicates
+    // and surfaced as a 500 on the second save of the same selection.
+    private bool HasFeature(Guid featureId) => _propertyFeatures.Any(f => f.FeatureId == featureId);
+
     public Result<Updated> AddFeature(PropertyFeature feature)
     {
         if (feature is null) return PropertyErrors.FeatureRequired;
 
-        if (_propertyFeatures.Contains(feature)) return PropertyErrors.DuplicateFeature;
+        if (HasFeature(feature.FeatureId)) return PropertyErrors.DuplicateFeature;
 
         _propertyFeatures.Add(feature);
         return Result.Updated;
     }
+
     public Result<Updated> AddFeatures(IReadOnlyCollection<PropertyFeature> features)
     {
         if (features is null || features.Count == 0)
             return PropertyErrors.FeatureRequired;
 
-        if (features.Any(f => _propertyFeatures.Contains(f)))
+        if (features.Any(f => f is null))
+            return PropertyErrors.FeatureRequired;
+
+        // Duplicates WITHIN the incoming batch, and duplicates against what is already
+        // attached, are both caught here rather than by the database.
+        if (features.Select(f => f.FeatureId).Distinct().Count() != features.Count)
+            return PropertyErrors.DuplicateFeature;
+
+        if (features.Any(f => HasFeature(f.FeatureId)))
             return PropertyErrors.DuplicateFeature;
 
         _propertyFeatures.AddRange(features);
+        return Result.Updated;
+    }
+
+    // Wholesale replace of the amenity selection -- what PUT /features has always claimed
+    // to do. Idempotent: submitting the same selection twice is a no-op, not a crash.
+    // An EMPTY collection is legitimate and means "the admin unticked everything";
+    // only null is rejected.
+    public Result<Updated> ReplaceFeatures(IReadOnlyCollection<PropertyFeature> features)
+    {
+        if (features is null) return PropertyErrors.FeatureRequired;
+
+        if (features.Any(f => f is null)) return PropertyErrors.FeatureRequired;
+
+        if (features.Select(f => f.FeatureId).Distinct().Count() != features.Count)
+            return PropertyErrors.DuplicateFeature;
+
+        var incoming = features.ToDictionary(f => f.FeatureId);
+
+        // 1) Links no longer selected. EF cascade-deletes the orphaned rows: the PropertyId
+        //    FK is required and the collection is owned by this aggregate.
+        _propertyFeatures.RemoveAll(existing => !incoming.ContainsKey(existing.FeatureId));
+
+        // 2) Links that survive keep their row identity -- no delete/insert churn, no unique
+        //    index violation -- and simply take the newly submitted value.
+        foreach (var existing in _propertyFeatures)
+        {
+            existing.SetValue(incoming[existing.FeatureId].Value);
+            incoming.Remove(existing.FeatureId);
+        }
+
+        // 3) Whatever is left over was not attached before: genuinely new.
+        _propertyFeatures.AddRange(incoming.Values);
         return Result.Updated;
     }
 
@@ -239,20 +287,28 @@ public sealed class Property : AuditableEntity
         if (feature is null)
             return PropertyErrors.FeatureRequired;
 
-        if (!_propertyFeatures.Remove(feature))
+        var attached = _propertyFeatures.FirstOrDefault(f => f.FeatureId == feature.FeatureId);
+        if (attached is null)
             return PropertyErrors.FeatureNotFound;
 
+        _propertyFeatures.Remove(attached);
         return Result.Updated;
     }
+
     public Result<Updated> RemoveFeatures(IReadOnlyCollection<PropertyFeature> features)
     {
         if (features is null || features.Count == 0)
             return PropertyErrors.FeatureRequired;
 
-        if (features.Any(f => !_propertyFeatures.Contains(f)))
+        if (features.Any(f => f is null))
+            return PropertyErrors.FeatureRequired;
+
+        var ids = features.Select(f => f.FeatureId).ToHashSet();
+
+        if (ids.Any(id => !HasFeature(id)))
             return PropertyErrors.FeatureNotFound;
 
-        _propertyFeatures.RemoveAll(features.Contains);
+        _propertyFeatures.RemoveAll(f => ids.Contains(f.FeatureId));
         return Result.Updated;
     }
 

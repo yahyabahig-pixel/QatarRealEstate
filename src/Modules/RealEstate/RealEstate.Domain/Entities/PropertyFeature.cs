@@ -24,4 +24,10 @@ public sealed class PropertyFeature : AuditableEntity
             Value = string.IsNullOrWhiteSpace(value) ? null : value.Trim()
         };
     }
+
+    // Called by Property.ReplaceFeatures so a link that survives a re-selection keeps its
+    // database row and only refreshes its value. internal: the aggregate root is the only
+    // legitimate caller -- nothing outside RealEstate.Domain can mutate a link directly.
+    internal void SetValue(string? value) =>
+        Value = string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }

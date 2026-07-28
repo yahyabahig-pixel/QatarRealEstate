@@ -8,6 +8,7 @@ using RealEstate.Application.Properties.Admin.ArchiveProperty;
 using RealEstate.Application.Properties.Admin.ChangePropertyPublicationStatus;
 using RealEstate.Application.Properties.Admin.Command.AddPropertyMedia;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty;
+using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatured;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatures;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyOffer;
 using RealEstate.Application.Properties.Admin.Command.UpdateProperty;
@@ -73,6 +74,14 @@ public sealed class AdminPropertiesController : ApiControllerBase
         Guid id, [FromBody] ChangePublicationStatusRequest body, CancellationToken ct)
         => (await Sender.Send(new ChangePropertyPublicationStatusCommand(id, body.Action, body.Reason), ct))
             .ToNoContent();
+
+    // PUT /api/admin/properties/{id}/featured   — { "isFeatured": true/false }
+    // "Exclusive" in the admin UI. Editorial promotion, so it shares the Publish
+    // permission; the domain only lets a PUBLISHED listing be featured (409 otherwise).
+    [HttpPut("{id:guid}/featured")]
+    [HasPermission(AppPermissions.Property.Publish)]
+    public async Task<IActionResult> SetFeatured(Guid id, [FromBody] SetPropertyFeaturedRequest body, CancellationToken ct)
+        => (await Sender.Send(new SetPropertyFeaturedCommand(id, body.IsFeatured), ct)).ToNoContent();
 
     // POST /api/admin/properties/{id}/archive
     [HttpPost("{id:guid}/archive")]

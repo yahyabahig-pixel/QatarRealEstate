@@ -187,6 +187,16 @@ export function DataProvider({ children }) {
   // Properties speak a different dialect (see realEstateApi.propertyCommand) and have a
   // richer lifecycle: create → attach media → set amenities → publish. No hard delete on
   // the backend — remove() archives, which is the domain-correct end of a listing.
+  // Two amenity selections are the same when they name the same features, order aside.
+  // The admin form submits the WHOLE record on save, so 'amenities' is present in every
+  // patch even when the user only flipped Exclusive -- and a pointless PUT is a pointless
+  // way to fail.
+  const sameAmenities = (a, b) => {
+    const left = [...(a || [])].sort()
+    const right = [...(b || [])].sort()
+    return left.length === right.length && left.every((name, i) => name === right[i])
+  }
+
   const toFeatureSelection = (names = []) => names
     .map(name => featureIdByName[name] && ({ featureId: featureIdByName[name], value: 'Yes' }))
     .filter(Boolean)
@@ -205,6 +215,11 @@ export function DataProvider({ children }) {
         if (sel.length) await propertiesAdminApi.setFeatures(id, sel)
       }
       if (form.status === 'available') await propertiesAdminApi.publication(id, 'Publish')
+      // Exclusive = the domain's IsFeatured. Must come AFTER publish — the backend only
+      // features published listings (a draft marked exclusive is simply not promoted yet).
+      if (form.exclusive && form.status === 'available') {
+        await propertiesAdminApi.setFeatured(id, true)
+      }
       await reloadProperties()
       return { id }
     }),
@@ -212,7 +227,7 @@ export function DataProvider({ children }) {
       const current = await propertiesAdminApi.details(id)
       const merged = { ...current, ...patch }
       await propertiesAdminApi.update(id, propertyCommand(merged, typeIdByName, areaIdByName))
-      if ('amenities' in patch) {
+      if ('amenities' in patch && !sameAmenities(current.amenities, patch.amenities)) {
         await propertiesAdminApi.setFeatures(id, toFeatureSelection(merged.amenities))
       }
       if ('images' in patch) {
@@ -232,6 +247,15 @@ export function DataProvider({ children }) {
       if ('status' in patch && patch.status !== current.status) {
         const action = { available: 'Publish', sold: 'MarkSold', rented: 'MarkRented', draft: 'Unpublish' }[patch.status]
         if (action) await propertiesAdminApi.publication(id, action)
+      }
+      // Exclusive = IsFeatured, applied AFTER any publication change so "publish + feature"
+      // in one save works. Featuring a non-published listing is skipped (backend would 409);
+      // unfeaturing always goes through.
+      if ('exclusive' in patch && patch.exclusive !== current.exclusive) {
+        const nowPublished = (patch.status ?? current.status) === 'available'
+        if (!patch.exclusive || nowPublished) {
+          await propertiesAdminApi.setFeatured(id, patch.exclusive)
+        }
       }
       await reloadProperties()
     }),
