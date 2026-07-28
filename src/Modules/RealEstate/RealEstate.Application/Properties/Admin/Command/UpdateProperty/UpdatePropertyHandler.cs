@@ -1,4 +1,4 @@
-// Properties/Admin/UpdateProperty/UpdatePropertyHandler.cs
+﻿// Properties/Admin/UpdateProperty/UpdatePropertyHandler.cs
 
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
@@ -15,15 +15,17 @@ public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyComman
 {
     private readonly IPropertyRepository _properties;
     private readonly IAreaRepository _areas;
+    private readonly IAgentRepository _agents;
     private readonly IUnitOfWork _unitOfWork;
     private readonly PropertyOwnershipPolicy _ownership;
 
     public UpdatePropertyHandler(
-        IPropertyRepository properties, IAreaRepository areas,
+        IPropertyRepository properties, IAreaRepository areas, IAgentRepository agents,
         IUnitOfWork unitOfWork, PropertyOwnershipPolicy ownership)
     {
         _properties = properties;
         _areas = areas;
+        _agents = agents;
         _unitOfWork = unitOfWork;
         _ownership = ownership;
     }
@@ -84,6 +86,15 @@ public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyComman
         }
         var areaAssigned = property.AssignArea(request.AreaId);
         if (areaAssigned.IsError) return areaAssigned.TopError;
+
+        // Agent mirrors Area: validated when provided, null clears the assignment.
+        if (request.AgentId is { } assignAgentId && assignAgentId != Guid.Empty)
+        {
+            if (await _agents.GetByIdAsync(assignAgentId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AgentErrors.NotFound;
+        }
+        var agentAssigned = property.AssignAgent(request.AgentId);
+        if (agentAssigned.IsError) return agentAssigned.TopError;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Updated;

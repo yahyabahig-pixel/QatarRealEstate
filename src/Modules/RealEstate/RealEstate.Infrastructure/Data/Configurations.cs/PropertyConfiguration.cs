@@ -1,4 +1,4 @@
-// Data/Configurations/PropertyConfiguration.cs
+﻿// Data/Configurations/PropertyConfiguration.cs
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using RealEstate.Domain.Constants;
@@ -109,6 +109,13 @@ public sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
                .HasForeignKey(p => p.PropertyTypeId)
                .OnDelete(DeleteBehavior.Restrict);
 
+        // The assigned consultant. SetNull: deleting an agent unassigns their listings
+        // rather than deleting them (or blocking the agent's deletion).
+        builder.HasOne<Agent>()
+               .WithMany()
+               .HasForeignKey(p => p.AgentId)
+               .OnDelete(DeleteBehavior.SetNull);
+
         // Aggregate-owned collections, exposed as IReadOnlyCollection over private List fields.
         // PropertyAccessMode.Field makes EF read/write _media and _features directly, so the
         // aggregate's encapsulation (no public mutable collection) survives persistence.
@@ -143,5 +150,6 @@ public sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.HasIndex(p => new { p.Status, p.IsFeatured }).HasDatabaseName("IX_Properties_Featured");
         builder.HasIndex(p => p.PropertyTypeId);
         builder.HasIndex(p => p.CreatedBy).HasDatabaseName("IX_Properties_Owner");
+        builder.HasIndex(p => p.AgentId).HasDatabaseName("IX_Properties_Agent");
     }
 }

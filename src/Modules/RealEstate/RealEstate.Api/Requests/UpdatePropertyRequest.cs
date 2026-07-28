@@ -1,4 +1,4 @@
-using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
+﻿using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
 using RealEstate.Domain.Enums;
 
 namespace RealEstate.Api.Requests;
@@ -12,4 +12,5 @@ public sealed record UpdatePropertyRequest(
     SaleTermsInput? Sale,
     RentTermsInput? Rent,
     PropertySpecsInput? Specs,
-    Guid? AreaId = null);
+    Guid? AreaId = null,
+    Guid? AgentId = null);

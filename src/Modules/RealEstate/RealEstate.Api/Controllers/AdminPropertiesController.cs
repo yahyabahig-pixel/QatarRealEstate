@@ -1,4 +1,4 @@
-using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Mvc;
 using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Authorization;
 using Microsoft.AspNetCore.Authorization;
@@ -8,6 +8,7 @@ using RealEstate.Application.Properties.Admin.ArchiveProperty;
 using RealEstate.Application.Properties.Admin.ChangePropertyPublicationStatus;
 using RealEstate.Application.Properties.Admin.Command.AddPropertyMedia;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty;
+using RealEstate.Application.Properties.Admin.Command.DeleteProperty;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatured;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatures;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyOffer;
@@ -57,7 +58,7 @@ public sealed class AdminPropertiesController : ApiControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePropertyRequest body, CancellationToken ct)
         => (await Sender.Send(new UpdatePropertyCommand(
                 id, body.Title, body.Description, body.PropertyTypeId, body.ListingKind,
-                body.Location, body.Sale, body.Rent, body.Specs, body.AreaId), ct))
+                body.Location, body.Sale, body.Rent, body.Specs, body.AreaId, body.AgentId), ct))
             .ToNoContent();
 
     // POST /api/admin/properties/{id}/media
@@ -105,6 +106,13 @@ public sealed class AdminPropertiesController : ApiControllerBase
     [HasPermission(AppPermissions.Property.Publish)]
     public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
         => (await Sender.Send(new ArchivePropertyCommand(id), ct)).ToNoContent();
+
+    // DELETE /api/admin/properties/{id} -- PERMANENT removal (media, features and status
+    // history cascade with it). Archive above stays the reversible alternative.
+    [HttpDelete("{id:guid}")]
+    [HasPermission(AppPermissions.Property.Delete)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+        => (await Sender.Send(new DeletePropertyCommand(id), ct)).ToNoContent();
 
     // PUT /api/admin/properties/{id}/active   — { "isActive": true/false }
     [HttpPut("{id:guid}/active")]

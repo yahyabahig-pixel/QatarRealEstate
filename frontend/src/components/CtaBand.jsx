@@ -9,7 +9,7 @@ export default function CtaBand() {
   const toast = useToast()
   const [email, setEmail] = useState('')
   return (
-    <section className="bg-coal text-white py-16">
+    <section className="qre-cta-band bg-coal text-white py-16">
       <div className="max-w-7xl mx-auto px-4">
         <h2 className="h-serif text-3xl md:text-4xl text-center mb-12">Stay Ahead of Qatar's Real Estate Market</h2>
         <div className="grid md:grid-cols-3 gap-10 text-center">

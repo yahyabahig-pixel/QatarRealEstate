@@ -173,7 +173,24 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
 /* ---- split view ---- */
 .qre-split { display: grid; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); height: calc(100vh - 8.5rem); }
 @media (min-width: 1024px) { .qre-split { grid-template-columns: 44% 56%; } }
-.qre-split-list { overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg); }
+.qre-split-list {
+  overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg);
+  /* The card grid inside sizes itself from THIS pane's width (container query), not the
+     viewport — the same markup is 2-up in the 44% desktop pane and 1-up on a phone. */
+  container-type: inline-size;
+}
+
+/* Map mode is a screen-contained app view — the page itself must not scroll the map
+   away. Listings sets body[data-map-view] while the split view is on screen; the global
+   footer and CTA band are hidden for exactly that duration. */
+body[data-map-view] footer,
+body[data-map-view] .qre-cta-band { display: none; }
+
+/* Card grid for the split view: columns follow the available LIST width.
+   ~250-300px per card = compact marketplace tiles, never extremely narrow. */
+.qre-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@container (min-width: 540px) { .qre-grid { grid-template-columns: repeat(2, 1fr); } }
+@container (min-width: 880px) { .qre-grid { grid-template-columns: repeat(3, 1fr); } }
 .qre-split-list::-webkit-scrollbar { width: 8px; }
 .qre-split-list::-webkit-scrollbar-thumb { background: #d6d3cd; border-radius: 4px; }
 .qre-split-map { position: relative; height: 100%; min-height: 320px; }
@@ -182,8 +199,11 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
   display: flex; align-items: center; justify-content: center; background: #f3f4f6;
 }
 
+/* Overlay stacking inside .qre-split-map (a clean, small hierarchy — the canvas sits
+   at the bottom, custom UI floats above it, the selected-property popup wins):
+     canvas 0 · active pin 3 · "Search this area" 4 · location search 5 · popup 6 */
 .qre-search-area {
-  position: absolute; top: 14px; left: 50%; transform: translateX(-50%); z-index: 4;
+  position: absolute; top: 58px; left: 50%; transform: translateX(-50%); z-index: 4;
   background: var(--bg); color: var(--ink);
   border: 1px solid var(--line); border-radius: 999px;
   padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
@@ -191,6 +211,43 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
 }
 .qre-search-area:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
 .qre-search-area:disabled { opacity: .65; cursor: default; }
+
+/* ---- persistent location search (listings map) ---- */
+.qre-map-search {
+  position: absolute; top: 14px; left: 14px; z-index: 5;
+  width: min(280px, calc(100% - 118px)); /* clears the zoom controls top-right */
+}
+.qre-map-search input {
+  width: 100%; background: var(--bg); color: var(--ink);
+  border: 1px solid var(--line); border-radius: 999px;
+  padding: 8px 34px 8px 34px; font-size: 13px; font-weight: 500;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .18); outline: none;
+}
+.qre-map-search input:focus { border-color: var(--gold); }
+.qre-map-search input::placeholder { color: var(--muted); }
+.qre-map-search .qre-map-search-icon {
+  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  width: 15px; height: 15px; color: var(--muted); pointer-events: none;
+}
+.qre-map-search-clear {
+  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border-radius: 999px; cursor: pointer;
+  display: flex; align-items: center; justify-content: center; color: var(--muted);
+}
+.qre-map-search-clear:hover { color: var(--ink); background: #f0efec; }
+.qre-map-search-results {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .16); overflow: hidden;
+}
+.qre-map-search-results button {
+  display: block; width: 100%; text-align: left; padding: 9px 12px;
+  font-size: 13px; color: var(--ink); cursor: pointer;
+}
+.qre-map-search-results button:hover { background: #f5f4f1; color: var(--gold); }
+
+/* Selected-property popup above every overlay control (see hierarchy above). */
+.qre-split-map .mapboxgl-popup { z-index: 6; }
 
 /* ---- compact list card ---- */
 .qre-mapcard {

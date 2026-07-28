@@ -1,4 +1,4 @@
-using RealEstate.Domain.Enums;
+﻿using RealEstate.Domain.Enums;
 namespace RealEstate.Application.Properties.Admin.Queries.ListPropertiesForAdmin.Inputs;
 
 public sealed record AdminPropertyListItemDto(
@@ -16,4 +16,6 @@ public sealed record AdminPropertyListItemDto(
     string? CoverImageUrl,
     int ViewsCount,
     Guid? CreatedBy,
-    DateTime CreatedOnUtc);
+    DateTime CreatedOnUtc,
+    Guid? AgentId = null,
+    string? AgentName = null);

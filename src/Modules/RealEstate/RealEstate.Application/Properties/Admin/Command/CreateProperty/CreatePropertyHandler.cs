@@ -1,4 +1,4 @@
-
+﻿
 using System.Runtime.CompilerServices;
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
@@ -14,17 +14,20 @@ public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyComman
 {
     private readonly IPropertyRepository _properties;
     private readonly IAreaRepository _areas;
+    private readonly IAgentRepository _agents;
     private readonly IUnitOfWork _unitOfWork;
     private readonly PropertyAuthorizationPolicy _authorization;
 
     public CreatePropertyHandler(
            IPropertyRepository properties,
            IAreaRepository areas,
+           IAgentRepository agents,
            IUnitOfWork unitOfWork,
            PropertyAuthorizationPolicy authorization)
     {
         _properties = properties;
         _areas = areas;
+        _agents = agents;
         _unitOfWork = unitOfWork;
         _authorization = authorization;
     }
@@ -92,6 +95,16 @@ public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyComman
 
             var assigned = property.Value.AssignArea(areaId);
             if (assigned.IsError) return assigned.TopError;
+        }
+
+        // Agent is a CATALOG reference too: when provided it must be a real agent.
+        if (request.AgentId is { } assignAgentId && assignAgentId != Guid.Empty)
+        {
+            if (await _agents.GetByIdAsync(assignAgentId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AgentErrors.NotFound;
+
+            var agentAssigned = property.Value.AssignAgent(assignAgentId);
+            if (agentAssigned.IsError) return agentAssigned.TopError;
         }
 
         await _properties.AddAsync(property.Value, cancellationToken);

@@ -1,4 +1,4 @@
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Domain.Entities;
 
@@ -27,4 +27,6 @@ public sealed class PropertyRepository : IPropertyRepository
 
     public Task<bool> PropertyTypeExistsAsync(Guid propertyTypeId, CancellationToken ct = default) =>
         _db.PropertyTypes.AnyAsync(t => t.Id == propertyTypeId, ct);
+
+    public void Remove(Property property) => _db.Properties.Remove(property);
 }

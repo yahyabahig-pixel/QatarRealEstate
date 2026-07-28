@@ -29,6 +29,11 @@ public sealed class Property : AuditableEntity
     // Location (below) stays the street-level ADDRESS; AreaId is the catalog classification.
     public Guid? AreaId { get; private set; }
 
+    // The consultant who represents this listing on the public site ("Listed by ..." card,
+    // WhatsApp contact). Nullable: a listing can exist unassigned. Configured with a SetNull
+    // FK -- deleting an agent unassigns their listings, it never deletes or blocks them.
+    public Guid? AgentId { get; private set; }
+
     public PropertyStatus Status { get; private set; } = PropertyStatus.Draft;
 
     public bool IsAvailable => Status == PropertyStatus.Published;
@@ -120,6 +125,13 @@ public sealed class Property : AuditableEntity
     public Result<Updated> AssignArea(Guid? areaId)
     {
         AreaId = areaId == Guid.Empty ? null : areaId;
+        return Result.Updated;
+    }
+
+    // Same contract as AssignArea: Guid.Empty and null both mean "no agent assigned".
+    public Result<Updated> AssignAgent(Guid? agentId)
+    {
+        AgentId = agentId == Guid.Empty ? null : agentId;
         return Result.Updated;
     }
 

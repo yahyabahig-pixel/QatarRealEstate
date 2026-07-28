@@ -1,4 +1,4 @@
-using BuildingBlocks.Domain.Common.Results;
+﻿using BuildingBlocks.Domain.Common.Results;
 using RealEstate.Application.Abstractions.Messaging;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
 using RealEstate.Domain.Enums;
@@ -15,4 +15,5 @@ public sealed record UpdatePropertyCommand(
     SaleTermsInput? Sale,
     RentTermsInput? Rent,
     PropertySpecsInput? Specs,
-    Guid? AreaId = null) : ICommand<Updated>;    // optional: file the listing under a catalog Area
+    Guid? AreaId = null,                         // optional: file the listing under a catalog Area
+    Guid? AgentId = null) : ICommand<Updated>;   // optional: assign the consultant who represents it

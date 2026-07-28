@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadMapbox, MAPBOX_TOKEN, MAP_STYLE } from '../lib/mapbox'
+import { forwardGeocode } from '../lib/geo'
 import { compactPrice } from './ui'
-import { IconMap } from './icons'
+import { IconMap, IconSearch, IconX } from './icons'
 
 // Doha. The very first render has no bounds to fit yet -- fitBounds only fires once the
 // first batch of pins arrives -- so the map needs somewhere sensible to open.
@@ -220,6 +221,17 @@ export default function ListingsMap({
             clusterMaxZoom: 14,   // beyond this every listing stands alone
             clusterRadius: 55,    // px — how close pins must be to merge
           })
+          // Mapbox only loads a source's data once AT LEAST ONE style layer uses it —
+          // with no layer, querySourceFeatures() stays empty forever and no pin would
+          // ever appear. This invisible zero-radius layer exists purely to make the
+          // clustered source load (same trick as Mapbox's own cluster-HTML example);
+          // the visible pins are the DOM markers synced in syncMarkers().
+          map.addLayer({
+            id: SRC + '-anchor',
+            type: 'circle',
+            source: SRC,
+            paint: { 'circle-radius': 0, 'circle-opacity': 0 },
+          })
           setReady(true)
         })
 
@@ -304,6 +316,37 @@ export default function ListingsMap({
     return () => clearTimeout(t)
   }, [resizeSignal])
 
+  // ---- location search (persistent overlay control) -----------------------
+  // Lives in the REACT layer, as a sibling of the map container -- never injected
+  // into Mapbox's internal control DOM, so map re-renders/resizes/route changes
+  // between /buy and /rent cannot remove it.
+  const [query, setQuery] = useState('')
+  const [places, setPlaces] = useState([])
+  const [placesOpen, setPlacesOpen] = useState(false)
+
+  useEffect(() => {
+    if (query.trim().length < 2) { setPlaces([]); setPlacesOpen(false); return }
+    let stale = false
+    const t = setTimeout(() => {
+      forwardGeocode(query)
+        .then((r) => { if (!stale) { setPlaces(r); setPlacesOpen(r.length > 0) } })
+        .catch(() => { if (!stale) { setPlaces([]); setPlacesOpen(false) } })
+    }, 300)
+    return () => { stale = true; clearTimeout(t) }
+  }, [query])
+
+  const goToPlace = (p) => {
+    setPlacesOpen(false)
+    setQuery(p.name)
+    const map = mapRef.current
+    if (!map) return
+    // Flying somewhere IS taking control of the viewport: stop auto-fit from
+    // yanking the user back, and arm "Search this area" so they can requery here.
+    userMovedRef.current = true
+    setMoved(true)
+    map.easeTo({ center: [p.lng, p.lat], zoom: 13.5, duration: 800 })
+  }
+
   const searchHere = () => {
     const map = mapRef.current
     if (!map) return
@@ -334,7 +377,45 @@ export default function ListingsMap({
 
   return (
     <div className="qre-split-map">
-      <div ref={containerRef} className="absolute inset-0" />
+      {/* Map container: INLINE style on purpose, not Tailwind's `absolute inset-0`.
+          Tailwind v4 emits utilities inside a cascade layer, while Mapbox's own
+          stylesheet is unlayered and sets `.mapboxgl-map { position: relative }` --
+          unlayered CSS outranks ANY layered utility, so the moment Mapbox adds its
+          class the container would lose `position: absolute`, collapse to 0px height
+          and clip the canvas (map invisible although the DOM is fully built).
+          Inline styles outrank both. */}
+      <div ref={containerRef} style={{ position: 'absolute', inset: 0 }} />
+
+      {/* Location search: always rendered (never conditional), positioned over the
+          canvas by the app's own UI layer. The map stays interactive around it. */}
+      <div className="qre-map-search">
+        <IconSearch className="qre-map-search-icon" />
+        <input
+          type="text"
+          value={query}
+          placeholder="Search location…"
+          aria-label="Search location on the map"
+          onChange={(e) => setQuery(e.target.value)}
+          onFocus={() => places.length > 0 && setPlacesOpen(true)}
+          onKeyDown={(e) => { if (e.key === 'Escape') setPlacesOpen(false) }}
+        />
+        {query && (
+          <button type="button" className="qre-map-search-clear" aria-label="Clear search"
+            onClick={() => { setQuery(''); setPlaces([]); setPlacesOpen(false) }}>
+            <IconX className="w-3.5 h-3.5" />
+          </button>
+        )}
+        {placesOpen && (
+          <div className="qre-map-search-results" role="listbox">
+            {places.map((p) => (
+              <button key={p.id} type="button" role="option" onClick={() => goToPlace(p)}>
+                {p.name}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
       {moved && (
         <button type="button" onClick={searchHere} disabled={searching} className="qre-search-area">
           {searching ? 'Searching…' : 'Search this area'}

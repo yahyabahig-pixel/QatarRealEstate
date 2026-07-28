@@ -161,13 +161,20 @@ export default function Listings({ purpose, offMarket = false }) {
     // The map endpoint filters by viewport, kind, type and price. Everything else the
     // filter drawer offers is applied here so the two panes never disagree.
     const q = f.q.trim().toLowerCase()
-    return remoteItems.filter(it =>
+    const filtered = remoteItems.filter(it =>
       (!q || `${it.title} ${it.area}`.toLowerCase().includes(q)) &&
       (!f.beds || (it.beds ?? 0) >= +f.beds) &&
       (!f.minSize || (it.sizeM2 || 0) >= +f.minSize) &&
       (!f.maxSize || (it.sizeM2 || 0) <= +f.maxSize)
     )
-  }, [results, remoteItems, f.q, f.beds, f.minSize, f.maxSize])
+    // Price sorting over the COMPLETE viewport result set (the map endpoint returns every
+    // matching pin, not a page), so sorting client-side here is accurate. "Price on
+    // request" (null) always sinks to the end. The map DTO carries no timestamp, so
+    // "Newest first" keeps the endpoint's own order.
+    if (sort === 'priceAsc') return [...filtered].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity))
+    if (sort === 'priceDesc') return [...filtered].sort((a, b) => (b.price ?? -Infinity) - (a.price ?? -Infinity))
+    return filtered
+  }, [results, remoteItems, f.q, f.beds, f.minSize, f.maxSize, sort])
 
   const selectFromPin = (id) => {
     setActiveId(id)
@@ -175,6 +182,15 @@ export default function Listings({ purpose, offMarket = false }) {
     const node = listRef.current?.querySelector(`[data-pid="${id}"]`)
     node?.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
   }
+
+  // Map mode is a screen-contained browsing view: the list scrolls inside its own pane
+  // and the map must stay on screen. The global footer/CTA band below would let the page
+  // scroll the map away, so they are hidden (via body attribute + CSS) while it is active.
+  useEffect(() => {
+    if (!showMap) return
+    document.body.dataset.mapView = '1'
+    return () => { delete document.body.dataset.mapView }
+  }, [showMap])
 
   const togglePane = (next) => {
     setPane(next)
@@ -262,7 +278,13 @@ export default function Listings({ purpose, offMarket = false }) {
           <div className="qre-split">
             <div ref={listRef} className={`qre-split-list ${pane === 'map' ? 'hidden lg:block' : ''}`}>
               <div className="p-4">
-                <h1 className="h-serif text-xl mb-1">{title}</h1>
+                {/* Compact results header: title + real backend count, no wasted height. */}
+                <h1 className="h-serif text-lg leading-tight">
+                  Properties for {label} in Qatar
+                </h1>
+                <p className="text-[13px] text-neutral-500 mt-0.5 mb-3.5">
+                  {mapItems.length.toLocaleString()} {mapItems.length === 1 ? 'property' : 'properties'} found
+                </p>
                 {mapError && (
                   <p className="text-xs text-red-600 mb-3">{mapError} Showing the last results loaded.</p>
                 )}
@@ -270,7 +292,7 @@ export default function Listings({ purpose, offMarket = false }) {
                 {mapItems.length === 0 && !mapLoading
                   ? <EmptyState message="No properties in this area. Pan the map or widen your filters." />
                   : (
-                    <div className="space-y-4">
+                    <div className="qre-grid">
                       {mapItems.map(it => (
                         <MapListingCard
                           key={it.id}

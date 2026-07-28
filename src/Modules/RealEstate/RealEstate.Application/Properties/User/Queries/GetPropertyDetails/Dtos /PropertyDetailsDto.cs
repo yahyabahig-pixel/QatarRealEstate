@@ -1,4 +1,4 @@
-using RealEstate.Domain.Enums;
+﻿using RealEstate.Domain.Enums;
 namespace RealEstate.Application.Properties.User.Queries.GetPropertyDetails.Dtos;
 
 public sealed record PropertyDetailsDto(
@@ -31,4 +31,8 @@ public sealed record PropertyDetailsDto(
     // than dropping a pin somewhere plausible and wrong.
     public double? Latitude { get; init; }
     public double? Longitude { get; init; }
+
+    // The assigned consultant ("Listed by" card + WhatsApp deep link on the details page).
+    // Init member for the same reason as the coordinates: no existing call site changes.
+    public PropertyAgentDto? Agent { get; init; }
 }

@@ -1,4 +1,4 @@
-// Data/Queries/PropertyQueries.cs
+﻿// Data/Queries/PropertyQueries.cs
 using Microsoft.EntityFrameworkCore;
 using RealEstate.Application.Abstractions.Common;
 using RealEstate.Application.Abstractions.Persistence;
@@ -230,6 +230,12 @@ public sealed class PropertyQueries : IPropertyQueries
                 // members on the record so adding them here changed no existing call site.
                 Latitude = p.Latitude,
                 Longitude = p.Longitude,
+                // The assigned consultant, joined here so the public page needs no second call.
+                Agent = _db.Agents
+                    .Where(a => a.Id == p.AgentId)
+                    .Select(a => new PropertyAgentDto(
+                        a.Id, a.Name, a.JobTitle, a.PhotoUrl, a.Slug, a.Phone, a.WhatsApp))
+                    .FirstOrDefault(),
             })
             .FirstOrDefaultAsync(ct);
     }
@@ -396,7 +402,9 @@ public sealed class PropertyQueries : IPropertyQueries
                     ?? p.Media.OrderBy(m => m.Order).Select(m => m.Url).FirstOrDefault(),
                 p.ViewsCount,
                 p.CreatedBy,
-                p.CreatedAtUtc.DateTime))
+                p.CreatedAtUtc.DateTime,
+                p.AgentId,
+                _db.Agents.Where(a => a.Id == p.AgentId).Select(a => a.Name).FirstOrDefault()))
             .ToListAsync(ct);
 
         return new PagedResult<AdminPropertyListItemDto>(items, filter.Page, filter.PageSize, totalCount);
