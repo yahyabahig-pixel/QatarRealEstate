@@ -27,6 +27,12 @@ public static class AppPermissions
         public const string Delete = "Agent.Delete";
     }
 
+    public static class Media
+    {
+        public const string Upload = "Media.Upload";
+        public const string Delete = "Media.Delete";
+    }
+
     public static class User
     {
         public const string Read   = "User.Read";
@@ -62,6 +68,7 @@ public static class AppPermissions
     [
         Property.Read, Property.Create, Property.Update, Property.Delete, Property.Publish,
         Agent.Read, Agent.Create, Agent.Update, Agent.Delete,
+        Media.Upload, Media.Delete,
         User.Read, User.Update, User.Delete,
         Admin.Read, Admin.Create, Admin.Update, Admin.Delete, Admin.AssignPosition,
         Position.Read, Position.Create, Position.Update, Position.Delete,
