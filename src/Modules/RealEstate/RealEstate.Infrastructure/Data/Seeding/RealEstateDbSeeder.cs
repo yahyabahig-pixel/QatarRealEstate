@@ -45,6 +45,38 @@ public sealed class RealEstateDbSeeder
         var featureIds = await SeedFeaturesAsync(ct);
         await SeedPropertiesAsync(propertyTypeIds, featureIds, ct);
         await SeedAgentsAsync(ct);
+        await SeedDevelopmentsAsync(ct);
+    }
+
+    // -----------------------------------------------------------------------------------------
+    //  developments  (matched on Slug — uniquely indexed, so this check is DB-backed)
+    // -----------------------------------------------------------------------------------------
+    private async Task SeedDevelopmentsAsync(CancellationToken ct)
+    {
+        var existing = await _db.Developments.Select(d => d.Slug).ToListAsync(ct);
+        var known = new HashSet<string>(existing, StringComparer.Ordinal);
+        var added = 0;
+
+        foreach (var seed in DevelopmentSeedCatalog.Developments)
+        {
+            if (known.Contains(seed.Slug))
+                continue;
+
+            var development = Must(
+                Development.Create(seed.Name, seed.AreaName, seed.DeliveryYear, seed.CoverImageUrl,
+                                   seed.Slug, seed.Description, seed.UnitsCount, seed.DeveloperName,
+                                   seed.StartingPrice, seed.PaymentPlan),
+                $"Development '{seed.Name}'");
+
+            _db.Developments.Add(development);
+            added++;
+        }
+
+        if (added > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log?.LogInformation("Seed: inserted {Count} development(s).", added);
+        }
     }
 
     // -----------------------------------------------------------------------------------------

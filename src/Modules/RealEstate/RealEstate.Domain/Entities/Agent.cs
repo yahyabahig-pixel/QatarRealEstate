@@ -1,6 +1,6 @@
-using System.Text;
 using BuildingBlocks.Domain.Common;
 using BuildingBlocks.Domain.Common.Results;
+using RealEstate.Domain.Common;
 using RealEstate.Domain.DomainErros;
 
 namespace RealEstate.Domain.Entities;
@@ -102,34 +102,9 @@ public class Agent : AuditableEntity
     public Result<Updated> Activate() { IsActive = true; return Result.Updated; }
     public Result<Updated> Deactivate() { IsActive = false; return Result.Updated; }
 
-    /// <summary>
-    /// Lowercase; letters and digits kept; every other run of characters collapses to a
-    /// single '-'; no leading/trailing '-'. Deterministic, so the seeder and the API produce
-    /// identical slugs for identical input.
-    /// </summary>
-    public static string NormalizeSlug(string input)
-    {
-        var sb = new StringBuilder(input.Length);
-        var lastWasDash = true;                       // suppress a leading dash
-
-        foreach (var ch in input.Trim().ToLowerInvariant())
-        {
-            if (char.IsAsciiLetterOrDigit(ch))
-            {
-                sb.Append(ch);
-                lastWasDash = false;
-            }
-            else if (!lastWasDash)
-            {
-                sb.Append('-');
-                lastWasDash = true;
-            }
-        }
-
-        // strip a trailing dash
-        if (sb.Length > 0 && sb[^1] == '-') sb.Length--;
-        return sb.ToString();
-    }
+    /// <summary>Delegates to the shared slug algorithm (see SlugHelper) — one rule for
+    /// every public-URL entity.</summary>
+    public static string NormalizeSlug(string input) => SlugHelper.Normalize(input);
 
     private static string? Clean(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
