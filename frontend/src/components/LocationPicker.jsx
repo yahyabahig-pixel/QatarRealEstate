@@ -21,8 +21,8 @@ export default function LocationPicker({ value = {}, onChange, variant = 'dark' 
     input: L ? 'field !pl-10' : 'field-dark !pl-10',
     dropdown: L ? 'absolute z-20 mt-1 w-full card !rounded-lg shadow-xl overflow-hidden'
                 : 'absolute z-20 mt-1 w-full panel-dark !rounded-lg shadow-2xl shadow-black/50 overflow-hidden',
-    option: L ? 'w-full text-left px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-gold transition-colors flex items-center gap-2'
-              : 'w-full text-left px-4 py-2.5 text-sm text-neutral-200 hover:bg-white/8 hover:text-gold transition-colors flex items-center gap-2',
+    option: L ? 'w-full text-left px-4 py-2.5 text-sm text-neutral-700 hover:bg-neutral-50 hover:text-primary transition-colors flex items-center gap-2'
+              : 'w-full text-left px-4 py-2.5 text-sm text-neutral-200 hover:bg-white/8 hover:text-primary transition-colors flex items-center gap-2',
     mapBox: L ? 'h-[340px] rounded-xl overflow-hidden border border-neutral-200'
               : 'h-[340px] rounded-xl overflow-hidden border border-white/10',
     panel: L ? 'rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-3'
@@ -172,7 +172,7 @@ export default function LocationPicker({ value = {}, onChange, variant = 'dark' 
             {results.map(r => (
               <button key={r.id} type="button" onClick={() => pickResult(r)}
                 className={C.option}>
-                <IconPin className="w-3.5 h-3.5 shrink-0 text-gold" />
+                <IconPin className="w-3.5 h-3.5 shrink-0 text-primary" />
                 <span className="truncate">{r.name}</span>
               </button>
             ))}
@@ -186,11 +186,11 @@ export default function LocationPicker({ value = {}, onChange, variant = 'dark' 
       {/* selected location summary — no raw coordinate inputs, ever */}
       <div className={C.panel}>
         <div className="flex items-center gap-2 text-sm mb-1.5">
-          <IconPin className="w-4 h-4 text-gold shrink-0" />
+          <IconPin className="w-4 h-4 text-primary shrink-0" />
           {hasPoint
             ? <span className={C.picked}>{v.description || 'Location selected'}</span>
             : <span className="text-neutral-500">Click the map or search above to set the property location.</span>}
-          {resolving && <span className="ml-auto text-xs text-gold flex items-center gap-1.5 shrink-0"><Spinner /> Fetching address…</span>}
+          {resolving && <span className="ml-auto text-xs text-primary flex items-center gap-1.5 shrink-0"><Spinner /> Fetching address…</span>}
         </div>
         {hasPoint && (
           <>

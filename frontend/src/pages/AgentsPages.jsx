@@ -20,11 +20,11 @@ export function AgentsIndex() {
             <div className="p-4">
               <div className="flex items-center justify-between">
                 <h3 className="h-serif text-lg">{a.name}</h3>
-                <span className="text-gold text-sm flex items-center gap-1"><Star />{a.rating > 0 ? `${a.rating.toFixed(1)} /5` : ''}</span>
+                <span className="text-primary text-sm flex items-center gap-1"><Star />{a.rating > 0 ? `${a.rating.toFixed(1)} /5` : ''}</span>
               </div>
               <p className="text-sm text-neutral-500">{a.title}</p>
               <p className="text-xs text-neutral-400 mb-3">Doha, Qatar</p>
-              <Link to={`/find-agent/${a.slug}`} className="gold-link text-gold text-sm">Start working with {a.name.split(' ')[0]}</Link>
+              <Link to={`/find-agent/${a.slug}`} className="brand-link text-primary text-sm">Start working with {a.name.split(' ')[0]}</Link>
             </div>
           </div>
         ))}
@@ -48,7 +48,7 @@ export function AgentProfile() {
         <div>
           <h1 className="h-serif text-4xl mb-1">{a.name}</h1>
           <p className="text-neutral-500 mb-2">{a.title}</p>
-          {a.rating > 0 && <div className="text-gold flex items-center gap-1 mb-4"><Star /> {a.rating.toFixed(1)} /5 · verified reviews</div>}
+          {a.rating > 0 && <div className="text-primary flex items-center gap-1 mb-4"><Star /> {a.rating.toFixed(1)} /5 · verified reviews</div>}
           <p className="text-neutral-700 leading-relaxed max-w-xl mb-6">{a.bio}</p>
           <div className="flex flex-wrap gap-3">
             <a href={`tel:${a.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> Call</a>

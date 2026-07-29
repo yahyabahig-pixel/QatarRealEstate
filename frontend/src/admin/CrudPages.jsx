@@ -88,13 +88,13 @@ export function DevelopmentsAdmin() {
   return (
     <div>
       <PageTitle title="Developments"
-        action={<button className="btn-gold !py-2" onClick={() => open(null)}>+ Add Development</button>} />
+        action={<button className="btn-primary !py-2" onClick={() => open(null)}>+ Add Development</button>} />
       <input placeholder="Search developments…" className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
 
       {rows.length === 0 ? (
         <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
           Nothing here yet.
-          <div className="mt-4"><button className="btn-gold !py-2" onClick={() => open(null)}>+ Add</button></div>
+          <div className="mt-4"><button className="btn-primary !py-2" onClick={() => open(null)}>+ Add</button></div>
         </div>
       ) : (
         <div className="overflow-x-auto panel-dark !rounded-xl">
@@ -112,7 +112,7 @@ export function DevelopmentsAdmin() {
                   <td className="px-4 py-2">{d.unitsCount}</td>
                   <td className="px-4 py-2 text-neutral-400">{d.developer || '—'}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
-                    <button className="text-gold hover:underline mr-3" onClick={() => open(d)}>Edit</button>
+                    <button className="text-primary hover:underline mr-3" onClick={() => open(d)}>Edit</button>
                     <button className="text-red-400 hover:underline"
                       onClick={() => confirm(`Delete "${d.name}"? This cannot be undone.`, () => remove(d.id))}>Delete</button>
                   </td>
@@ -152,8 +152,8 @@ export function DevelopmentsAdmin() {
 
 
             <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
-              <button className="btn-gold flex items-center gap-2" disabled={saving || uploading}>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn-primary flex items-center gap-2" disabled={saving || uploading}>
                 {saving && <Spinner />}{saving ? 'Saving…' : 'Save Development'}
               </button>
             </div>
@@ -235,7 +235,7 @@ export function FeaturesAdmin() {
       { key: 'icon', label: 'Icon', render: r => {
         const resolved = resolveFeatureIcon(r.icon)
         return resolved
-          ? <span className="inline-flex items-center gap-2"><span className="w-7 h-7 rounded-lg bg-gold/15 text-gold flex items-center justify-center"><resolved.Icon className="w-4 h-4" /></span><span className="text-xs text-neutral-400">{resolved.name}</span></span>
+          ? <span className="inline-flex items-center gap-2"><span className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center"><resolved.Icon className="w-4 h-4" /></span><span className="text-xs text-neutral-400">{resolved.name}</span></span>
           : '—'
       } },
       { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-500/15 text-green-400', retired: 'bg-white/10 text-neutral-400' }} /> },
@@ -347,7 +347,7 @@ export function LeadsAdmin() {
                   <td className="px-4 py-3 text-white">{l.name}</td>
                   <td className="px-4 py-3 text-neutral-400"><div>{l.phone}</div><div className="text-[11px]">{l.email}</div></td>
                   <td className="px-4 py-3"><StatusBadge value={LEAD_TYPE_LABELS[typeOf(l)] || typeOf(l)}
-                    map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-gold/15 text-gold', 'General Inquiry': 'bg-white/10 text-neutral-300' }} /></td>
+                    map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-primary/15 text-primary', 'General Inquiry': 'bg-white/10 text-neutral-300' }} /></td>
                   <td className="px-4 py-3 max-w-[220px]"><div className="truncate text-neutral-300">{linked(l) || '—'}</div><div className="text-[11px] text-neutral-500">{l.source}</div></td>
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <select value={l.status} className="field-dark !py-1 !w-auto" onChange={e => setStatus(l, e.target.value)}>
@@ -356,7 +356,7 @@ export function LeadsAdmin() {
                     </select>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                    <button className="text-gold hover:underline mr-3" onClick={() => view(l)}>View</button>
+                    <button className="text-primary hover:underline mr-3" onClick={() => view(l)}>View</button>
                     <button className="text-red-400 hover:underline"
                       onClick={() => confirm(`Delete the lead from "${l.name}"? This cannot be undone.`, () => remove(l.id))}>Delete</button>
                   </td>
@@ -375,7 +375,7 @@ export function LeadsAdmin() {
             <div className="space-y-4 text-sm text-neutral-300">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge value={selected.typeLabel || LEAD_TYPE_LABELS[typeOf(selected)]}
-                  map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-gold/15 text-gold', 'General Inquiry': 'bg-white/10 text-neutral-300' }} />
+                  map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-primary/15 text-primary', 'General Inquiry': 'bg-white/10 text-neutral-300' }} />
                 <StatusBadge value={selected.status} />
                 <span className="text-neutral-500 text-xs ml-auto">{selected.date} · {selected.source}</span>
               </div>
@@ -388,14 +388,14 @@ export function LeadsAdmin() {
 
               {selected.property && (
                 <Link to={`/property/${selected.property.purpose || 'buy'}/${selected.property.id}`}
-                  className="flex items-center gap-4 panel-dark p-3 hover:border-gold transition-colors group">
+                  className="flex items-center gap-4 panel-dark p-3 hover:border-primary transition-colors group">
                   {selected.property.coverImage && <img src={selected.property.coverImage} alt="" className="w-24 h-16 object-cover rounded-lg shrink-0" />}
                   <div className="min-w-0">
-                    <div className="text-white truncate group-hover:text-gold transition-colors">{selected.property.title}</div>
+                    <div className="text-white truncate group-hover:text-primary transition-colors">{selected.property.title}</div>
                     <div className="text-xs text-neutral-500">{[selected.property.type, selected.property.city].filter(Boolean).join(' · ')}</div>
-                    {selected.property.price != null && <div className="text-gold text-xs font-semibold mt-0.5">{Number(selected.property.price).toLocaleString()} {selected.property.currency || 'QAR'}</div>}
+                    {selected.property.price != null && <div className="text-primary text-xs font-semibold mt-0.5">{Number(selected.property.price).toLocaleString()} {selected.property.currency || 'QAR'}</div>}
                   </div>
-                  <span className="ml-auto text-gold text-xs whitespace-nowrap">View property →</span>
+                  <span className="ml-auto text-primary text-xs whitespace-nowrap">View property →</span>
                 </Link>
               )}
 
@@ -449,7 +449,7 @@ export function SettingsAdmin() {
             <textarea rows="2" dir="rtl" lang="ar" className="field-dark text-right" value={f.footerAboutAr ?? ''} onChange={set('footerAboutAr')} />
           </Field>
         </div>
-        <div className="md:col-span-2"><button className="btn-gold">Save Settings</button></div>
+        <div className="md:col-span-2"><button className="btn-primary">Save Settings</button></div>
       </form>
     </div>
   )

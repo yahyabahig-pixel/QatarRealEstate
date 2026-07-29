@@ -273,7 +273,7 @@ export default function PropertiesAdmin() {
   return (
     <div>
       <PageTitle title="Properties"
-        action={hasPermission('Property.Create') && <button className="btn-gold !py-2" onClick={() => open(null)}>+ Add Property</button>} />
+        action={hasPermission('Property.Create') && <button className="btn-primary !py-2" onClick={() => open(null)}>+ Add Property</button>} />
 
       {/* filters */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
@@ -297,7 +297,7 @@ export default function PropertiesAdmin() {
           <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
             <tr>{['', 'Title', 'Type', 'Purpose', 'Location', 'Price', 'Status', 'Viewers', 'Agent', 'Actions'].map(h => h === 'Viewers' ? (
               <th key={h} className="px-3 py-3 whitespace-nowrap">
-                <button type="button" className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-gold transition-colors"
+                <button type="button" className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-primary transition-colors"
                   title="Sort by views"
                   onClick={() => setViewSort(s => s === null ? 'desc' : s === 'desc' ? 'asc' : null)}>
                   Viewers
@@ -314,7 +314,7 @@ export default function PropertiesAdmin() {
                 <td className="px-3 py-2">{p.type}</td>
                 <td className="px-3 py-2 capitalize">{p.purpose}</td>
                 <td className="px-3 py-2 text-neutral-400">{p.area || p.city}</td>
-                <td className="px-3 py-2 text-gold whitespace-nowrap">{p.priceOnRequest ? 'On request' : `${p.price.toLocaleString()} ${p.currency}`}</td>
+                <td className="px-3 py-2 text-primary whitespace-nowrap">{p.priceOnRequest ? 'On request' : `${p.price.toLocaleString()} ${p.currency}`}</td>
                 <td className="px-3 py-2"><StatusBadge value={p.status} /></td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5 text-neutral-300">
@@ -328,7 +328,7 @@ export default function PropertiesAdmin() {
                     {hasPermission('Property.Publish') && (
                       <span className="relative block">
                         <button type="button" title="Change status"
-                          className="w-full flex items-center justify-between gap-2 border border-white/12 rounded-lg px-2.5 py-1.5 hover:border-gold transition-colors"
+                          className="w-full flex items-center justify-between gap-2 border border-white/12 rounded-lg px-2.5 py-1.5 hover:border-primary transition-colors"
                           aria-haspopup="menu" aria-expanded={statusMenuFor === p.id}
                           onClick={() => setStatusMenuFor(id => id === p.id ? null : p.id)}>
                           <StatusBadge value={p.status} />
@@ -341,10 +341,10 @@ export default function PropertiesAdmin() {
                               <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-neutral-500">Change status</div>
                               {STATUS_OPTIONS.map(([v, label]) => (
                                 <button key={v} role="menuitem" disabled={v === p.status}
-                                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-2 transition-colors ${v === p.status ? 'text-neutral-500 cursor-default' : 'text-neutral-200 hover:bg-white/8 hover:text-gold'}`}
+                                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-2 transition-colors ${v === p.status ? 'text-neutral-500 cursor-default' : 'text-neutral-200 hover:bg-white/8 hover:text-primary'}`}
                                   onClick={() => applyStatus(p, v)}>
                                   {p.status === 'archived' && v === 'available' ? 'Restore (Publish)' : label}
-                                  {v === p.status && <IconCheck className="w-3.5 h-3.5 text-gold" />}
+                                  {v === p.status && <IconCheck className="w-3.5 h-3.5 text-primary" />}
                                 </button>
                               ))}
                             </div>
@@ -356,7 +356,7 @@ export default function PropertiesAdmin() {
                     <div className="flex gap-1.5">
                       {hasPermission('Property.Update') && (
                         <button type="button" title="Edit property"
-                          className="flex-1 inline-flex items-center justify-center gap-1.5 border border-white/12 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-200 hover:border-gold hover:text-gold transition-colors"
+                          className="flex-1 inline-flex items-center justify-center gap-1.5 border border-white/12 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-200 hover:border-primary hover:text-primary transition-colors"
                           onClick={() => open(p)}>
                           <IconPencil className="w-3.5 h-3.5" /> Edit
                         </button>
@@ -460,7 +460,7 @@ export default function PropertiesAdmin() {
                   : (
                     <div className="flex flex-wrap gap-2">
                       {featureOptions.map(f => (
-                        <label key={f.id} className={`cursor-pointer rounded-full border px-3 py-1 text-xs inline-flex items-center gap-1.5 ${form.amenities.includes(f.name) ? 'bg-gold text-white border-gold' : 'border-neutral-600 text-neutral-300'}`}>
+                        <label key={f.id} className={`cursor-pointer rounded-full border px-3 py-1 text-xs inline-flex items-center gap-1.5 ${form.amenities.includes(f.name) ? 'bg-primary text-white border-primary' : 'border-neutral-600 text-neutral-300'}`}>
                           <input type="checkbox" className="hidden" checked={form.amenities.includes(f.name)}
                             onChange={() => setV('amenities', form.amenities.includes(f.name) ? form.amenities.filter(x => x !== f.name) : [...form.amenities, f.name])} />
                           {(() => { const r = resolveFeatureIcon(f.icon); return r ? <r.Icon className="w-3.5 h-3.5" /> : null })()}
@@ -475,17 +475,17 @@ export default function PropertiesAdmin() {
               <Field label="Photos (uploaded from your device — first one is the cover)">
                 <input ref={fileInput} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
                 <div className="flex items-center gap-3 mb-2">
-                  <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold"
+                  <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary"
                     onClick={() => fileInput.current?.click()}>Choose photos…</button>
                   {uploading.length > 0 && (
-                    <span className="text-xs text-gold flex items-center gap-2"><Spinner /> Uploading {uploading.join(', ')}…</span>
+                    <span className="text-xs text-primary flex items-center gap-2"><Spinner /> Uploading {uploading.join(', ')}…</span>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {form.images.map((src, i) => (
                     <div key={i} className="relative group">
                       <img src={src} alt="" className="w-24 h-16 object-cover rounded-lg border border-white/10" />
-                      {i === 0 && <span className="absolute top-1 left-1 bg-gold text-white font-bold text-[9px] px-1.5 py-0.5 rounded">COVER</span>}
+                      {i === 0 && <span className="absolute top-1 left-1 bg-primary text-white font-bold text-[9px] px-1.5 py-0.5 rounded">COVER</span>}
                       <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 text-xs transition-opacity">
                         <button type="button" aria-label="Move left" className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, -1)}><IconChevronLeft className="w-3.5 h-3.5" /></button>
                         <button type="button" aria-label="Remove photo" className="w-6 h-6 rounded flex items-center justify-center text-red-400 hover:bg-white/20" onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}><IconX className="w-3.5 h-3.5" /></button>
@@ -500,8 +500,8 @@ export default function PropertiesAdmin() {
               </Field>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
-              <button className="btn-gold flex items-center gap-2" disabled={saving || uploading.length > 0}>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn-primary flex items-center gap-2" disabled={saving || uploading.length > 0}>
                 {saving && <Spinner />}
                 {saving ? 'Saving property…' : uploading.length > 0 ? 'Waiting for uploads…' : 'Save Property'}
               </button>

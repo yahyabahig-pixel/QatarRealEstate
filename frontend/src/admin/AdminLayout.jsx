@@ -28,22 +28,22 @@ export default function AdminLayout() {
   const visibleNav = NAV.filter(n => !n.perm || hasPermission(n.perm))
 
   return (
-    <div className="min-h-screen bg-[#111318] text-neutral-200 flex">
+    <div className="min-h-screen bg-[#1B1C2B] text-neutral-200 flex">
       {/* sidebar */}
       <aside className={`bg-ink border-r border-white/8 flex flex-col fixed inset-y-0 z-40 w-60 transition-transform lg:translate-x-0 lg:static ${drawer ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 flex items-center px-5 border-b border-white/8">
-          <span className="h-serif text-lg text-white">Prime<span className="text-gold">Admin</span></span>
+          <span className="h-serif text-lg text-white">Prime<span className="text-primary">Admin</span></span>
         </div>
         <nav className="flex-1 py-4 px-3 space-y-0.5 overflow-y-auto">
           {visibleNav.map(({ to, label, Icon, end }) => (
             <NavLink key={to} to={to} end={end} onClick={() => setDrawer(false)}
-              className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${isActive ? 'text-gold bg-white/6' : 'text-neutral-400 hover:text-white hover:bg-white/4'}`}>
+              className={({ isActive }) => `flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${isActive ? 'text-primary bg-white/6' : 'text-neutral-400 hover:text-white hover:bg-white/4'}`}>
               <Icon className="w-[18px] h-[18px] shrink-0" /><span>{label}</span>
             </NavLink>
           ))}
         </nav>
         <button onClick={() => { logout(); navigate('/admin/login') }}
-          className="m-4 flex items-center justify-center gap-2 border border-white/10 rounded-lg py-2.5 text-sm font-medium text-neutral-400 hover:border-gold hover:text-gold transition-colors">
+          className="m-4 flex items-center justify-center gap-2 border border-white/10 rounded-lg py-2.5 text-sm font-medium text-neutral-400 hover:border-primary hover:text-primary transition-colors">
           <IconLogout className="w-4 h-4" /> Logout
         </button>
       </aside>
@@ -57,9 +57,9 @@ export default function AdminLayout() {
             <span className="text-sm text-neutral-400 font-medium">Admin Panel</span>
           </div>
           <div className="flex items-center gap-4 text-sm">
-            <Link to="/" className="text-gold gold-link hidden sm:inline-flex items-center gap-1 font-medium">View site <IconArrowUpRight className="w-3.5 h-3.5" /></Link>
+            <Link to="/" className="text-primary brand-link hidden sm:inline-flex items-center gap-1 font-medium">View site <IconArrowUpRight className="w-3.5 h-3.5" /></Link>
             <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-full bg-gold text-white flex items-center justify-center font-bold">
+              <div className="w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center font-bold">
                 {user?.fullName?.[0] || 'A'}
               </div>
               <div className="leading-tight hidden sm:block">

@@ -12,7 +12,7 @@
 
 export const COMPANY = {
   // Brand ---------------------------------------------------------------------------
-  // Rendered as two parts: the first word in white, the rest in gold.
+  // Rendered as two parts: the first word in white, the rest in brand red.
   name: 'AL-Madenah RealEstate',
   tagline: "Qatar's Most Exclusive Real Estate Portal",
 

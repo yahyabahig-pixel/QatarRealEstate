@@ -33,7 +33,7 @@ export function AdminsAdmin() {
   return (
     <div>
       <PageTitle title="Admins"
-        action={hasPermission('Admin.Create') && <button className="btn-gold !py-2" onClick={() => setCreating(true)}>+ Create Admin</button>} />
+        action={hasPermission('Admin.Create') && <button className="btn-primary !py-2" onClick={() => setCreating(true)}>+ Create Admin</button>} />
       <div className="overflow-x-auto panel-dark !rounded-xl">
         <table className="w-full text-sm">
           <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
@@ -43,8 +43,8 @@ export function AdminsAdmin() {
             {rows.map(a => (
               <tr key={a.id} className="hover:bg-white/4 transition-colors">
                 <td className="px-4 py-3">
-                  <Link to={`/admin/admins/${a.id}`} className="text-white hover:text-gold">{a.fullName}</Link>
-                  {a.isMainAdmin && <span className="ml-2 text-gold text-xs border border-gold/40 px-1.5 py-0.5">★ MAIN ADMIN</span>}
+                  <Link to={`/admin/admins/${a.id}`} className="text-white hover:text-primary">{a.fullName}</Link>
+                  {a.isMainAdmin && <span className="ml-2 text-primary text-xs border border-primary/40 px-1.5 py-0.5">★ MAIN ADMIN</span>}
                   {a.id === user?.id && <span className="ml-2 text-neutral-500 text-xs">(you)</span>}
                 </td>
                 <td className="px-4 py-3 text-neutral-400">{a.email}</td>
@@ -86,7 +86,7 @@ export function AdminsAdmin() {
                 {positions.filter(p => p.isActive).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
-            <button className="btn-gold w-full">Create Admin</button>
+            <button className="btn-primary w-full">Create Admin</button>
           </form>
         </Modal>
       )}
@@ -119,13 +119,13 @@ export function AdminDetail() {
         <div className="flex flex-wrap gap-3 items-center text-sm">
           <span className="text-neutral-400">{admin.email}</span>
           <StatusBadge value={admin.isActive ? 'active' : 'inactive'} map={{ active: 'bg-green-500/15 text-green-400', inactive: 'bg-red-900 text-red-300' }} />
-          {admin.isMainAdmin && <span className="text-gold text-xs border border-gold/40 px-2 py-0.5">★ MAIN ADMIN — full access, protected account</span>}
+          {admin.isMainAdmin && <span className="text-primary text-xs border border-primary/40 px-2 py-0.5">★ MAIN ADMIN — full access, protected account</span>}
         </div>
 
         {!admin.isMainAdmin && hasPermission('Admin.Update') && (
           <form className="flex gap-3 items-end" onSubmit={e => { e.preventDefault(); run(() => adminsApi.update(admin.id, { fullName: name }), 'Name updated.') }}>
             <div className="flex-1"><Field label="Full name"><input className="field-dark" value={name} onChange={e => setName(e.target.value)} /></Field></div>
-            <button className="btn-gold !py-2">Save</button>
+            <button className="btn-primary !py-2">Save</button>
           </form>
         )}
 
@@ -139,7 +139,7 @@ export function AdminDetail() {
                 </select>
               </Field>
             </div>
-            <button className="btn-gold !py-2" onClick={() =>
+            <button className="btn-primary !py-2" onClick={() =>
               positionId ? run(() => adminsApi.assignPosition(admin.id, positionId), 'Position assigned.')
                 : run(() => adminsApi.removePosition(admin.id), 'Position removed.')}>Apply</button>
           </div>
@@ -175,22 +175,22 @@ export function PositionsAdmin() {
   return (
     <div>
       <PageTitle title="Positions"
-        action={hasPermission('Position.Create') && <button className="btn-gold !py-2" onClick={() => { setEditing({}); setForm({ name: '', description: '' }) }}>+ Create Position</button>} />
+        action={hasPermission('Position.Create') && <button className="btn-primary !py-2" onClick={() => { setEditing({}); setForm({ name: '', description: '' }) }}>+ Create Position</button>} />
       <div className="grid md:grid-cols-2 gap-4">
         {rows.map(p => (
           <div key={p.id} className="panel-dark p-5">
             <div className="flex justify-between items-start mb-2">
-              <Link to={`/admin/positions/${p.id}`} className="h-serif text-lg text-white hover:text-gold">{p.name}</Link>
+              <Link to={`/admin/positions/${p.id}`} className="h-serif text-lg text-white hover:text-primary">{p.name}</Link>
               <span className="text-xs text-neutral-500">{p.adminCount} admin(s)</span>
             </div>
             <p className="text-sm text-neutral-400 mb-3">{p.description}</p>
             <div className="flex flex-wrap gap-1.5 mb-4">
               {p.permissions.length === 0
                 ? <span className="text-xs text-neutral-600">No permissions yet</span>
-                : p.permissions.map(x => <span key={x} className="border border-gold/30 text-gold px-2 py-0.5 text-[11px]">{x}</span>)}
+                : p.permissions.map(x => <span key={x} className="border border-primary/30 text-primary px-2 py-0.5 text-[11px]">{x}</span>)}
             </div>
             <div className="flex gap-3 text-sm">
-              <Link to={`/admin/positions/${p.id}`} className="text-gold hover:underline">Manage permissions</Link>
+              <Link to={`/admin/positions/${p.id}`} className="text-primary hover:underline">Manage permissions</Link>
               {hasPermission('Position.Update') && <button className="text-neutral-300 hover:underline" onClick={() => { setEditing(p); setForm({ name: p.name, description: p.description }) }}>Edit</button>}
               {hasPermission('Position.Delete') && <button className="text-red-400 hover:underline"
                 onClick={() => confirm(`Delete position "${p.name}"? Admins holding it block deletion.`, () => run(() => positionsApi.remove(p.id), 'Position deleted.'))}>Delete</button>}
@@ -209,7 +209,7 @@ export function PositionsAdmin() {
           }}>
             <Field label="Name"><input required className="field-dark" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field>
             <Field label="Description"><textarea rows="3" className="field-dark" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></Field>
-            <button className="btn-gold w-full">Save</button>
+            <button className="btn-primary w-full">Save</button>
           </form>
         </Modal>
       )}
@@ -239,7 +239,7 @@ export function PositionDetail() {
     <div className="max-w-3xl">
       <PageTitle title={position.name} />
       <p className="text-neutral-400 text-sm mb-6">{position.description}</p>
-      {!canAssign && <p className="text-xs text-neutral-500 mb-4">You can view this position's permissions but changing them requires <span className="text-gold">Permission.Assign</span> (Main Admin by default).</p>}
+      {!canAssign && <p className="text-xs text-neutral-500 mb-4">You can view this position's permissions but changing them requires <span className="text-primary">Permission.Assign</span> (Main Admin by default).</p>}
       <div className="space-y-6">
         {groups.map(g => (
           <div key={g}>
@@ -251,7 +251,7 @@ export function PositionDetail() {
                   <button key={perm} disabled={!canAssign}
                     onClick={() => run(() => has ? positionsApi.removePermission(position.id, perm) : positionsApi.assignPermission(position.id, perm),
                       has ? `Removed ${perm}.` : `Granted ${perm}.`)}
-                    className={`px-3 py-1.5 text-xs border transition-colors ${has ? 'bg-gold text-black border-gold' : 'border-neutral-700 text-neutral-400 hover:border-gold'} ${!canAssign ? 'opacity-60 cursor-not-allowed' : ''}`}>
+                    className={`px-3 py-1.5 text-xs border transition-colors ${has ? 'bg-primary text-black border-primary' : 'border-neutral-700 text-neutral-400 hover:border-primary'} ${!canAssign ? 'opacity-60 cursor-not-allowed' : ''}`}>
                     {has ? '✓ ' : ''}{perm}
                   </button>
                 )
@@ -273,7 +273,7 @@ export function PermissionsAdmin() {
   return (
     <div className="max-w-3xl">
       <PageTitle title="Permission Catalog" />
-      <p className="text-neutral-400 text-sm mb-6">Every permission the system knows. Permissions are granted to <Link to="/admin/positions" className="text-gold">Positions</Link>, never directly to people — and never by the person themselves.</p>
+      <p className="text-neutral-400 text-sm mb-6">Every permission the system knows. Permissions are granted to <Link to="/admin/positions" className="text-primary">Positions</Link>, never directly to people — and never by the person themselves.</p>
       <div className="space-y-6">
         {groups.map(g => (
           <div key={g} className="panel-dark p-5">

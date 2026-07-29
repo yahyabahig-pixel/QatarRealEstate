@@ -66,7 +66,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
 
       {areaLabel && (
         <div className="flex items-center gap-1.5 mb-3 text-sm" style={{ color: 'var(--muted)' }}>
-          <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" style={{ color: 'var(--gold)' }} aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4" style={{ color: 'var(--primary)' }} aria-hidden="true">
             <path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z" />
           </svg>
           <span>{areaLabel}</span>
@@ -93,7 +93,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
       {approx ? <div className="mb-10" /> : (
         <a href={'https://maps.google.com/?q=' + latitude + ',' + longitude}
            target="_blank" rel="noreferrer"
-           className="gold-link text-gold text-sm inline-block mt-3 mb-10">
+           className="brand-link text-primary text-sm inline-block mt-3 mb-10">
           View on Google Maps ↗
         </a>
       )}

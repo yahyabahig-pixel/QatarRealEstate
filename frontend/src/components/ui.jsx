@@ -37,15 +37,16 @@ export function useFavourite(id) {
   return [fav, toggle]
 }
 
-export function SectionHeading({ eyebrow, title, link, linkLabel, dark }) {
+export function SectionHeading({ eyebrow, title, subtitle, link, linkLabel, dark }) {
   return (
     <div className="flex items-end justify-between mb-10 gap-4">
-      <div>
+      <div className="max-w-2xl">
         {eyebrow && <div className="eyebrow mb-2.5">{eyebrow}</div>}
         <h2 className={`h-serif text-2xl md:text-[2rem] leading-tight ${dark ? 'text-white' : 'text-ink'}`}>{title}</h2>
+        {subtitle && <p className={`mt-2.5 text-[15px] leading-relaxed ${dark ? 'text-neutral-400' : 'text-mist'}`}>{subtitle}</p>}
       </div>
       {link && (
-        <Link to={link} className="gold-link text-gold text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1">
+        <Link to={link} className="brand-link text-primary text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1">
           {linkLabel || 'View all'} <IconChevronRight className="w-3.5 h-3.5" />
         </Link>
       )}
@@ -59,7 +60,7 @@ export function Breadcrumb({ items }) {
       {items.map((it, i) => (
         <span key={i} className="flex items-center gap-1.5">
           {i > 0 && <IconChevronRight className="w-3 h-3 text-neutral-400" />}
-          {it.to ? <Link to={it.to} className="hover:text-gold transition-colors">{it.label}</Link> : <span className="text-neutral-700 font-medium">{it.label}</span>}
+          {it.to ? <Link to={it.to} className="hover:text-primary transition-colors">{it.label}</Link> : <span className="text-neutral-700 font-medium">{it.label}</span>}
         </span>
       ))}
     </nav>

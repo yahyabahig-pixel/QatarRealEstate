@@ -28,7 +28,7 @@ export function AboutUs() {
         <div className="grid sm:grid-cols-3 gap-4 !mt-10">
           {[['Trust', 'Verified listings, transparent data'], ['Speed', 'Response inside one business hour'], ['Discretion', 'Off-market handled quietly']].map(([t, d]) => (
             <div key={t} className="card p-5 text-center">
-              <div className="h-serif text-xl text-gold mb-1">{t}</div>
+              <div className="h-serif text-xl text-primary mb-1">{t}</div>
               <div className="text-xs text-neutral-500">{d}</div>
             </div>
           ))}
@@ -37,7 +37,7 @@ export function AboutUs() {
       <div className="border-y border-neutral-200"><div className="max-w-7xl mx-auto px-4"><LogoMarquee /></div></div>
       <div className="text-center py-16">
         <h2 className="h-serif text-3xl mb-4">Meet the people behind the portfolio</h2>
-        <Link to="/find-agent" className="btn-gold">Meet the Team</Link>
+        <Link to="/find-agent" className="btn-primary">Meet the Team</Link>
       </div>
     </div>
   )
@@ -121,11 +121,11 @@ export function ListProperty() {
           <div className="eyebrow mb-2">Owners & landlords</div>
           <h1 className="h-serif text-4xl mb-6">List your property with us</h1>
           <ul className="space-y-4 text-neutral-700">
-            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Qualified buyers, not clicks</b> — inquiries are screened before they reach you.</span></li>
-            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Professional media included</b> — photography, floor plans and video at our cost.</span></li>
-            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Priced from evidence</b> — valuations built on closed transactions, not hopes.</span></li>
-            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>One point of contact</b> — a named consultant owns your listing end to end.</span></li>
-            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-gold/15 text-gold flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Off-market on request</b> — sell quietly to our private client list.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Qualified buyers, not clicks</b> — inquiries are screened before they reach you.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Professional media included</b> — photography, floor plans and video at our cost.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Priced from evidence</b> — valuations built on closed transactions, not hopes.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>One point of contact</b> — a named consultant owns your listing end to end.</span></li>
+            <li className="flex gap-3"><span className="w-5 h-5 rounded-full bg-primary/15 text-primary flex items-center justify-center shrink-0 mt-0.5"><IconCheck className="w-3 h-3" /></span><span><b>Off-market on request</b> — sell quietly to our private client list.</span></li>
           </ul>
         </div>
         <form className="card p-6 space-y-3" onSubmit={submit}>
@@ -149,7 +149,7 @@ export function ListProperty() {
             />
           </div>
           <textarea placeholder="Anything else we should know?" rows="3" className="field" value={f.message} onChange={set('message')} />
-          <button className="btn-gold w-full" disabled={sending}>{sending ? 'Sending…' : 'Request a Valuation'}</button>
+          <button className="btn-primary w-full" disabled={sending}>{sending ? 'Sending…' : 'Request a Valuation'}</button>
         </form>
       </div>
     </div>
@@ -159,10 +159,10 @@ export function ListProperty() {
 export function NotFound() {
   return (
     <div className="min-h-[70vh] bg-ink text-white flex flex-col items-center justify-center text-center px-4 pt-16">
-      <div className="h-serif text-8xl text-gold mb-4">404</div>
+      <div className="h-serif text-8xl text-primary mb-4">404</div>
       <h1 className="h-serif text-3xl mb-3">This address doesn't exist</h1>
       <p className="text-neutral-400 mb-8">The page you're looking for has moved, sold, or never listed.</p>
-      <Link to="/" className="btn-gold">Back to the homepage</Link>
+      <Link to="/" className="btn-primary">Back to the homepage</Link>
     </div>
   )
 }

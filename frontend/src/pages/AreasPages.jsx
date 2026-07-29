@@ -51,7 +51,7 @@ export function AreaDetail() {
         <div className="grid sm:grid-cols-3 gap-4 max-w-xl mb-14">
           {[['Total properties', all.length], ['For rent', forRent.length], ['For sale', forSale.length]].map(([k, v]) => (
             <div key={k} className="card p-5 text-center">
-              <div className="h-serif text-3xl text-gold">{v}</div>
+              <div className="h-serif text-3xl text-primary">{v}</div>
               <div className="text-xs uppercase tracking-wider text-neutral-500 mt-1">{k}</div>
             </div>
           ))}
@@ -62,7 +62,7 @@ export function AreaDetail() {
         )}
         <div className="mt-12 flex flex-wrap gap-x-6 gap-y-2 text-sm">
           {[`Apartments for rent in ${a.name}`, `Apartments for sale in ${a.name}`, `Villas in ${a.name}`, `Penthouses in ${a.name}`].map(l => (
-            <Link key={l} to={l.includes('rent') ? '/rent' : '/buy'} className="gold-link text-gold">{l}</Link>
+            <Link key={l} to={l.includes('rent') ? '/rent' : '/buy'} className="brand-link text-primary">{l}</Link>
           ))}
         </div>
       </div>

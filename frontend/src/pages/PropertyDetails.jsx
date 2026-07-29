@@ -86,7 +86,7 @@ export default function PropertyDetails() {
   if (!p) return (
     <div className="pt-32 pb-20 text-center">
       <h1 className="h-serif text-3xl mb-4">Listing not found</h1>
-      <Link to="/buy" className="btn-gold">Browse properties</Link>
+      <Link to="/buy" className="btn-primary">Browse properties</Link>
     </div>
   )
 
@@ -116,7 +116,7 @@ export default function PropertyDetails() {
             <IconCamera className="w-4 h-4" /> Gallery ({images.length})
           </button>
           <div className="absolute top-4 right-4 flex gap-2">
-            <button className="bg-white/90 backdrop-blur w-9 h-9 rounded-full flex items-center justify-center text-ink hover:text-gold transition-colors shadow-sm" title="Share" aria-label="Share"><IconShare className="w-4 h-4" /></button>
+            <button className="bg-white/90 backdrop-blur w-9 h-9 rounded-full flex items-center justify-center text-ink hover:text-primary transition-colors shadow-sm" title="Share" aria-label="Share"><IconShare className="w-4 h-4" /></button>
             <button className="bg-white/90 backdrop-blur w-9 h-9 rounded-full flex items-center justify-center text-ink hover:text-error transition-colors shadow-sm" title="Bookmark" aria-label="Bookmark"><IconHeart className="w-4 h-4" /></button>
           </div>
         </div>
@@ -174,12 +174,12 @@ export default function PropertyDetails() {
                         || featureCatalog.find(x => x.name === a)?.icon
                       const r = resolveFeatureIcon(key)
                       const C = r ? r.Icon : IconSparkle
-                      return <C className="w-3.5 h-3.5 text-gold" />
+                      return <C className="w-3.5 h-3.5 text-primary" />
                     })()} {a}</span>
                 ))}
               </div>
               {allAmenities.length > 6 && (
-                <button onClick={() => setShowAllAmenities(s => !s)} className="text-gold text-sm gold-link mb-10">
+                <button onClick={() => setShowAllAmenities(s => !s)} className="text-primary text-sm brand-link mb-10">
                   {showAllAmenities ? 'Show less' : `Show all ${allAmenities.length}`}
                 </button>
               )}
@@ -224,9 +224,9 @@ export default function PropertyDetails() {
                 <div className="flex items-center gap-3">
                   <img src={agent.photo} alt={agent.name} className="w-14 h-14 rounded-full object-cover bg-neutral-100" />
                   <div className="min-w-0">
-                    <Link to={`/find-agent/${agent.slug}`} className="font-medium hover:text-gold block truncate">{agent.name}</Link>
+                    <Link to={`/find-agent/${agent.slug}`} className="font-medium hover:text-primary block truncate">{agent.name}</Link>
                     <div className="text-xs text-neutral-500 truncate">{agent.title}</div>
-                    {agent.rating > 0 && <div className="text-xs text-gold flex items-center gap-1"><Star /> {agent.rating.toFixed(1)} · verified reviews</div>}
+                    {agent.rating > 0 && <div className="text-xs text-primary flex items-center gap-1"><Star /> {agent.rating.toFixed(1)} · verified reviews</div>}
                   </div>
                 </div>
               </div>
@@ -246,7 +246,7 @@ export default function PropertyDetails() {
                 )}
               </div>
             )}
-            <button onClick={() => setShowInquiry(s => !s)} className="btn-gold w-full mt-2">Submit Inquiry</button>
+            <button onClick={() => setShowInquiry(s => !s)} className="btn-primary w-full mt-2">Submit Inquiry</button>
             {showInquiry && <div className="mt-4"><InquiryForm compact propertyId={p.id} agentId={agent?.id} source="Property inquiry" /></div>}
           </div>
         </aside>
@@ -254,16 +254,16 @@ export default function PropertyDetails() {
 
       {/* mobile fixed bottom bar */}
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-ink text-white flex items-center justify-between px-4 py-3">
-        <span className="text-gold font-semibold text-sm">{fmtPrice(p)}</span>
+        <span className="text-primary font-semibold text-sm">{fmtPrice(p)}</span>
         <div className="flex gap-2">
-          {agent?.phone && <a href={`tel:${waDigits(agent.phone)}`} className="btn-gold !py-1.5 text-xs">Call</a>}
+          {agent?.phone && <a href={`tel:${waDigits(agent.phone)}`} className="btn-primary !py-1.5 text-xs">Call</a>}
           {waHref(agent, p) && (
             <a href={waHref(agent, p)} target="_blank" rel="noreferrer"
               className="bg-[#25d366] rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">
               <WhatsAppIcon /> WhatsApp
             </a>
           )}
-          {!agent && <button onClick={() => setShowInquiry(true)} className="btn-gold !py-1.5 text-xs">Inquire</button>}
+          {!agent && <button onClick={() => setShowInquiry(true)} className="btn-primary !py-1.5 text-xs">Inquire</button>}
         </div>
       </div>
 

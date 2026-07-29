@@ -23,7 +23,7 @@ export default function Footer() {
             <h4 className="text-white font-medium mb-3">{col.title}</h4>
             <ul className="space-y-2">
               {col.links.map(l => (
-                <li key={l}><Link to={l.includes('rent') ? '/rent' : '/buy'} className="hover:text-gold text-neutral-400">{l}</Link></li>
+                <li key={l}><Link to={l.includes('rent') ? '/rent' : '/buy'} className="hover:text-primary text-neutral-400">{l}</Link></li>
               ))}
             </ul>
           </div>
@@ -33,16 +33,16 @@ export default function Footer() {
       {/* main footer */}
       <div className="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
         <div className="md:col-span-1">
-          <div className="h-serif text-xl text-white mb-4">{brandFirst} <span className="text-gold">{brandRest}</span></div>
+          <div className="h-serif text-xl text-white mb-4">{brandFirst} <span className="text-primary">{brandRest}</span></div>
           <p className="text-sm text-neutral-400 leading-relaxed mb-4">{settings.footerAbout}</p>
           {/* Arabic licence line. dir/lang let the browser shape and align the script correctly
               regardless of the page's left-to-right direction. */}
           {settings.footerAboutAr && (
             <p dir="rtl" lang="ar" className="text-sm text-neutral-400 leading-relaxed mb-4 text-right">{settings.footerAboutAr}</p>
           )}
-          <div className="inline-flex items-center gap-2 border border-gold/40 rounded-full px-3.5 py-1.5 text-xs text-gold mb-3"><IconAward className="w-3.5 h-3.5" /> Qatar Luxury Brokerage of the Year</div>
+          <div className="inline-flex items-center gap-2 border border-primary/40 rounded-full px-3.5 py-1.5 text-xs text-primary mb-3"><IconAward className="w-3.5 h-3.5" /> Qatar Luxury Brokerage of the Year</div>
           <div className="flex items-center gap-2 text-sm">
-            <span className="flex text-gold">{[...Array(5)].map((_, i) => <Star key={i} />)}</span>
+            <span className="flex text-primary">{[...Array(5)].map((_, i) => <Star key={i} />)}</span>
             <span className="text-white font-medium">{settings.googleRating}</span>
             <span className="text-neutral-500">({settings.googleReviews} Google reviews)</span>
           </div>
@@ -55,7 +55,7 @@ export default function Footer() {
           <div key={col.title}>
             <h4 className="text-white font-semibold text-sm mb-4">{col.title}</h4>
             <ul className="space-y-2 text-sm">
-              {col.links.map(([label, to]) => <li key={label}><Link to={to} className="hover:text-gold text-neutral-400 gold-link">{label}</Link></li>)}
+              {col.links.map(([label, to]) => <li key={label}><Link to={to} className="hover:text-primary text-neutral-400 brand-link">{label}</Link></li>)}
             </ul>
           </div>
         ))}
@@ -65,14 +65,14 @@ export default function Footer() {
       <div className="border-t border-white/8">
         <div className="max-w-7xl mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
           <div className="flex gap-4 text-neutral-400">
-            {['Instagram', 'LinkedIn', 'YouTube', 'X'].map(s => <a key={s} href="#" className="hover:text-gold">{s}</a>)}
+            {['Instagram', 'LinkedIn', 'YouTube', 'X'].map(s => <a key={s} href="#" className="hover:text-primary">{s}</a>)}
           </div>
           <div className="text-center md:text-left">
             <div>© {new Date().getFullYear()} {settings.siteName}. All rights reserved.</div>
             {settings.taxNumber && <div className="mt-1">Tax Number: {settings.taxNumber}</div>}
           </div>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-gold">Privacy</a><a href="#" className="hover:text-gold">Terms</a><a href="#" className="hover:text-gold">Cookies</a>
+            <a href="#" className="hover:text-primary">Privacy</a><a href="#" className="hover:text-primary">Terms</a><a href="#" className="hover:text-primary">Cookies</a>
           </div>
         </div>
       </div>

@@ -31,7 +31,7 @@ export function DevelopmentsIndex() {
               <img src={d.coverImage} alt={d.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
               <div className="absolute bottom-0 p-5 text-white">
-                <div className="text-gold text-xs uppercase tracking-wider mb-1">Available from {d.deliveryYear}</div>
+                <div className="text-primary text-xs uppercase tracking-wider mb-1">Available from {d.deliveryYear}</div>
                 <h3 className="h-serif text-2xl">{d.name}</h3>
                 <p className="text-sm text-neutral-300">{d.area} · by {d.developer}</p>
               </div>
@@ -60,7 +60,7 @@ export function DevelopmentDetail() {
         <img src={d.coverImage} alt={d.name} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-black/20" />
         <div className="relative max-w-7xl mx-auto px-4 pb-12 text-white w-full">
-          <div className="text-gold text-xs uppercase tracking-[0.25em] mb-2">Delivery {d.deliveryYear} · {d.area}</div>
+          <div className="text-primary text-xs uppercase tracking-[0.25em] mb-2">Delivery {d.deliveryYear} · {d.area}</div>
           <h1 className="h-serif text-4xl md:text-5xl">{d.name}</h1>
           <p className="text-neutral-300 mt-1">by {d.developer}</p>
         </div>

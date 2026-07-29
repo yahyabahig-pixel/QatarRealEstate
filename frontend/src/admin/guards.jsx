@@ -35,7 +35,7 @@ export function Forbidden({ permission }) {
     <div className="p-10 text-center">
       <div className="text-5xl mb-4">🔒</div>
       <h2 className="h-serif text-2xl text-white mb-2">You do not have permission</h2>
-      <p className="text-neutral-400 text-sm">This action requires <span className="text-gold">{permission}</span>. Ask the Main Admin to update your position.</p>
+      <p className="text-neutral-400 text-sm">This action requires <span className="text-primary">{permission}</span>. Ask the Main Admin to update your position.</p>
     </div>
   )
 }
@@ -43,7 +43,7 @@ export function Forbidden({ permission }) {
 export function FullSpinner() {
   return (
     <div className="min-h-screen bg-ink flex items-center justify-center">
-      <div className="w-10 h-10 border-2 border-gold border-t-transparent rounded-full animate-spin" />
+      <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
     </div>
   )
 }

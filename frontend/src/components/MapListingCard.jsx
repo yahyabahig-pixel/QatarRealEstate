@@ -33,7 +33,7 @@ export default function MapListingCard({ item, purpose, active = false, onHover 
         <img src={item.thumbUrl || PLACEHOLDER} alt={item.title}
              className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
         <div className="absolute top-2 left-2 flex gap-1.5">
-          {item.isExclusive && <span className="qre-badge qre-badge-gold !static">Exclusive</span>}
+          {item.isExclusive && <span className="qre-badge qre-badge-brand !static">Exclusive</span>}
           {item.isOffPlan && <span className="qre-badge qre-badge-ink !static">Off-Plan</span>}
         </div>
         <button

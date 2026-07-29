@@ -19,7 +19,7 @@ export function ToastProvider({ children }) {
         {toasts.map(t => (
           <div key={t.id}
             className={`flex items-center gap-3 pl-3 pr-4 py-3 text-sm font-medium shadow-xl shadow-black/15 text-white rounded-xl ${t.kind === 'error' ? 'bg-error' : 'bg-ink'}`}>
-            <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t.kind === 'error' ? 'bg-white/20' : 'bg-gold/90'}`}>
+            <span className={`w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${t.kind === 'error' ? 'bg-white/20' : 'bg-primary/90'}`}>
               {t.kind === 'error' ? <IconX className="w-3.5 h-3.5" /> : <IconCheck className="w-3.5 h-3.5" />}
             </span>
             {t.message}

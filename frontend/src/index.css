@@ -5,20 +5,37 @@
    One palette, one type scale, one spacing rhythm, applied through the shared
    classes below. Components consume these classes; pages never invent colors.
 
-   Palette:  ink (brand dark)  #14171a   gold (accent)    #b89c4c
-             coal (dark card)  #1c2026   paper (page bg)  #f8f8f7
+   Palette:  primary (brand red)   #EF233C   primary-dark (hover) #D90429
+             ink (dark indigo)     #2B2D42   mist (lavender grey) #8D99AE
+             coal (dark surface)   #232438   paper (page bg)      #F7F8FA
              semantic: success #15803d · warning #b45309 · error #b91c1c · info #1d4ed8
+   Neutrals: a cool, lavender-tinted grey scale derived from mist, so every
+             border, caption and secondary line sits in the same temperature.
    Type:     Plus Jakarta Sans everywhere. Display headings are the same family,
              bold, tightly tracked (.h-serif kept as a class name so no page
-             changes — it now renders the modern display style).
+             changes — it renders the modern display style).
    ========================================================================== */
 
 @theme {
-  --color-ink: #14171a;
-  --color-coal: #1c2026;
-  --color-gold: #b89c4c;
-  --color-gold-light: #cbb069;
-  --color-paper: #f8f8f7;
+  --color-primary: #EF233C;
+  --color-primary-dark: #D90429;
+  --color-ink: #2B2D42;
+  --color-coal: #232438;
+  --color-mist: #8D99AE;
+  --color-paper: #F7F8FA;
+
+  /* Lavender-grey neutral scale (hue-matched to mist #8D99AE) */
+  --color-neutral-50: #F7F8FA;
+  --color-neutral-100: #EEF0F4;
+  --color-neutral-200: #DEE2E9;
+  --color-neutral-300: #C4CBD7;
+  --color-neutral-400: #A5AFC0;
+  --color-neutral-500: #8D99AE;
+  --color-neutral-600: #6C7891;
+  --color-neutral-700: #525C72;
+  --color-neutral-800: #3A3F54;
+  --color-neutral-900: #2B2D42;
+  --color-neutral-950: #1B1C2B;
 
   --color-success: #15803d;
   --color-warning: #b45309;
@@ -28,17 +45,17 @@
   --font-serif: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
-  --shadow-card: 0 1px 2px rgb(20 23 26 / 0.04), 0 4px 16px rgb(20 23 26 / 0.05);
-  --shadow-card-hover: 0 2px 4px rgb(20 23 26 / 0.05), 0 12px 32px rgb(20 23 26 / 0.10);
+  --shadow-card: 0 1px 2px rgb(43 45 66 / 0.04), 0 4px 16px rgb(43 45 66 / 0.06);
+  --shadow-card-hover: 0 2px 4px rgb(43 45 66 / 0.05), 0 16px 40px rgb(43 45 66 / 0.12);
 }
 
 html { scroll-behavior: smooth; }
 body { @apply font-sans text-neutral-800 bg-paper antialiased; }
 
-::selection { background: rgb(184 156 76 / 0.25); }
+::selection { background: rgb(239 35 60 / 0.18); }
 
 /* Consistent, visible keyboard focus everywhere; invisible for mouse users. */
-:focus-visible { outline: 2px solid var(--color-gold); outline-offset: 2px; border-radius: 4px; }
+:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; border-radius: 4px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
@@ -48,26 +65,26 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
   /* ---------------------------------------------------------------- typography */
 
   /* small uppercase label used across the site */
-  .eyebrow { @apply text-[11px] uppercase tracking-[0.18em] text-gold font-semibold; }
+  .eyebrow { @apply text-[11px] uppercase tracking-[0.18em] text-primary font-semibold; }
 
   /* Display headings. Historic class name — every heading on the site already
      carries it, so the modern style lands everywhere without touching pages. */
   .h-serif { @apply font-sans font-bold tracking-[-0.02em]; }
 
-  /* gold underline hover for links */
-  .gold-link { @apply relative inline-block; }
-  .gold-link::after {
+  /* animated underline hover for accent links */
+  .brand-link { @apply relative inline-block; }
+  .brand-link::after {
     content: ""; position: absolute; left: 0; bottom: -2px; height: 1.5px; width: 0;
-    background: var(--color-gold); transition: width .25s ease;
+    background: var(--color-primary); transition: width .25s ease;
   }
-  .gold-link:hover::after { width: 100%; }
+  .brand-link:hover::after { width: 100%; }
 
   /* ------------------------------------------------------------------ surfaces */
 
   /* card lift */
-  .lift { @apply transition-all duration-300 hover:-translate-y-0.5 hover:shadow-card-hover; }
+  .lift { @apply transition-all duration-300 hover:-translate-y-1 hover:shadow-card-hover; }
 
-  .card { @apply bg-white border border-neutral-200/80 rounded-xl shadow-card; }
+  .card { @apply bg-white border border-neutral-200/80 rounded-2xl shadow-card; }
 
   /* dark admin panel surface */
   .panel-dark { @apply bg-coal border border-white/8 rounded-xl; }
@@ -87,44 +104,45 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
 
   /* ----------------------------------------------------------------- controls */
 
-  /* form controls (admin + public forms) */
+  /* form controls (admin + public forms). Focus is calm indigo — the brand red
+     stays reserved for actions, so a focused field never reads as an error. */
   .field {
     @apply w-full rounded-lg border border-neutral-300 bg-white px-3.5 py-2.5 text-sm text-neutral-800
            placeholder:text-neutral-400 outline-none transition-colors
-           hover:border-neutral-400 focus:border-gold focus:ring-2 focus:ring-gold/20
+           hover:border-neutral-400 focus:border-ink focus:ring-2 focus:ring-ink/15
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .field-dark {
     @apply w-full rounded-lg border border-white/10 bg-white/5 px-3.5 py-2.5 text-sm text-white
            placeholder:text-neutral-500 outline-none transition-colors
-           hover:border-white/20 focus:border-gold focus:ring-2 focus:ring-gold/25
+           hover:border-white/20 focus:border-mist focus:ring-2 focus:ring-mist/25
            disabled:opacity-50 disabled:cursor-not-allowed;
   }
 
   /* Button system. Shared skeleton, five variants. Same height, radius, focus,
      disabled and pressed treatment across all of them. */
-  .btn-gold, .btn-dark, .btn-outline, .btn-ghost, .btn-danger {
+  .btn-primary, .btn-dark, .btn-outline, .btn-ghost, .btn-danger {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold
            cursor-pointer select-none transition-all duration-150
-           focus-visible:ring-2 focus-visible:ring-gold/40
+           focus-visible:ring-2 focus-visible:ring-primary/40
            active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none;
   }
-  .btn-gold { @apply bg-gold text-white hover:bg-gold-light shadow-sm; }
+  .btn-primary { @apply bg-primary text-white hover:bg-primary-dark shadow-sm shadow-primary/20; }
   .btn-dark { @apply bg-ink text-white hover:bg-coal shadow-sm; }
-  .btn-outline { @apply border border-neutral-300 bg-white text-neutral-700 hover:border-gold hover:text-gold; }
+  .btn-outline { @apply border border-neutral-300 bg-white text-neutral-700 hover:border-primary hover:text-primary; }
   .btn-ghost { @apply text-neutral-600 hover:bg-neutral-100 hover:text-ink; }
   .btn-danger { @apply bg-error text-white hover:bg-red-800 shadow-sm; }
 
   /* filter / category chips */
   .chip {
     @apply shrink-0 rounded-full border border-neutral-300 bg-white px-4 py-1.5 text-sm text-neutral-700
-           cursor-pointer transition-colors hover:border-gold hover:text-gold;
+           cursor-pointer transition-colors hover:border-primary hover:text-primary;
   }
-  .chip-active { @apply bg-ink text-white border-ink hover:text-gold; }
+  .chip-active { @apply bg-ink text-white border-ink hover:text-white hover:border-ink; }
 
   /* status + label badges */
   .badge { @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[11px] font-semibold; }
-  .badge-gold { @apply bg-gold/12 text-gold; }
+  .badge-primary { @apply bg-primary/10 text-primary; }
   .badge-success { @apply bg-green-600/12 text-success; }
   .badge-warning { @apply bg-amber-600/12 text-warning; }
   .badge-error { @apply bg-red-600/12 text-error; }
@@ -138,12 +156,13 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
    MAP TOKENS + MAP UI  (listings split view + property detail location block)
    ========================================================================== */
 :root {
-  --gold: #b89c4c;
-  --ink: #14171a;
-  --muted: #6b7280;
-  --line: #e6e5e2;
+  --brand: #EF233C;
+  --brand-dark: #D90429;
+  --ink: #2B2D42;
+  --muted: #6C7891;
+  --line: #DEE2E9;
   --bg: #ffffff;
-  --card-radius: 12px;
+  --card-radius: 14px;
 }
 
 /* ---- price-bubble pins ---- */
@@ -158,14 +177,14 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
   line-height: 1.2;
   white-space: nowrap;
   cursor: pointer;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, .18);
+  box-shadow: 0 1px 4px rgba(43, 45, 66, .22);
   transition: background-color .15s, color .15s, border-color .15s, transform .15s;
 }
-.pin:hover { border-color: var(--gold); transform: translateY(-1px); }
+.pin:hover { border-color: var(--brand); transform: translateY(-1px); }
 .pin-active {
   background: var(--ink);
   color: #fff;
-  border-color: var(--gold);
+  border-color: var(--brand);
   transform: scale(1.06);
   z-index: 3;
 }
@@ -192,11 +211,11 @@ body[data-map-view] .qre-cta-band { display: none; }
 @container (min-width: 540px) { .qre-grid { grid-template-columns: repeat(2, 1fr); } }
 @container (min-width: 880px) { .qre-grid { grid-template-columns: repeat(3, 1fr); } }
 .qre-split-list::-webkit-scrollbar { width: 8px; }
-.qre-split-list::-webkit-scrollbar-thumb { background: #d6d3cd; border-radius: 4px; }
+.qre-split-list::-webkit-scrollbar-thumb { background: #C4CBD7; border-radius: 4px; }
 .qre-split-map { position: relative; height: 100%; min-height: 320px; }
 .qre-map-fallback {
   position: relative; height: 100%; min-height: 320px;
-  display: flex; align-items: center; justify-content: center; background: #f3f4f6;
+  display: flex; align-items: center; justify-content: center; background: #EEF0F4;
 }
 
 /* Overlay stacking inside .qre-split-map (a clean, small hierarchy — the canvas sits
@@ -207,9 +226,9 @@ body[data-map-view] .qre-cta-band { display: none; }
   background: var(--bg); color: var(--ink);
   border: 1px solid var(--line); border-radius: 999px;
   padding: 8px 18px; font-size: 13px; font-weight: 600; cursor: pointer;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .18);
+  box-shadow: 0 2px 10px rgba(43, 45, 66, .2);
 }
-.qre-search-area:hover:not(:disabled) { border-color: var(--gold); color: var(--gold); }
+.qre-search-area:hover:not(:disabled) { border-color: var(--brand); color: var(--brand); }
 .qre-search-area:disabled { opacity: .65; cursor: default; }
 
 /* ---- persistent location search (listings map) ---- */
@@ -221,9 +240,9 @@ body[data-map-view] .qre-cta-band { display: none; }
   width: 100%; background: var(--bg); color: var(--ink);
   border: 1px solid var(--line); border-radius: 999px;
   padding: 8px 34px 8px 34px; font-size: 13px; font-weight: 500;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, .18); outline: none;
+  box-shadow: 0 2px 10px rgba(43, 45, 66, .2); outline: none;
 }
-.qre-map-search input:focus { border-color: var(--gold); }
+.qre-map-search input:focus { border-color: var(--ink); }
 .qre-map-search input::placeholder { color: var(--muted); }
 .qre-map-search .qre-map-search-icon {
   position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
@@ -234,17 +253,17 @@ body[data-map-view] .qre-cta-band { display: none; }
   width: 22px; height: 22px; border-radius: 999px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; color: var(--muted);
 }
-.qre-map-search-clear:hover { color: var(--ink); background: #f0efec; }
+.qre-map-search-clear:hover { color: var(--ink); background: #EEF0F4; }
 .qre-map-search-results {
   position: absolute; top: calc(100% + 6px); left: 0; right: 0;
   background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, .16); overflow: hidden;
+  box-shadow: 0 8px 24px rgba(43, 45, 66, .16); overflow: hidden;
 }
 .qre-map-search-results button {
   display: block; width: 100%; text-align: left; padding: 9px 12px;
   font-size: 13px; color: var(--ink); cursor: pointer;
 }
-.qre-map-search-results button:hover { background: #f5f4f1; color: var(--gold); }
+.qre-map-search-results button:hover { background: #F7F8FA; color: var(--brand); }
 
 /* Selected-property popup above every overlay control (see hierarchy above). */
 .qre-split-map .mapboxgl-popup { z-index: 6; }
@@ -255,39 +274,39 @@ body[data-map-view] .qre-cta-band { display: none; }
   border: 1px solid var(--line); border-radius: var(--card-radius);
   overflow: hidden; transition: border-color .15s, box-shadow .15s;
 }
-.qre-mapcard:hover { border-color: var(--gold); box-shadow: 0 4px 14px rgba(0, 0, 0, .08); }
-.qre-mapcard.is-active { border-color: var(--gold); box-shadow: 0 6px 18px rgba(184, 156, 76, .25); }
+.qre-mapcard:hover { border-color: var(--brand); box-shadow: 0 4px 14px rgba(43, 45, 66, .1); }
+.qre-mapcard.is-active { border-color: var(--brand); box-shadow: 0 6px 18px rgba(239, 35, 60, .22); }
 
 .qre-badge {
   position: absolute; top: 8px; z-index: 2;
   font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   padding: 3px 8px; border-radius: 999px;
 }
-.qre-badge-gold { left: 8px; background: var(--gold); color: #fff; }
+.qre-badge-brand { left: 8px; background: var(--brand); color: #fff; }
 .qre-badge-ink { right: 8px; background: var(--ink); color: #fff; }
 
 /* ---- detail-page location block ---- */
 .qre-detail-map { width: 100%; height: 400px; border-radius: 12px; overflow: hidden; }
 .qre-marker {
   width: 40px; height: 40px; border-radius: 999px;
-  background: var(--gold); border: 3px solid #fff;
+  background: var(--brand); border: 3px solid #fff;
   display: flex; align-items: center; justify-content: center;
-  color: #fff; box-shadow: 0 2px 8px rgba(0, 0, 0, .3);
+  color: #fff; box-shadow: 0 2px 8px rgba(43, 45, 66, .35);
 }
 .qre-marker svg { width: 20px; height: 20px; }
 
 /* ---- pin popup (listings map) ---- */
-.mapboxgl-popup-content { padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px rgba(0, 0, 0, .18); }
+.mapboxgl-popup-content { padding: 0; border-radius: 12px; overflow: hidden; box-shadow: 0 8px 28px rgba(43, 45, 66, .2); }
 .qre-popup { display: block; width: 240px; text-decoration: none; color: var(--ink); background: var(--bg); }
 .qre-popup img { width: 100%; height: 120px; object-fit: cover; display: block; }
 .qre-popup-body { padding: 10px 12px 12px; }
 .qre-popup-price { font-weight: 700; font-size: 14px; }
 .qre-popup-title { font-size: 12px; color: var(--muted); margin: 2px 0 6px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.qre-popup-link { color: var(--gold); font-size: 12px; font-weight: 600; }
+.qre-popup-link { color: var(--brand); font-size: 12px; font-weight: 600; }
 
 /* ---- cluster bubbles + rich pin popup ---- */
 .pin-cluster {
-  background: var(--ink); color: #fff; border: 2px solid var(--gold);
+  background: var(--ink); color: #fff; border: 2px solid var(--brand);
   font-weight: 700; font-size: 13px;
   min-width: 40px; height: 40px; border-radius: 999px;
   display: flex; align-items: center; justify-content: center; padding: 0 10px;
@@ -303,7 +322,7 @@ body[data-map-view] .qre-cta-band { display: none; }
   display: flex; align-items: center; gap: 4px;
   font-size: 11px; color: var(--muted); margin-top: 2px;
 }
-.qre-popup-loc svg { width: 12px; height: 12px; color: var(--gold); flex: none; }
+.qre-popup-loc svg { width: 12px; height: 12px; color: var(--brand); flex: none; }
 .qre-popup-specs {
   display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
   font-size: 11.5px; color: var(--muted); margin: 8px 0 10px;
@@ -316,5 +335,5 @@ body[data-map-view] .qre-cta-band { display: none; }
   border-radius: 8px; padding: 8px 10px; font-size: 12.5px; font-weight: 600;
   transition: background-color .15s;
 }
-.qre-popup-btn:hover { background: var(--gold); color: #fff; }
+.qre-popup-btn:hover { background: var(--brand); color: #fff; }
 .mapboxgl-popup-close-button { width: 22px; height: 22px; font-size: 14px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); }

@@ -38,12 +38,12 @@ export default function Careers() {
                 <div key={j.id} className="card p-6 lift">
                   <div className="flex gap-2 mb-3">
                     <span className="badge badge-neutral">{j.department}</span>
-                    <span className="badge badge-gold">{j.type}</span>
+                    <span className="badge badge-primary">{j.type}</span>
                   </div>
                   <h3 className="h-serif text-xl mb-1">{j.title}</h3>
                   <p className="text-xs text-neutral-400 mb-2">{j.location}</p>
                   <p className="text-sm text-neutral-600 mb-4 line-clamp-2">{j.description}</p>
-                  <a href={`mailto:${settings.email}?subject=Application: ${encodeURIComponent(j.title)}`} className="btn-gold">Apply Now</a>
+                  <a href={`mailto:${settings.email}?subject=Application: ${encodeURIComponent(j.title)}`} className="btn-primary">Apply Now</a>
                 </div>
               ))}
             </div>
@@ -52,7 +52,7 @@ export default function Careers() {
         <div className="text-center mt-16 bg-ink text-white py-14 px-4 rounded-2xl">
           <h2 className="h-serif text-3xl mb-3">Don't See the Right Role?</h2>
           <p className="text-neutral-400 mb-6">Exceptional people always have a seat here — introduce yourself.</p>
-          <a href={`mailto:${settings.email}?subject=Open application`} className="btn-gold">Send Your CV</a>
+          <a href={`mailto:${settings.email}?subject=Open application`} className="btn-primary">Send Your CV</a>
         </div>
       </div>
     </div>

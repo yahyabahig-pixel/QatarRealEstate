@@ -42,7 +42,7 @@ export default function Navbar({ overHero = false }) {
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${solid ? 'bg-ink/95 backdrop-blur-md shadow-lg shadow-black/10' : 'bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16 text-white">
         <Link to="/" className="h-serif text-lg tracking-tight">
-          {brandFirst} <span className="text-gold">{brandRest}</span>
+          {brandFirst} <span className="text-primary">{brandRest}</span>
         </Link>
 
         {/* desktop menu */}
@@ -50,14 +50,14 @@ export default function Navbar({ overHero = false }) {
           {MENUS.map(m => (
             <div key={m.label} className="relative group">
               <NavLink to={m.to}
-                className={({ isActive }) => `inline-flex items-center gap-1 rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors ${isActive ? 'text-gold' : 'text-white/85 hover:text-white hover:bg-white/8'}`}>
+                className={({ isActive }) => `inline-flex items-center gap-1 rounded-lg px-3.5 py-2 text-[13px] font-medium transition-colors ${isActive ? 'text-primary' : 'text-white/85 hover:text-white hover:bg-white/8'}`}>
                 {m.label}
                 <IconChevronDown className="w-3 h-3 opacity-60 transition-transform group-hover:rotate-180" />
               </NavLink>
               <div className="absolute left-1/2 -translate-x-1/2 top-full hidden group-hover:block pt-2">
                 <div className="bg-ink/98 backdrop-blur border border-white/10 rounded-xl shadow-2xl shadow-black/30 p-5 min-w-[240px]">
                   <ul className="space-y-1">
-                    {m.items.map(x => <li key={x}><Link to={itemLink(x)} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-gold hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
+                    {m.items.map(x => <li key={x}><Link to={itemLink(x)} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-primary hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
                   </ul>
                 </div>
               </div>
@@ -66,13 +66,14 @@ export default function Navbar({ overHero = false }) {
         </nav>
 
         <div className="hidden lg:flex items-center gap-3 text-sm">
-          <Link to="/admin" aria-label="Account" className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:text-gold hover:bg-white/8 transition-colors">
+          <Link to="/admin" aria-label="Account" className="w-9 h-9 rounded-full flex items-center justify-center text-white/85 hover:text-primary hover:bg-white/8 transition-colors">
             <IconUser className="w-[18px] h-[18px]" />
           </Link>
           <span className="text-white/40 text-xs font-medium">EN</span>
           <select className="bg-transparent border border-white/20 rounded-lg px-2 py-1 text-xs font-medium hover:border-white/40 transition-colors" defaultValue="QAR" aria-label="Currency">
             <option className="text-black">QAR</option><option className="text-black">USD</option><option className="text-black">EUR</option>
           </select>
+          <Link to="/list-property" className="btn-primary !py-2 !px-4 text-[13px]">List Property</Link>
         </div>
 
         {/* hamburger */}
@@ -89,12 +90,12 @@ export default function Navbar({ overHero = false }) {
               <button onClick={() => setOpenAccordion(a => a === m.label ? null : m.label)}
                 className="w-full flex justify-between items-center px-5 py-4 text-sm font-semibold" aria-expanded={openAccordion === m.label}>
                 {m.label}
-                <IconChevronDown className={`w-4 h-4 text-gold transition-transform ${openAccordion === m.label ? 'rotate-180' : ''}`} />
+                <IconChevronDown className={`w-4 h-4 text-primary transition-transform ${openAccordion === m.label ? 'rotate-180' : ''}`} />
               </button>
               {openAccordion === m.label && (
                 <ul className="px-5 pb-4 space-y-1 text-sm text-white/70">
                   {m.items.map(x => (
-                    <li key={x}><Link to={itemLink(x)} onClick={() => setMobileOpen(false)} className="block py-1.5 hover:text-gold transition-colors">{x}</Link></li>
+                    <li key={x}><Link to={itemLink(x)} onClick={() => setMobileOpen(false)} className="block py-1.5 hover:text-primary transition-colors">{x}</Link></li>
                   ))}
                 </ul>
               )}

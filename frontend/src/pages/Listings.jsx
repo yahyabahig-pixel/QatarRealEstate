@@ -215,13 +215,13 @@ export default function Listings({ purpose, offMarket = false }) {
           {/* Off-market prices are blurred on the cards; a price pin would leak them. */}
           {!offMarket && (
             <button
-              className={`btn-outline !py-1.5 ${showMap ? '!border-gold !text-gold' : ''}`}
+              className={`btn-outline !py-1.5 ${showMap ? '!border-primary !text-primary' : ''}`}
               aria-pressed={showMap}
               onClick={() => { setShowMap(s => !s); setPane('list'); setActiveId(null) }}>
               {showMap ? <><IconList className="w-4 h-4" /> List</> : <><IconMap className="w-4 h-4" /> Map</>}
             </button>
           )}
-          <button className={`btn-outline !py-1.5 ${filtersOpen ? '!border-gold !text-gold' : ''}`} onClick={() => setFiltersOpen(o => !o)}><IconSliders className="w-4 h-4" /> Filters</button>
+          <button className={`btn-outline !py-1.5 ${filtersOpen ? '!border-primary !text-primary' : ''}`} onClick={() => setFiltersOpen(o => !o)}><IconSliders className="w-4 h-4" /> Filters</button>
           <button className="btn-outline !py-1.5 hidden md:inline-flex"><IconHeart className="w-4 h-4" /> Save search</button>
           <select value={sort} onChange={e => setSort(e.target.value)} className="ml-auto field !w-auto !py-1.5">
             <option value="newest">Newest first</option>
@@ -234,7 +234,7 @@ export default function Listings({ purpose, offMarket = false }) {
       {/* filters drawer — shared by both layouts */}
       {filtersOpen && (
         <div className="max-w-7xl mx-auto px-4 pt-4">
-          <div className="border border-neutral-200 bg-neutral-50 p-5 grid md:grid-cols-4 gap-4 text-sm">
+          <div className="card !rounded-2xl !bg-white p-5 grid md:grid-cols-4 gap-4 text-sm">
             <input placeholder="Keyword or area" className="field" value={f.q} onChange={e => setF('q', e.target.value)} />
             <select className="field" value={f.beds} onChange={e => setF('beds', e.target.value)}>
               <option value="">Bedrooms (any)</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}+</option>)}
@@ -252,7 +252,7 @@ export default function Listings({ purpose, offMarket = false }) {
             <input placeholder="Max size m²" type="number" className="field" value={f.maxSize} onChange={e => setF('maxSize', e.target.value)} />
             <div className="md:col-span-4 flex flex-wrap gap-2 pt-1">
               {AMENITIES.slice(0, 12).map(a => (
-                <label key={a} className={`cursor-pointer rounded-full border px-3 py-1 text-xs ${f.amenities.includes(a) ? 'bg-gold text-black border-gold' : 'border-neutral-300'}`}>
+                <label key={a} className={`cursor-pointer rounded-full border px-3 py-1 text-xs ${f.amenities.includes(a) ? 'bg-primary text-white border-primary' : 'border-neutral-300'}`}>
                   <input type="checkbox" className="hidden" checked={f.amenities.includes(a)} onChange={() => toggleAmenity(a)} />{a}
                 </label>
               ))}
@@ -359,7 +359,7 @@ export default function Listings({ purpose, offMarket = false }) {
               <div className="flex gap-1">
                 {Array.from({ length: pages }, (_, i) => (
                   <button key={i} onClick={() => setPage(i + 1)}
-                    className={`w-9 h-9 rounded-lg border text-sm font-medium transition-colors ${page === i + 1 ? 'bg-ink text-white border-ink' : 'bg-white border-neutral-300 hover:border-gold hover:text-gold'}`}>{i + 1}</button>
+                    className={`w-9 h-9 rounded-lg border text-sm font-medium transition-colors ${page === i + 1 ? 'bg-ink text-white border-ink' : 'bg-white border-neutral-300 hover:border-primary hover:text-primary'}`}>{i + 1}</button>
                 ))}
               </div>
             </div>
@@ -382,10 +382,10 @@ export default function Listings({ purpose, offMarket = false }) {
                 </div>
                 <div>
                   <h2 className="h-serif text-2xl mb-4">Frequently asked questions</h2>
-                  <div className="divide-y divide-neutral-200 border border-neutral-200">
+                  <div className="divide-y divide-neutral-200 border border-neutral-200 rounded-2xl overflow-hidden bg-white">
                     {FAQ.map(([q, a]) => (
                       <details key={q} className="group p-4">
-                        <summary className="cursor-pointer font-medium list-none flex justify-between items-center">{q}<span className="text-gold group-open:rotate-45 transition-transform">+</span></summary>
+                        <summary className="cursor-pointer font-medium list-none flex justify-between items-center">{q}<span className="text-primary group-open:rotate-45 transition-transform">+</span></summary>
                         <p className="mt-2 text-neutral-600">{a}</p>
                       </details>
                     ))}
@@ -397,7 +397,7 @@ export default function Listings({ purpose, offMarket = false }) {
                     {(purpose === 'rent'
                       ? [['Studio rentals', 1], ['1-bedroom rentals', 2], ['2-bedroom rentals', 2], ['3-bedroom rentals', 1], ['4+ bedroom rentals', 1]]
                       : typeCounts.map(([t, c]) => [`${t}s for sale`, c])
-                    ).map(([lbl, c]) => <span key={lbl} className="gold-link text-gold cursor-pointer">{lbl} ({c})</span>)}
+                    ).map(([lbl, c]) => <span key={lbl} className="brand-link text-primary cursor-pointer">{lbl} ({c})</span>)}
                   </div>
                 </div>
               </div>

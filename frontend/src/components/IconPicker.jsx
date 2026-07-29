@@ -20,7 +20,7 @@ export default function IconPicker({ value = '', onChange }) {
       <div className="flex items-center gap-2 text-sm">
         {selected ? (
           <>
-            <span className="w-9 h-9 rounded-lg bg-gold/15 text-gold flex items-center justify-center">
+            <span className="w-9 h-9 rounded-lg bg-primary/15 text-primary flex items-center justify-center">
               <selected.Icon className="w-5 h-5" />
             </span>
             <span className="text-neutral-200">{selected.name}</span>
@@ -46,12 +46,12 @@ export default function IconPicker({ value = '', onChange }) {
       {/* category filter */}
       <div className="flex gap-1.5 flex-wrap">
         <button type="button" onClick={() => setCategory('')}
-          className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${!category ? 'bg-gold text-white border-gold' : 'border-white/15 text-neutral-400 hover:border-gold hover:text-gold'}`}>
+          className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${!category ? 'bg-primary text-white border-primary' : 'border-white/15 text-neutral-400 hover:border-primary hover:text-primary'}`}>
           All
         </button>
         {FEATURE_ICON_CATEGORIES.map(c => (
           <button key={c} type="button" onClick={() => setCategory(cat => cat === c ? '' : c)}
-            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${category === c ? 'bg-gold text-white border-gold' : 'border-white/15 text-neutral-400 hover:border-gold hover:text-gold'}`}>
+            className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${category === c ? 'bg-primary text-white border-primary' : 'border-white/15 text-neutral-400 hover:border-primary hover:text-primary'}`}>
             {c}
           </button>
         ))}
@@ -65,7 +65,7 @@ export default function IconPicker({ value = '', onChange }) {
           {results.map(e => (
             <button key={e.key} type="button" title={`${e.name} (${e.category})`}
               onClick={() => onChange?.(e.key)} aria-pressed={value === e.key}
-              className={`rounded-lg border p-2 flex flex-col items-center gap-1 transition-colors ${value === e.key ? 'border-gold bg-gold/15 text-gold' : 'border-white/8 text-neutral-300 hover:border-gold/60 hover:text-gold'}`}>
+              className={`rounded-lg border p-2 flex flex-col items-center gap-1 transition-colors ${value === e.key ? 'border-primary bg-primary/15 text-primary' : 'border-white/8 text-neutral-300 hover:border-primary/60 hover:text-primary'}`}>
               <e.Icon className="w-5 h-5" />
               <span className="text-[9.5px] leading-tight text-center line-clamp-2">{e.name}</span>
             </button>

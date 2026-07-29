@@ -74,7 +74,7 @@ export default function ListingsMap({
   // ---- popup ------------------------------------------------------------
   const popupHtml = (it) => {
     const badges =
-      (it.isExclusive ? '<span class="qre-badge qre-badge-gold">Exclusive</span>' : '') +
+      (it.isExclusive ? '<span class="qre-badge qre-badge-brand">Exclusive</span>' : '') +
       (it.isOffPlan ? '<span class="qre-badge qre-badge-ink">Off-Plan</span>' : '')
     const specs = [
       it.type ? `<span class="qre-popup-type">${esc(it.type)}</span>` : '',

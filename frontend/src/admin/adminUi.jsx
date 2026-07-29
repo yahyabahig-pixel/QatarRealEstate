@@ -50,7 +50,7 @@ export function CenterNotice({ kind = 'success', message, onClose }) {
         <div className={`w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-4 ${kind === 'success' ? 'bg-green-500/15 text-green-400' : 'bg-red-500/15 text-red-400'}`}>{kind === 'success' ? <IconCheck className="w-6 h-6" /> : <IconX className="w-6 h-6" />}</div>
         <p className="text-white text-sm leading-relaxed whitespace-pre-line">{message}</p>
         {kind === 'error' && (
-          <button className="btn-gold mt-5 !py-2" onClick={onClose}>OK — let me fix it</button>
+          <button className="btn-primary mt-5 !py-2" onClick={onClose}>OK — let me fix it</button>
         )}
       </div>
     </div>
@@ -58,7 +58,7 @@ export function CenterNotice({ kind = 'success', message, onClose }) {
 }
 
 export const Spinner = () => (
-  <span className="inline-block w-4 h-4 border-2 border-neutral-500 border-t-gold rounded-full animate-spin align-middle" />
+  <span className="inline-block w-4 h-4 border-2 border-neutral-500 border-t-primary rounded-full animate-spin align-middle" />
 )
 
 export function useConfirm() {
@@ -68,7 +68,7 @@ export function useConfirm() {
     <Modal title="Are you sure?" onClose={() => setState(null)}>
       <p className="text-neutral-300 text-sm mb-6">{state.message}</p>
       <div className="flex gap-3 justify-end">
-        <button className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" onClick={() => setState(null)}>Cancel</button>
+        <button className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" onClick={() => setState(null)}>Cancel</button>
         <button className="btn-danger !py-2" onClick={() => { state.onYes(); setState(null) }}>Delete</button>
       </div>
     </Modal>
@@ -123,11 +123,11 @@ export function ImageUpload({ value = '', onChange, onBusy, maxMb = 8 }) {
             <button type="button" className="btn-outline !bg-transparent !border-white/40 !text-white !py-1.5 !px-3 text-xs" onClick={() => fileInput.current?.click()}>Replace</button>
             <button type="button" className="btn-danger !py-1.5 !px-3 text-xs" onClick={() => { setError(''); onChange?.('') }}>Remove</button>
           </div>
-          {uploading && <p className="text-xs text-gold mt-2 flex items-center gap-2"><Spinner /> Uploading…</p>}
+          {uploading && <p className="text-xs text-primary mt-2 flex items-center gap-2"><Spinner /> Uploading…</p>}
         </div>
       ) : (
         <button type="button" disabled={uploading}
-          className="w-64 h-40 rounded-lg border-2 border-dashed border-white/15 hover:border-gold text-neutral-500 hover:text-gold text-sm flex flex-col items-center justify-center gap-2 transition-colors"
+          className="w-64 h-40 rounded-lg border-2 border-dashed border-white/15 hover:border-primary text-neutral-500 hover:text-primary text-sm flex flex-col items-center justify-center gap-2 transition-colors"
           onClick={() => fileInput.current?.click()}>
           {uploading ? <><Spinner /> Uploading…</> : <>Choose image…<span className="text-[11px]">JPG / PNG / WebP, up to {maxMb} MB</span></>}
         </button>
@@ -149,7 +149,7 @@ export function Field({ label, children }) {
 export function Toggle({ checked, onChange, label }) {
   return (
     <button type="button" onClick={() => onChange(!checked)} className="flex items-center gap-2 text-sm">
-      <span className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-gold' : 'bg-white/15'}`}>
+      <span className={`w-9 h-5 rounded-full transition-colors relative ${checked ? 'bg-primary' : 'bg-white/15'}`}>
         <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all ${checked ? 'left-4.5 ml-0.5' : 'left-0.5'}`} />
       </span>
       {label && <span className="text-neutral-300">{label}</span>}
@@ -224,13 +224,13 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
 
   return (
     <div>
-      <PageTitle title={title} action={canCreate && <button className="btn-gold !py-2" onClick={() => open(null)}><IconPlus className="w-4 h-4" /> Add {singular}</button>} />
+      <PageTitle title={title} action={canCreate && <button className="btn-primary !py-2" onClick={() => open(null)}><IconPlus className="w-4 h-4" /> Add {singular}</button>} />
       <input placeholder={`Search ${title.toLowerCase()}…`} className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
 
       {filtered.length === 0 ? (
         <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
           {emptyMessage || `Nothing here yet.`}
-          {canCreate && <div className="mt-4"><button className="btn-gold !py-2" onClick={() => open(null)}><IconPlus className="w-4 h-4" /> Add</button></div>}
+          {canCreate && <div className="mt-4"><button className="btn-primary !py-2" onClick={() => open(null)}><IconPlus className="w-4 h-4" /> Add</button></div>}
         </div>
       ) : (
         <div className="overflow-x-auto panel-dark !rounded-xl">
@@ -243,7 +243,7 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
                 <tr key={row.id} className="hover:bg-white/4 transition-colors">
                   {columns.map(c => <td key={c.key} className="px-4 py-3 align-middle">{c.render ? c.render(row) : String(row[c.key] ?? '—')}</td>)}
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {canUpdate && <button className="text-gold hover:underline mr-3" onClick={() => open(row)}>Edit</button>}
+                    {canUpdate && <button className="text-primary hover:underline mr-3" onClick={() => open(row)}>Edit</button>}
                     {canDelete && <button className="text-red-400 hover:underline"
                       onClick={() => confirm(`Delete "${row.name || row.title}"? This cannot be undone.`, () => remove(row.id))}>Delete</button>}
                   </td>
@@ -276,8 +276,8 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
               </div>
             ))}
             <div className={`flex justify-end gap-3 pt-2 ${fields.length > 6 ? 'md:col-span-2' : ''}`}>
-              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
-              <button className="btn-gold flex items-center gap-2" disabled={saving || imageBusy}>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn-primary flex items-center gap-2" disabled={saving || imageBusy}>
                 {(saving || imageBusy) && <Spinner />}{saving ? 'Saving…' : imageBusy ? 'Uploading…' : 'Save'}
               </button>
             </div>

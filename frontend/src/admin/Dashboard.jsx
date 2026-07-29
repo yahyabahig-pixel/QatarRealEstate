@@ -23,8 +23,8 @@ const topRoundedRect = (x, y, w, h, r) => {
   return `M${x},${y + h} L${x},${y + rr} Q${x},${y} ${x + rr},${y} L${x + w - rr},${y} Q${x + w},${y} ${x + w},${y + rr} L${x + w},${y + h} Z`
 }
 
-// Single-series monthly bar chart, hand-rolled SVG. Series color #ab8c3d is the brand
-// gold snapped into the dark-surface lightness band (validated); hover brightens to the
+// Single-series monthly bar chart, hand-rolled SVG. Series color #C42B41 is the brand
+// primary snapped into the dark-surface lightness band (validated); hover brightens to the
 // brand accent. All text stays in neutral ink tokens, never the series color.
 function MonthlyBarChart({ months, metricKey, metricLabel }) {
   const [hover, setHover] = useState(null)
@@ -56,7 +56,7 @@ function MonthlyBarChart({ months, metricKey, metricLabel }) {
             <g key={i}>
               {v > 0 && (
                 <path d={topRoundedRect(x, yFor(v), barW, h, 4)}
-                  fill={hover === i ? '#b89c4c' : '#ab8c3d'} />
+                  fill={hover === i ? '#EF233C' : '#C42B41'} />
               )}
               {/* selective direct label: the peak only — everything else lives in the tooltip */}
               {i === peakIdx && v > 0 && (
@@ -199,7 +199,7 @@ export default function Dashboard() {
           <div className="flex items-center gap-2 flex-wrap">
             {METRICS.map(([k, label]) => (
               <button key={k} type="button" onClick={() => setMetric(k)} aria-pressed={metric === k}
-                className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${metric === k ? 'bg-gold text-white border-gold' : 'border-white/15 text-neutral-400 hover:border-gold hover:text-gold'}`}>
+                className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${metric === k ? 'bg-primary text-white border-primary' : 'border-white/15 text-neutral-400 hover:border-primary hover:text-primary'}`}>
                 {label.replace(' properties', '')}
               </button>
             ))}
@@ -231,12 +231,12 @@ export default function Dashboard() {
                     <td className="py-2.5 pr-3">
                       <Link to={`/property/${p.purpose || 'buy'}/${p.id}`} className="flex items-center gap-3 group">
                         {p.thumb && <img src={p.thumb} alt="" className="w-14 h-10 object-cover rounded shrink-0" />}
-                        <span className="text-white group-hover:text-gold transition-colors truncate max-w-[260px]">{p.title}</span>
+                        <span className="text-white group-hover:text-primary transition-colors truncate max-w-[260px]">{p.title}</span>
                       </Link>
                     </td>
                     <td className="py-2.5 pr-3 text-neutral-400 hidden sm:table-cell">{p.city || '—'}</td>
                     <td className="py-2.5 pr-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-gold font-semibold">
+                      <span className="inline-flex items-center gap-1.5 text-primary font-semibold">
                         <IconEye className="w-4 h-4" /> {(p.views ?? 0).toLocaleString()}
                       </span>
                     </td>
@@ -263,7 +263,7 @@ export default function Dashboard() {
               ))}
             </tbody>
           </table>
-          <Link to="/admin/leads" className="text-gold text-sm gold-link inline-block mt-3">All leads →</Link>
+          <Link to="/admin/leads" className="text-primary text-sm brand-link inline-block mt-3">All leads →</Link>
         </div>
 
         <div className="panel-dark p-5">

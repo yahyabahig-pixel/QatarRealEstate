@@ -29,21 +29,21 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-ink flex items-center justify-center px-4"
-      style={{ backgroundImage: 'radial-gradient(ellipse at top, #1c2026, #101216)' }}>
+      style={{ backgroundImage: 'radial-gradient(ellipse at top, #2B2D42, #1B1C2B)' }}>
       <div className="w-full max-w-sm panel-dark !rounded-2xl p-8 shadow-2xl shadow-black/40">
         <div className="text-center mb-8">
-          <div className="h-serif text-2xl text-white">Prime<span className="text-gold">Admin</span></div>
+          <div className="h-serif text-2xl text-white">Prime<span className="text-primary">Admin</span></div>
           <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest">Command Center</p>
         </div>
         <form onSubmit={submit} className="space-y-4">
           <input type="email" required placeholder="Email" className="field-dark" value={email} onChange={e => setEmail(e.target.value)} />
           <input type="password" required placeholder="Password" className="field-dark" value={password} onChange={e => setPassword(e.target.value)} />
           <label className="flex items-center gap-2 text-sm text-neutral-400">
-            <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="accent-gold" />
+            <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="accent-primary" />
             Remember me
           </label>
           {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5">{error}</p>}
-          <button disabled={busy} className="btn-gold w-full disabled:opacity-50">{busy ? 'Signing in…' : 'Sign In'}</button>
+          <button disabled={busy} className="btn-primary w-full disabled:opacity-50">{busy ? 'Signing in…' : 'Sign In'}</button>
         </form>
         {MOCK_MODE && (
           <p className="text-[11px] text-neutral-600 mt-6 text-center">

@@ -53,7 +53,7 @@ export function InquiryForm({ propertyId = null, agentId = null, source = 'Conta
         <input required type="email" placeholder="Email" className={cls} value={f.email} onChange={set('email')} />
       </div>
       <textarea required placeholder="Message" rows="3" className={cls} value={f.message} onChange={set('message')} />
-      <button className="btn-gold w-full" disabled={sending}>{sending ? 'Sending…' : 'Submit Inquiry'}</button>
+      <button className="btn-primary w-full" disabled={sending}>{sending ? 'Sending…' : 'Submit Inquiry'}</button>
     </form>
   )
 }
@@ -84,7 +84,7 @@ export function AgentsStrip() {
             ))}
           </div>
           <p className="text-lg font-bold tracking-tight text-ink text-center">Can't find the right property?</p>
-          <Link to="/find-agent" className="btn-gold">Find your agent</Link>
+          <Link to="/find-agent" className="btn-primary">Find your agent</Link>
         </div>
       </div>
     </section>
@@ -98,12 +98,12 @@ export function FloatingContact() {
     <div className="fixed bottom-6 left-6 z-40 flex flex-col items-start gap-2">
       {open && (
         <div className="bg-ink text-white shadow-2xl shadow-black/25 border border-white/10 rounded-xl p-2 text-sm w-48">
-          <a href={`https://wa.me/${settings.whatsapp}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-gold transition-colors"><WhatsAppIcon /> WhatsApp</a>
-          <a href="#" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-gold transition-colors"><IconTelegram /> Telegram</a>
-          <a href={`mailto:${settings.email}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-gold transition-colors"><IconMail /> Email</a>
+          <a href={`https://wa.me/${settings.whatsapp}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><WhatsAppIcon /> WhatsApp</a>
+          <a href="#" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><IconTelegram /> Telegram</a>
+          <a href={`mailto:${settings.email}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><IconMail /> Email</a>
         </div>
       )}
-      <button onClick={() => setOpen(o => !o)} className="btn-gold !rounded-full !px-5 shadow-xl shadow-gold/25">
+      <button onClick={() => setOpen(o => !o)} className="btn-primary !rounded-full !px-5 shadow-xl shadow-primary/25">
         {open ? <><IconX className="w-4 h-4" /> Close</> : "Let's talk"}
       </button>
     </div>
