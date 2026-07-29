@@ -6,6 +6,7 @@ using BuildingBlocks.Authorization;
 using Host.ErrorHandling;
 using Host.Middleware;
 using Host.OpenApi;
+using Host.Startup;
 using RealEstate.Api;
 using RealEstate.Application;
 using RealEstate.Infrastructure;
@@ -68,11 +69,32 @@ app.UseSerilogRequestLogging();
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
+}
+
+// ---- database bootstrap --------------------------------------------------------------
+// Driven by configuration instead of by environment, so the SAME published image can be
+// told to migrate and seed in production. Both flags default to the old Development-only
+// behaviour, so running locally is completely unchanged.
+if (app.Configuration.GetValue("Startup:ApplyMigrations", app.Environment.IsDevelopment()))
+{
+    await app.MigrateDatabaseAsync();
+}
+
+if (app.Configuration.GetValue("Startup:SeedData", app.Environment.IsDevelopment()))
+{
     await app.Services.SeedAuthAsync();            // roles → Main Admin → positions
     await app.Services.SeedRealEstateAsync();      // property types → features → listings
 }
 
-app.UseHttpsRedirection();
+// ---- https redirection ---------------------------------------------------------------
+// Behind the nginx container the site is served as plain HTTP on a bare IP. Redirecting to
+// https there would break every API call and fill the log with warnings about an undefined
+// https port. Turn this back on with Startup__UseHttpsRedirection=true the day a domain and
+// a certificate exist.
+if (app.Configuration.GetValue("Startup:UseHttpsRedirection", !app.Environment.IsProduction()))
+{
+    app.UseHttpsRedirection();
+}
 
 app.UseCors(FrontendCorsPolicy);   // before auth: even 401s need the CORS headers
 
