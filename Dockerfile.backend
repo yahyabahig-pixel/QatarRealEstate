@@ -1,0 +1,69 @@
+# =====================================================================================
+# Backend image — ASP.NET Core 10 modular monolith (src/Host)
+#
+# Two stages. The "build" stage has the full .NET SDK (~800 MB) and compiles the app.
+# The "final" stage has only the ASP.NET runtime (~220 MB) and receives the compiled
+# output. The SDK never ships to production, so the shipped image is small and has a
+# far smaller attack surface.
+#
+# Build context is the REPOSITORY ROOT, because Host.csproj references projects that
+# live outside its own folder.
+#   docker build -f Dockerfile.backend -t qre-backend .
+# =====================================================================================
+
+# ---------- stage 1: build ------------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+WORKDIR /src
+
+# global.json pins the SDK version, so it must be present before any dotnet command.
+COPY global.json ./
+
+# Copy ONLY the project files first, then restore. Docker caches each layer: as long as
+# no .csproj changes, the (slow) NuGet restore is reused from cache even when you edit
+# C# source. Copying everything up front would re-download packages on every build.
+COPY src/BuildingBlocks/BuildingBlocks.Api/BuildingBlocks.Api.csproj                 src/BuildingBlocks/BuildingBlocks.Api/
+COPY src/BuildingBlocks/BuildingBlocks.Application/BuildingBlocks.Application.csproj src/BuildingBlocks/BuildingBlocks.Application/
+COPY src/BuildingBlocks/BuildingBlocks.Authorization/BuildingBlocks.Authorization.csproj src/BuildingBlocks/BuildingBlocks.Authorization/
+COPY src/BuildingBlocks/BuildingBlocks.Domain/BuildingBlocks.Domain.csproj           src/BuildingBlocks/BuildingBlocks.Domain/
+COPY src/BuildingBlocks/BuildingBlocks.Persistence/BuildingBlocks.Persistence.csproj src/BuildingBlocks/BuildingBlocks.Persistence/
+COPY src/Modules/Auth/Auth.Api/Auth.Api.csproj                                       src/Modules/Auth/Auth.Api/
+COPY src/Modules/Auth/Auth.Application/Auth.Application.csproj                       src/Modules/Auth/Auth.Application/
+COPY src/Modules/Auth/Auth.Contracts/Auth.Contracts.csproj                           src/Modules/Auth/Auth.Contracts/
+COPY src/Modules/Auth/Auth.Domain/Auth.Domain.csproj                                 src/Modules/Auth/Auth.Domain/
+COPY src/Modules/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj                 src/Modules/Auth/Auth.Infrastructure/
+COPY src/Modules/RealEstate/RealEstate.Api/RealEstate.Api.csproj                     src/Modules/RealEstate/RealEstate.Api/
+COPY src/Modules/RealEstate/RealEstate.Application/RealEstate.Application.csproj     src/Modules/RealEstate/RealEstate.Application/
+COPY src/Modules/RealEstate/RealEstate.Contracts/RealEstate.Contracts.csproj         src/Modules/RealEstate/RealEstate.Contracts/
+COPY src/Modules/RealEstate/RealEstate.Domain/RealEstate.Domain.csproj               src/Modules/RealEstate/RealEstate.Domain/
+COPY src/Modules/RealEstate/RealEstate.Infrastructure/RealEstate.Infrastructure.csproj src/Modules/RealEstate/RealEstate.Infrastructure/
+COPY src/Host/Host.csproj                                                            src/Host/
+
+# Restore Host and, transitively, every project it references.
+RUN dotnet restore src/Host/Host.csproj
+
+# Now bring in the actual source code.
+COPY src/ src/
+
+# Compile in Release and lay out a self-contained folder of DLLs to run.
+# --no-restore because the restore above already ran; this keeps the build honest
+# about its cache and fails loudly if a package reference was missed.
+RUN dotnet publish src/Host/Host.csproj -c Release -o /app/publish --no-restore
+
+# ---------- stage 2: runtime ----------------------------------------------------------
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS final
+WORKDIR /app
+
+# Kestrel listens on 8080 inside the container. Port 80 needs root privileges on Linux;
+# 8080 does not, which is what lets the app run as a non-root user below.
+ENV ASPNETCORE_HTTP_PORTS=8080
+
+# Documents the port for humans and tooling. It does NOT publish anything by itself.
+EXPOSE 8080
+
+COPY --from=build /app/publish .
+
+# Run as the unprivileged user Microsoft bakes into their images. If the container is
+# ever compromised, the attacker is not root inside it.
+USER $APP_UID
+
+ENTRYPOINT ["dotnet", "Host.dll"]

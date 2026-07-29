@@ -1,0 +1,28 @@
+# Build output from your Windows machine. These MUST be excluded: they contain
+# Windows-compiled binaries that would be copied into a Linux container and
+# either break the build or silently ship the wrong DLLs.
+**/bin/
+**/obj/
+
+# Frontend dependencies. Hundreds of megabytes, and they get reinstalled inside
+# the container anyway with the exact Linux versions.
+**/node_modules/
+**/dist/
+
+# Version control and editor metadata. Never needed at runtime.
+**/.git/
+**/.gitignore
+**/.vs/
+**/.vscode/
+**/.idea/
+
+# Packed archives sitting in the repo root.
+*.tgz
+
+# Local-only settings. Must never end up in a production image.
+**/appsettings.Development.json
+**/.env
+**/.env.local
+
+# Docker files themselves do not need to be inside the build context.
+**/docker-compose*.yml
