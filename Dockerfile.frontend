@@ -1,0 +1,46 @@
+# =======================================================================================
+# STAGE 1 - build the React app
+# =======================================================================================
+# node:22-slim is Debian-based rather than Alpine. Tailwind 4 pulls in native binaries
+# (lightningcss) and the Debian build avoids the musl-libc variants that occasionally
+# fail to install on Alpine.
+FROM node:22-slim AS build
+WORKDIR /app
+
+# Copy ONLY the dependency manifests first. Docker caches this layer, so npm reinstalls
+# happen only when package.json or the lockfile actually change - not on every code edit.
+COPY frontend/package.json frontend/package-lock.json ./
+
+# npm ci installs the exact versions pinned in package-lock.json. Unlike npm install it
+# never silently upgrades anything, which is what you want for reproducible deploys.
+RUN npm ci
+
+# Now the source. Changing a component invalidates only from here down.
+COPY frontend/ ./
+
+# Vite inlines env vars into the JavaScript bundle AT BUILD TIME - there is no runtime
+# config for a static site. These arrive as --build-arg values so nothing is hardcoded.
+ARG VITE_API_URL
+ARG VITE_MAPBOX_TOKEN
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
+
+# Produces /app/dist: index.html plus fingerprinted JS/CSS. Nothing else is needed.
+RUN npm run build
+
+# =======================================================================================
+# STAGE 2 - serve
+# =======================================================================================
+# Node is not needed to serve a compiled React app. This image is ~50 MB and contains
+# only nginx and the static files - no build tools, no source code, no node_modules.
+FROM nginx:1.27-alpine AS final
+
+# Replace nginx's default site with ours (static files + /api proxy + SPA fallback).
+COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+
+# Copy the compiled output from stage 1 into nginx's web root.
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 80
+
+# The base image already starts nginx in the foreground; no CMD override needed.
