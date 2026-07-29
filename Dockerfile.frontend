@@ -11,9 +11,15 @@ WORKDIR /app
 # happen only when package.json or the lockfile actually change - not on every code edit.
 COPY frontend/package.json frontend/package-lock.json ./
 
-# npm ci installs the exact versions pinned in package-lock.json. Unlike npm install it
-# never silently upgrades anything, which is what you want for reproducible deploys.
-RUN npm ci
+# npm ci installs the exact versions pinned in package-lock.json and never silently
+# upgrades anything - the reproducible option, so we try it first.
+#
+# The fallback exists because npm generates lockfiles that are platform-incomplete: on
+# macOS it prunes dependencies of optional packages that only matter on Linux, and then
+# npm ci on Linux refuses to run because the lockfile looks inconsistent. When that
+# happens npm install resolves the gap from the registry. Versions stay pinned by the
+# lockfile for everything it does list, so the loss of strictness is small and bounded.
+RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 
 # Now the source. Changing a component invalidates only from here down.
 COPY frontend/ ./
