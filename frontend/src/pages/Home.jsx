@@ -4,13 +4,12 @@ import { useData } from '../store/DataContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading } from '../components/ui'
 import { LogoMarquee } from '../components/misc'
-import { PROPERTY_TYPES } from '../data/mockData'
 
 const HERO = 'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?auto=format&fit=crop&w=2000&q=80'
 const PILLS = ['Apartments in Porto Arabia', 'Rentals in West Bay', 'Villas in Al Waab', 'Off-plan in Lusail', 'Land in Qetaifan Island']
 
 export default function Home() {
-  const { properties, developments, areas, areaCount } = useData()
+  const { properties, developments, areas, areaCount, propertyTypes } = useData()
   const navigate = useNavigate()
   const [tab, setTab] = useState('rent')
   const [q, setQ] = useState('')
@@ -26,7 +25,7 @@ export default function Home() {
     if (q) params.set('q', q)
     if (type) params.set('type', type)
     if (price) params.set('maxPrice', price)
-    navigate(`/${tab === 'commercial' ? 'buy' : tab}?${params}`)
+    navigate(`/${tab}?${params}`)
   }
 
   return (
@@ -41,7 +40,7 @@ export default function Home() {
 
           <div className="bg-white text-neutral-900 shadow-2xl shadow-black/20 rounded-2xl overflow-hidden text-left">
             <div className="flex border-b border-neutral-200">
-              {['rent', 'buy', 'commercial'].map(t => (
+              {['rent', 'buy'].map(t => (
                 <button key={t} onClick={() => setTab(t)}
                   className={`flex-1 py-3 text-sm font-semibold capitalize transition-colors ${tab === t ? 'bg-ink text-white' : 'text-neutral-600 hover:bg-neutral-100'}`}>
                   {t}
@@ -52,7 +51,7 @@ export default function Home() {
               <input value={q} onChange={e => setQ(e.target.value)} placeholder="Location, area, or keyword…" className="field" />
               <select value={type} onChange={e => setType(e.target.value)} className="field md:w-44">
                 <option value="">Property type</option>
-                {PROPERTY_TYPES.map(t => <option key={t}>{t}</option>)}
+                {propertyTypes.map(t => <option key={t.id}>{t.name}</option>)}
               </select>
               <select value={price} onChange={e => setPrice(e.target.value)} className="field md:w-40">
                 <option value="">Max price</option>

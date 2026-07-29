@@ -168,6 +168,10 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
   const [confirm, confirmDialog] = useConfirm()
   const [search, setSearch] = useState('')
   const [saving, setSaving] = useState(false)
+  // True while an ImageUpload inside this form has a request in flight. Saving mid-upload
+  // would post the *previous* URL (or none at all) and silently drop the new file, so the
+  // submit button waits for the upload to finish instead.
+  const [imageBusy, setImageBusy] = useState(false)
   const [notice, setNotice] = useState(null)     // { kind, message }
 
   const singular = title.endsWith('s') ? title.slice(0, -1) : title
@@ -175,11 +179,24 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
   const canUpdate = !permissions.update || hasPermission(permissions.update)
   const canDelete = !permissions.delete || hasPermission(permissions.delete)
 
-  const open = (row) => { setEditing(row ?? {}); setForm(row ? { ...row } : { ...defaults }) }
+  const open = (row) => { setEditing(row ?? {}); setForm(row ? { ...row } : { ...defaults }); setImageBusy(false) }
 
   const save = async (e) => {
     e.preventDefault()
     if (saving) return                            // no duplicate submissions
+    // The button is already disabled while an image uploads, but Enter inside a text field
+    // submits the form regardless of which button is disabled — so guard here as well.
+    if (imageBusy) {
+      setNotice({ kind: 'error', message: 'An image is still uploading — wait for it to finish, then save.' })
+      return
+    }
+    // Image fields are custom controls, so the browser's `required` attribute cannot
+    // guard them — check here instead of letting the API return a 400 for an empty URL.
+    const missingImage = fields.find(f => f.type === 'image' && f.required && !form[f.key])
+    if (missingImage) {
+      setNotice({ kind: 'error', message: `${missingImage.label} is required — choose an image before saving.` })
+      return
+    }
     setSaving(true)
     const res = await Promise.resolve(
       editing?.id ? actions.update(editing.id, form) : actions.add(form))
@@ -243,7 +260,7 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
             {fields.map(f => (
               <div key={f.key} className={['textarea', 'image', 'icon'].includes(f.type) ? 'md:col-span-2' : ''}>
                 <Field label={f.label}>
-                  {f.type === 'image' ? <ImageUpload value={form[f.key] || ''} onChange={url => setForm({ ...form, [f.key]: url })} />
+                  {f.type === 'image' ? <ImageUpload value={form[f.key] || ''} onChange={url => setForm({ ...form, [f.key]: url })} onBusy={setImageBusy} />
                     : f.type === 'icon' ? <IconPicker value={form[f.key] || ''} onChange={k => setForm({ ...form, [f.key]: k })} />
                     : f.type === 'textarea' ? <textarea rows="3" required={f.required} className="field-dark" value={form[f.key] || ''} onChange={e => setForm({ ...form, [f.key]: e.target.value })} />
                     : f.type === 'select' ? (
@@ -260,8 +277,8 @@ export function CrudPage({ title, rows, columns, fields, actions, permissions = 
             ))}
             <div className={`flex justify-end gap-3 pt-2 ${fields.length > 6 ? 'md:col-span-2' : ''}`}>
               <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-gold hover:!text-gold" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
-              <button className="btn-gold flex items-center gap-2" disabled={saving}>
-                {saving && <Spinner />}{saving ? 'Saving…' : 'Save'}
+              <button className="btn-gold flex items-center gap-2" disabled={saving || imageBusy}>
+                {(saving || imageBusy) && <Spinner />}{saving ? 'Saving…' : imageBusy ? 'Uploading…' : 'Save'}
               </button>
             </div>
           </form>

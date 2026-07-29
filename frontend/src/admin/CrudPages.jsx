@@ -195,7 +195,8 @@ export function AgentsAdmin() {
     ]}
     fields={[
       { key: 'name', label: 'Full name', required: true }, { key: 'title', label: 'Job title', required: true },
-      { key: 'photo', label: 'Portrait photo URL', required: true }, { key: 'phone', label: 'Phone' },
+      { key: 'photo', label: 'Portrait photo (uploaded from your device)', type: 'image', required: true },
+      { key: 'phone', label: 'Phone' },
       { key: 'whatsapp', label: 'WhatsApp number' }, { key: 'email', label: 'Email' },
       { key: 'rating', label: 'Rating (0–5)', type: 'number' }, { key: 'active', label: 'Active (visible on site)', type: 'toggle' },
       { key: 'bio', label: 'Short bio', type: 'textarea' },
@@ -439,7 +440,15 @@ export function SettingsAdmin() {
         <Field label="Contact email"><input className="field-dark" value={f.email} onChange={set('email')} /></Field>
         <Field label="Instagram URL"><input className="field-dark" value={f.instagram} onChange={set('instagram')} /></Field>
         <Field label="LinkedIn URL"><input className="field-dark" value={f.linkedin} onChange={set('linkedin')} /></Field>
+        <Field label="Tax number (placeholder — replace with the issued number)">
+          <input className="field-dark" value={f.taxNumber ?? ''} onChange={set('taxNumber')} />
+        </Field>
         <div className="md:col-span-2"><Field label="Footer about text"><textarea rows="3" className="field-dark" value={f.footerAbout} onChange={set('footerAbout')} /></Field></div>
+        <div className="md:col-span-2">
+          <Field label="Footer about text (Arabic)">
+            <textarea rows="2" dir="rtl" lang="ar" className="field-dark text-right" value={f.footerAboutAr ?? ''} onChange={set('footerAboutAr')} />
+          </Field>
+        </div>
         <div className="md:col-span-2"><button className="btn-gold">Save Settings</button></div>
       </form>
     </div>

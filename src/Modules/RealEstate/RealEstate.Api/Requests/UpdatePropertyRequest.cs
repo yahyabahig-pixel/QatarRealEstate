@@ -13,4 +13,6 @@ public sealed record UpdatePropertyRequest(
     RentTermsInput? Rent,
     PropertySpecsInput? Specs,
     Guid? AreaId = null,
-    Guid? AgentId = null);
+    Guid? AgentId = null,
+    bool IsOffPlan = false,
+    bool PriceOnRequest = false);

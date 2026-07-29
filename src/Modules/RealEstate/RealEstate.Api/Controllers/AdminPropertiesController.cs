@@ -58,7 +58,8 @@ public sealed class AdminPropertiesController : ApiControllerBase
     public async Task<IActionResult> Update(Guid id, [FromBody] UpdatePropertyRequest body, CancellationToken ct)
         => (await Sender.Send(new UpdatePropertyCommand(
                 id, body.Title, body.Description, body.PropertyTypeId, body.ListingKind,
-                body.Location, body.Sale, body.Rent, body.Specs, body.AreaId, body.AgentId), ct))
+                body.Location, body.Sale, body.Rent, body.Specs, body.AreaId, body.AgentId,
+                body.IsOffPlan, body.PriceOnRequest), ct))
             .ToNoContent();
 
     // POST /api/admin/properties/{id}/media

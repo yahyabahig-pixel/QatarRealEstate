@@ -74,15 +74,20 @@ export const mapPropertyListItem = (p) => ({
   price: p.offerPrice ?? p.price ?? 0,
   originalPrice: p.offerPrice != null ? p.price : null,
   currency: p.currency || 'QAR',
-  priceOnRequest: p.price == null,
+  // The real flag now, not "we couldn't see a price". A listing always has terms --
+  // the aggregate requires them -- so a missing amount was never the right signal.
+  priceOnRequest: !!p.priceOnRequest,
   city: p.city,
   bedrooms: p.numberOfRooms,
   bathrooms: p.bathrooms,
   sizeSqm: Number(p.areaInSquareMeters) || 0,
   images: p.coverImageUrl ? [p.coverImageUrl] : [],
   exclusive: !!p.isFeatured,
+  offPlan: !!p.isOffPlan,
   type: '', area: '', district: '', amenities: [], agentId: null,
-  offPlan: false, balcony: false, furnishing: '',
+  // Balcony and Furnishing live in the feature catalog, and list DTOs carry no features
+  // by design (one SQL row per card) -- both populate on the details page.
+  balcony: false, furnishing: '',
   addedOn: '',
 })
 
@@ -106,6 +111,15 @@ export const mapPropertyMapItem = (p) => ({
   isOffPlan: !!p.isOffPlan,
 })
 
+// Two catalog features double as first-class UI concepts: the property form shows them as
+// a flag and a dropdown instead of a chip, and the public pages read them back as `balcony`
+// and `furnishing`. Naming them here keeps that mapping in ONE place — they are still
+// ordinary rows in the Features catalog, not columns and not a second system.
+export const NAMED_FEATURES = { BALCONY: 'Balconies', FURNISHING: 'Furnishing' }
+
+const featureValue = (features, name) =>
+  (features || []).find(f => f.name === name)?.value || ''
+
 export const mapPropertyDetails = (p) => ({
   id: p.id,
   referenceNo: `QP-${String(p.id).slice(0, 8).toUpperCase()}`,
@@ -125,11 +139,13 @@ export const mapPropertyDetails = (p) => ({
   price: p.offerPrice ?? p.sale?.amount ?? p.rent?.amount ?? 0,
   originalPrice: p.offerPrice != null ? (p.sale?.amount ?? p.rent?.amount) : null,
   currency: p.sale?.currency || p.rent?.currency || 'QAR',
-  priceOnRequest: p.sale == null && p.rent == null,
+  // A listing always carries terms (the domain requires them for its ListingKind); this
+  // flag is what decides whether the figure is shown publicly or replaced by "on request".
+  priceOnRequest: !!p.priceOnRequest,
   paymentMethod: p.sale?.paymentMethod || null,
   contractDurationMonths: p.rent?.contractDurationMonths || null,
   exclusive: !!p.isFeatured,
-  offPlan: false,
+  offPlan: !!p.isOffPlan,
   viewsCount: p.viewsCount,
   // null whenever the backend could not parse a usable coordinate pair; the
   // detail page hides the whole Location block rather than showing a map of nowhere.
@@ -139,8 +155,10 @@ export const mapPropertyDetails = (p) => ({
   media: p.media || [],                       // full objects, for the admin media manager
   amenities: (p.features || []).map(f => f.name),
   features: p.features || [],                 // full objects, for the admin feature editor
-  balcony: false,
-  furnishing: '',
+  // Both live in the Features catalog — read back here so the pages that ask for
+  // `balcony` / `furnishing` keep working without a second storage location.
+  balcony: (p.features || []).some(f => f.name === NAMED_FEATURES.BALCONY),
+  furnishing: featureValue(p.features, NAMED_FEATURES.FURNISHING),
   agentId: p.agent?.id || null,
   // Full "Listed by" card data straight from the details DTO (live mode). Mock mode has
   // no p.agent — the details page falls back to looking the agent up by agentId.
@@ -223,6 +241,12 @@ export const propertyCommand = (f, typeIdByName, areaIdByName) => {
     },
     areaId: areaIdByName[f.area] || null,
     agentId: f.agentId || null,
+    // Two booleans the domain already models on Property. The listing keeps its real
+    // figure either way — PriceOnRequest only decides whether the site prints it.
+    // "Exclusive" is deliberately NOT here: it is IsFeatured, and the backend guards it
+    // behind its own endpoint because only a published listing may be featured.
+    isOffPlan: !!f.offPlan,
+    priceOnRequest: !!f.priceOnRequest,
   }
 }
 
@@ -321,7 +345,8 @@ export const mapAdminPropertyRow = (p) => ({
   active: p.isActive !== false,
   price: p.price ?? 0,
   currency: p.currency || 'QAR',
-  priceOnRequest: p.price == null,
+  priceOnRequest: !!p.priceOnRequest,
+  offPlan: !!p.isOffPlan,
   city: p.city || '', area: p.area || '', district: '',
   type: p.propertyType || '',
   images: p.coverImageUrl ? [p.coverImageUrl] : [],

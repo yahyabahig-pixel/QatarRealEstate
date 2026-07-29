@@ -107,6 +107,17 @@ public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyComman
             if (agentAssigned.IsError) return agentAssigned.TopError;
         }
 
+        // Presentation flags, applied through the aggregate's own mutators rather than by
+        // assigning the properties — the entity keeps its private setters and stays the
+        // only thing that decides what a valid listing looks like.
+        var offPlan = request.IsOffPlan ? property.Value.MarkOffPlan() : property.Value.ClearOffPlan();
+        if (offPlan.IsError) return offPlan.TopError;
+
+        var onRequest = request.PriceOnRequest
+            ? property.Value.MarkPriceOnRequest()
+            : property.Value.ClearPriceOnRequest();
+        if (onRequest.IsError) return onRequest.TopError;
+
         await _properties.AddAsync(property.Value, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return property.Value.Id;

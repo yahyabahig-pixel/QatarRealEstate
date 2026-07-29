@@ -220,8 +220,13 @@ public sealed class PropertyQueries : IPropertyQueries
                     .Select(m => new MediaDto(m.Id, m.Url, m.MediaType, m.Width, m.Height, m.Order, m.IsPrimary))
                     .ToList(),
                 p.PropertyFeatures
+                    // FeatureDto is (FeatureId, Name, Value, Icon). The join used to pass
+                    // (f.Id, f.Name, f.Icon, pf.Value), which type-checks because both are
+                    // strings but puts the icon in Value and the value in Icon -- so every
+                    // Text feature (Furnishing, Floor Number, Kitchen Type...) read back the
+                    // wrong field. Argument order corrected here.
                     .Join(_db.Features, pf => pf.FeatureId, f => f.Id,
-                          (pf, f) => new FeatureDto(f.Id, f.Name, f.Icon, pf.Value))
+                          (pf, f) => new FeatureDto(f.Id, f.Name, pf.Value, f.Icon))
                     .ToList(),
                 p.AreaId,
                 _db.Areas.Where(a => a.Id == p.AreaId).Select(a => a.Name).FirstOrDefault())
@@ -236,6 +241,8 @@ public sealed class PropertyQueries : IPropertyQueries
                     .Select(a => new PropertyAgentDto(
                         a.Id, a.Name, a.JobTitle, a.PhotoUrl, a.Slug, a.Phone, a.WhatsApp))
                     .FirstOrDefault(),
+                IsOffPlan = p.IsOffPlan,
+                PriceOnRequest = p.PriceOnRequest,
             })
             .FirstOrDefaultAsync(ct);
     }
@@ -404,7 +411,9 @@ public sealed class PropertyQueries : IPropertyQueries
                 p.CreatedBy,
                 p.CreatedAtUtc.DateTime,
                 p.AgentId,
-                _db.Agents.Where(a => a.Id == p.AgentId).Select(a => a.Name).FirstOrDefault()))
+                _db.Agents.Where(a => a.Id == p.AgentId).Select(a => a.Name).FirstOrDefault(),
+                p.IsOffPlan,
+                p.PriceOnRequest))
             .ToListAsync(ct);
 
         return new PagedResult<AdminPropertyListItemDto>(items, filter.Page, filter.PageSize, totalCount);
@@ -445,5 +454,10 @@ public sealed class PropertyQueries : IPropertyQueries
             p.PropertySpecs.NumberOfRooms,
             p.PropertySpecs.Bathrooms,
             p.PropertySpecs.AreaInSquareMeters,
-            p.IsFeatured);
+            p.IsFeatured,
+            // Card-level presentation flags. Features are deliberately NOT joined here: a list
+            // endpoint stays one row per card, so Balcony/Furnishing only appear on the details
+            // page, which already loads the full feature set.
+            p.IsOffPlan,
+            p.PriceOnRequest);
 }

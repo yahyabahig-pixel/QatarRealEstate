@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { brandParts } from '../config/company'
 import { Star } from './ui'
 import { IconAward } from './icons'
 
@@ -12,6 +13,7 @@ const SEO_COLUMNS = [
 
 export default function Footer() {
   const { settings } = useData()
+  const [brandFirst, brandRest] = brandParts(settings.siteName)
   return (
     <footer className="bg-ink text-neutral-300">
       {/* SEO links */}
@@ -31,8 +33,13 @@ export default function Footer() {
       {/* main footer */}
       <div className="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
         <div className="md:col-span-1">
-          <div className="h-serif text-xl text-white mb-4">{settings.siteName.split(' ')[0]} <span className="text-gold">{settings.siteName.split(' ').slice(1).join(' ')}</span></div>
+          <div className="h-serif text-xl text-white mb-4">{brandFirst} <span className="text-gold">{brandRest}</span></div>
           <p className="text-sm text-neutral-400 leading-relaxed mb-4">{settings.footerAbout}</p>
+          {/* Arabic licence line. dir/lang let the browser shape and align the script correctly
+              regardless of the page's left-to-right direction. */}
+          {settings.footerAboutAr && (
+            <p dir="rtl" lang="ar" className="text-sm text-neutral-400 leading-relaxed mb-4 text-right">{settings.footerAboutAr}</p>
+          )}
           <div className="inline-flex items-center gap-2 border border-gold/40 rounded-full px-3.5 py-1.5 text-xs text-gold mb-3"><IconAward className="w-3.5 h-3.5" /> Qatar Luxury Brokerage of the Year</div>
           <div className="flex items-center gap-2 text-sm">
             <span className="flex text-gold">{[...Array(5)].map((_, i) => <Star key={i} />)}</span>
@@ -60,7 +67,10 @@ export default function Footer() {
           <div className="flex gap-4 text-neutral-400">
             {['Instagram', 'LinkedIn', 'YouTube', 'X'].map(s => <a key={s} href="#" className="hover:text-gold">{s}</a>)}
           </div>
-          <div>© {new Date().getFullYear()} {settings.siteName}. All rights reserved.</div>
+          <div className="text-center md:text-left">
+            <div>© {new Date().getFullYear()} {settings.siteName}. All rights reserved.</div>
+            {settings.taxNumber && <div className="mt-1">Tax Number: {settings.taxNumber}</div>}
+          </div>
           <div className="flex gap-4">
             <a href="#" className="hover:text-gold">Privacy</a><a href="#" className="hover:text-gold">Terms</a><a href="#" className="hover:text-gold">Cookies</a>
           </div>

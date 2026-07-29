@@ -1,16 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { brandParts } from '../config/company'
 import { IconChevronDown, IconMenu, IconUser, IconX } from './icons'
 
 const MENUS = [
   { label: 'Rent', to: '/rent', items: ['Apartments for Rent', 'Villas for Rent', 'Offices for Rent', 'Studios for Rent'] },
   { label: 'Buy', to: '/buy', items: ['Apartments for Sale', 'Villas for Sale', 'Lands for Sale', 'Offices for Sale', 'Penthouses for Sale'] },
-  {
-    label: 'Commercial', to: '/buy', twoCol: true,
-    rent: ['Commercial Villa', 'Retail Shop', 'Warehouse', 'Restaurant', 'Labor Camp'],
-    buy: ['Whole Building', 'Land Plot', 'Factory', 'Hotel', 'Office'],
-  },
   { label: 'Developments', to: '/developments', items: ['All Developments', 'The Pearl', 'Lusail', 'Qetaifan Island'] },
   { label: 'Agents', to: '/find-agent', items: ['Find an Agent', 'Careers'] },
   { label: 'Resources', to: '/about-us', items: ['About Us', 'Contact Us', 'List Your Property', 'Off-Market Opportunities'] },
@@ -29,6 +25,7 @@ const itemLink = (label) => {
 
 export default function Navbar({ overHero = false }) {
   const { settings } = useData()
+  const [brandFirst, brandRest] = brandParts(settings.siteName)
   const [scrolled, setScrolled] = useState(false)
   const [mobileOpen, setMobileOpen] = useState(false)
   const [openAccordion, setOpenAccordion] = useState(null)
@@ -45,7 +42,7 @@ export default function Navbar({ overHero = false }) {
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${solid ? 'bg-ink/95 backdrop-blur-md shadow-lg shadow-black/10' : 'bg-transparent'}`}>
       <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16 text-white">
         <Link to="/" className="h-serif text-lg tracking-tight">
-          {settings.siteName.split(' ')[0]} <span className="text-gold">{settings.siteName.split(' ').slice(1).join(' ')}</span>
+          {brandFirst} <span className="text-gold">{brandRest}</span>
         </Link>
 
         {/* desktop menu */}
@@ -59,22 +56,9 @@ export default function Navbar({ overHero = false }) {
               </NavLink>
               <div className="absolute left-1/2 -translate-x-1/2 top-full hidden group-hover:block pt-2">
                 <div className="bg-ink/98 backdrop-blur border border-white/10 rounded-xl shadow-2xl shadow-black/30 p-5 min-w-[240px]">
-                  {m.twoCol ? (
-                    <div className="grid grid-cols-2 gap-6">
-                      {['rent', 'buy'].map(col => (
-                        <div key={col}>
-                          <div className="eyebrow mb-3">{col === 'rent' ? 'For Rent' : 'For Buy'}</div>
-                          <ul className="space-y-1">
-                            {m[col].map(x => <li key={x}><Link to={col === 'rent' ? '/rent' : '/buy'} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-gold hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
-                          </ul>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <ul className="space-y-1">
-                      {m.items.map(x => <li key={x}><Link to={itemLink(x)} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-gold hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
-                    </ul>
-                  )}
+                  <ul className="space-y-1">
+                    {m.items.map(x => <li key={x}><Link to={itemLink(x)} className="block rounded-md px-2 py-1.5 -mx-2 text-white/75 hover:text-gold hover:bg-white/5 whitespace-nowrap transition-colors">{x}</Link></li>)}
+                  </ul>
                 </div>
               </div>
             </div>
@@ -109,7 +93,7 @@ export default function Navbar({ overHero = false }) {
               </button>
               {openAccordion === m.label && (
                 <ul className="px-5 pb-4 space-y-1 text-sm text-white/70">
-                  {(m.items || [...m.rent, ...m.buy]).map(x => (
+                  {m.items.map(x => (
                     <li key={x}><Link to={itemLink(x)} onClick={() => setMobileOpen(false)} className="block py-1.5 hover:text-gold transition-colors">{x}</Link></li>
                   ))}
                 </ul>

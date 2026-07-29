@@ -32,4 +32,8 @@ public sealed record PropertyListItem(
     int NumberOfRooms,
     int Bathrooms,
     decimal AreaInSquareMeters,
-    bool IsFeatured);
+    bool IsFeatured,
+    // Card badges. Trailing and defaulted so every existing construction site of this
+    // positional record keeps compiling untouched.
+    bool IsOffPlan = false,
+    bool PriceOnRequest = false);

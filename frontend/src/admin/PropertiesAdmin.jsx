@@ -5,9 +5,15 @@ import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconEye,
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE } from '../api/client'
-import { imagesAdminApi, imageUrl, mapAdminPropertyRow, propertiesAdminApi } from '../api/realEstateApi'
+import { NAMED_FEATURES, imagesAdminApi, imageUrl, mapAdminPropertyRow, propertiesAdminApi } from '../api/realEstateApi'
 import LocationPicker from '../components/LocationPicker'
 import { resolveFeatureIcon } from '../lib/featureIcons'
+
+// Two entries in the Features catalog get a dedicated control on this form rather than a
+// chip, because the request asks for them by name: "Balcony" as a flag and "Furnishing" as
+// a dropdown. They are filtered out of the chip grid so each value has exactly ONE control,
+// but they are still stored as features — no parallel columns, no second catalog.
+const { BALCONY: BALCONY_FEATURE, FURNISHING: FURNISHING_FEATURE } = NAMED_FEATURES
 
 // Form state mirrors the UI dialect; DataContext + realEstateApi translate it into the
 // backend's CreatePropertyCommand / UpdatePropertyRequest (see propertyCommand).
@@ -20,6 +26,30 @@ const EMPTY = {
   // Location: x = LONGITUDE, y = LATITUDE (strings, matching the backend Location VO).
   // Set by the LocationPicker only -- there are no coordinate inputs in the form.
   x: '', y: '', lat: null, lng: null, locCountry: 'Qatar', locState: '', locDescription: '',
+}
+
+// Reverse geocoding hands back free text ("Porto Arabia, The Pearl, Doha, Qatar"), while
+// Area is a catalog record. This looks for a catalog name inside that text so the dropdown
+// can pre-select itself. Deliberately conservative:
+//   * only names ALREADY in the Areas catalog can match — nothing is ever created;
+//   * matching is on whole words, so "Al Waab" cannot match inside a longer word;
+//   * the LONGEST match wins, so "Lusail Marina District" beats a bare "Lusail";
+//   * no match returns null, and the caller then leaves the current choice untouched.
+const normalizeText = (s) => ` ${String(s || '').toLowerCase().replace(/[^a-z0-9؀-ۿ]+/g, ' ').trim()} `
+const matchAreaName = (areas, patch) => {
+  const haystack = normalizeText([patch.description, patch.street, patch.state, patch.city].filter(Boolean).join(' '))
+  if (haystack.trim() === '') return null
+  let best = null
+  let bestLength = 0
+  for (const a of areas) {
+    const name = normalizeText(a.name)
+    if (name.trim() === '') continue
+    const withoutArticle = name.replace(/^ the /, ' ')
+    if (haystack.includes(name) || haystack.includes(withoutArticle)) {
+      if (name.length > bestLength) { best = a.name; bestLength = name.length }
+    }
+  }
+  return best
 }
 
 export default function PropertiesAdmin() {
@@ -71,7 +101,9 @@ export default function PropertiesAdmin() {
 
   // Amenity chips come from the backend feature catalog (Features admin section),
   // never a hardcoded list. Only active features are offered on the form.
-  const featureOptions = useMemo(() => features.filter(f => f.active !== false), [features])
+  const featureOptions = useMemo(
+    () => features.filter(f => f.active !== false && f.name !== BALCONY_FEATURE && f.name !== FURNISHING_FEATURE),
+    [features])
   const typeNames = useMemo(() => propertyTypes.map(t => t.name), [propertyTypes])
 
   // Initial data-load failures (not save errors — those come back on the action result).
@@ -93,7 +125,12 @@ export default function PropertiesAdmin() {
       : viewsOf(a) - viewsOf(b))
   }, [properties, adminRows, filters, viewSort])   // eslint-disable-line react-hooks/exhaustive-deps
 
-  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target?.type === 'number' ? +e.target.value : e.target.value }))
+  // Number inputs keep their RAW string while the admin types. Coercing to a number on
+  // every keystroke is what made decimals impossible to enter: "1500." collapses to 1500,
+  // so the "." never survives long enough to type the digits after it. The payload
+  // builders already do `Number(f.price) || 0`, so strings are safe all the way down and
+  // an emptied field means 0 rather than a stuck "0" the admin has to delete around.
+  const set = (k) => (e) => setForm(f => ({ ...f, [k]: e.target.value }))
 
   // Editing: the detail DTO exposes lat/lng; the form speaks x/y (x=lng, y=lat).
   const withCoords = (src) => ({
@@ -105,14 +142,30 @@ export default function PropertiesAdmin() {
   })
 
   // One adapter between the picker's generic keys and this form's field names.
-  const applyLocation = (patch) => setForm(f => ({ ...f,
-    ...(patch.x !== undefined ? { x: patch.x, y: patch.y, lat: patch.lat, lng: patch.lng } : {}),
-    ...(patch.country !== undefined ? { locCountry: patch.country } : {}),
-    ...(patch.city !== undefined ? { city: patch.city } : {}),
-    ...(patch.street !== undefined ? { district: patch.street } : {}),
-    ...(patch.state !== undefined ? { locState: patch.state } : {}),
-    ...(patch.description !== undefined ? { locDescription: patch.description } : {}),
-  }))
+  // The picker emits twice per pin: coordinates first, then the geocoded address — so the
+  // Area lookup only runs on the second call, when there is actually an address to read.
+  const applyLocation = (patch) => setForm(f => {
+    const next = { ...f,
+      ...(patch.x !== undefined ? { x: patch.x, y: patch.y, lat: patch.lat, lng: patch.lng } : {}),
+      ...(patch.country !== undefined ? { locCountry: patch.country } : {}),
+      ...(patch.city !== undefined ? { city: patch.city } : {}),
+      ...(patch.street !== undefined ? { district: patch.street } : {}),
+      ...(patch.state !== undefined ? { locState: patch.state } : {}),
+      ...(patch.description !== undefined ? { locDescription: patch.description } : {}),
+    }
+    // A geocode that resolved nothing comes back with blank parts. Blanking City would
+    // strand the admin: the field is filled by the map, so there would be nothing left to
+    // fix it with. An empty answer therefore leaves the previous value standing.
+    if (patch.city !== undefined && !String(patch.city).trim()) next.city = f.city
+    if (patch.street !== undefined && !String(patch.street).trim()) next.district = f.district
+    if (patch.description !== undefined || patch.street !== undefined) {
+      // A hit updates the selection; a miss leaves whatever the admin already chose,
+      // because "the geocoder didn't recognise it" is not the same as "no area".
+      const matched = matchAreaName(areas, patch)
+      if (matched) next.area = matched
+    }
+    return next
+  })
   const setV = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
   // EDIT loads the FULL record from GET /api/properties/{id} — the table rows are thin
@@ -121,7 +174,9 @@ export default function PropertiesAdmin() {
   const open = async (row) => {
     if (!row) {
       setEditing({})
-      setForm({ ...EMPTY, type: typeNames[0] || '', agentId: agents[0]?.id || '' })
+      // Type starts EMPTY so the "Select a type…" placeholder is what the admin sees —
+      // pre-picking the first type silently decides a required field on their behalf.
+      setForm({ ...EMPTY, type: '', agentId: agents[0]?.id || '' })
       return
     }
     if (MOCK_MODE) { setEditing(row); setForm({ ...EMPTY, ...row, ...withCoords(row) }); return }
@@ -129,7 +184,10 @@ export default function PropertiesAdmin() {
     try {
       const full = await propertiesAdminApi.details(row.id)
       setEditing({ id: row.id, referenceNo: full.referenceNo })
-      setForm({ ...EMPTY, ...full, ...withCoords(full) })
+      // An empty furnishing means the catalog feature simply isn't attached — show that
+      // as "N/A" so the dropdown and the form state agree instead of the browser
+      // rendering the first option while the value is still ''.
+      setForm({ ...EMPTY, ...full, furnishing: full.furnishing || 'N/A', ...withCoords(full) })
     } catch (err) {
       setEditing(null)
       setNotice({ kind: 'error', message: `Could not load this listing for editing.\n${err?.problem?.title || err.message}` })
@@ -335,22 +393,41 @@ export default function PropertiesAdmin() {
                 {typeNames.map(t => <option key={t}>{t}</option>)}
               </select>
             </Field>
-            <Field label="City (auto-filled from the map)"><input required readOnly title="Set by the Location picker below" className="field-dark opacity-70 cursor-default" value={form.city} /></Field>
-            <Field label="Area (from the Areas catalog)">
-              {/* Only defined Areas are selectable — the value submitted is the Area's id,
-                  resolved in DataContext. Free-typed area names are gone on purpose. */}
-              <select className="field-dark" value={form.area} onChange={set('area')}>
-                <option value="">— No area —</option>
-                {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-              </select>
-              {areas.length === 0 && <p className="text-[11px] text-neutral-500 mt-1">No areas defined yet — add them under Areas first.</p>}
-            </Field>
-            <Field label="Street (auto-filled from the map)"><input readOnly title="Set by the Location picker below" className="field-dark opacity-70 cursor-default" value={form.district} /></Field>
-            <Field label="Assigned agent"><select className="field-dark" value={form.agentId} onChange={set('agentId')}>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+            {/* LOCATION — the map comes first and everything below it is what the map just
+                said. Pin the property, then read (and correct) the address underneath:
+                1. City   2. Area   3. Street. */}
+            <div className="md:col-span-2">
+              <Field label="Location (search or click the map — the address below fills in automatically)">
+                <LocationPicker
+                  value={{ x: form.x, y: form.y, country: form.locCountry, city: form.city, street: form.district, state: form.locState, description: form.locDescription }}
+                  onChange={applyLocation}
+                />
+              </Field>
+            </div>
+            <div className="md:col-span-2 grid md:grid-cols-3 gap-4">
+              <Field label="City (auto-filled from the map)"><input required readOnly title="Set by the Location picker above" className="field-dark opacity-70 cursor-default" value={form.city} /></Field>
+              <Field label="Area (from the Areas catalog)">
+                {/* Only defined Areas are selectable — the value submitted is the Area's id,
+                    resolved in DataContext. Free-typed area names are gone on purpose.
+                    The map pre-selects this when the geocoded address names a known Area. */}
+                <select className="field-dark" value={form.area} onChange={set('area')}>
+                  <option value="">No area</option>
+                  {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+                </select>
+                {areas.length === 0 && <p className="text-[11px] text-neutral-500 mt-1">No areas defined yet — add them under Areas first.</p>}
+              </Field>
+              <Field label="Street (auto-filled from the map)"><input readOnly title="Set by the Location picker above" className="field-dark opacity-70 cursor-default" value={form.district} /></Field>
+            </div>
+            {/* Agents come from the Agents catalog, never a hardcoded list. The blank option
+                mirrors "No area": the backend accepts a null AgentId, and without an option
+                for it an unassigned listing would display someone else's name. */}
+            <Field label="Assigned agent"><select className="field-dark" value={form.agentId} onChange={set('agentId')}><option value="">No agent assigned</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
             <Field label="Bedrooms (number of beds)"><input type="number" min="0" className="field-dark" value={form.bedrooms} onChange={set('bedrooms')} /></Field>
             <Field label="Bathrooms"><input type="number" min="0" className="field-dark" value={form.bathrooms} onChange={set('bathrooms')} /></Field>
             <Field label="Size (m²)"><input type="number" min="0" step="0.01" className="field-dark" value={form.sizeSqm} onChange={set('sizeSqm')} /></Field>
-            <Field label="Price"><input type="number" min="0" className="field-dark" value={form.price} onChange={set('price')} disabled={form.priceOnRequest} /></Field>
+            {/* Editable even when "Price on request" is on: the listing still records a real
+                figure internally, the flag only decides whether the site shows it. */}
+            <Field label="Price"><input type="number" min="0" step="0.01" className="field-dark" value={form.price} onChange={set('price')} /></Field>
             <Field label="Currency"><select className="field-dark" value={form.currency} onChange={set('currency')}><option>QAR</option><option>USD</option></select></Field>
             <Field label="Status">
               <select className="field-dark" value={form.status} onChange={set('status')}>
@@ -365,7 +442,16 @@ export default function PropertiesAdmin() {
               <Toggle checked={form.priceOnRequest} onChange={v => setV('priceOnRequest', v)} label="Price on request" />
               <Toggle checked={form.exclusive} onChange={v => setV('exclusive', v)} label="Exclusive" />
               <Toggle checked={form.offPlan} onChange={v => setV('offPlan', v)} label="Off-Plan" />
-              <Toggle checked={form.balcony} onChange={v => setV('balcony', v)} label="Balcony" />
+              {/* Stored as the catalog's "Balconies" feature. `balcony` is kept in step so
+                  anything already reading it (the details page, mock mode) still works. */}
+              <Toggle checked={form.amenities.includes(BALCONY_FEATURE)}
+                onChange={v => setForm(f => ({ ...f,
+                  balcony: v,
+                  amenities: v
+                    ? [...new Set([...f.amenities, BALCONY_FEATURE])]
+                    : f.amenities.filter(x => x !== BALCONY_FEATURE),
+                }))}
+                label="Balcony" />
             </div>
             <div className="md:col-span-2">
               <Field label="Property features (managed under Features)">
@@ -383,14 +469,6 @@ export default function PropertiesAdmin() {
                       ))}
                     </div>
                   )}
-              </Field>
-            </div>
-            <div className="md:col-span-2">
-              <Field label="Location (search or click the map — the address and coordinates fill in automatically)">
-                <LocationPicker
-                  value={{ x: form.x, y: form.y, country: form.locCountry, city: form.city, street: form.district, state: form.locState, description: form.locDescription }}
-                  onChange={applyLocation}
-                />
               </Field>
             </div>
             <div className="md:col-span-2">

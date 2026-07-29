@@ -18,4 +18,8 @@ public sealed record AdminPropertyListItemDto(
     Guid? CreatedBy,
     DateTime CreatedOnUtc,
     Guid? AgentId = null,
-    string? AgentName = null);
+    string? AgentName = null,
+    // Presentation flags so the admin grid can round-trip them without a details call.
+    // Trailing and defaulted: existing positional construction keeps compiling.
+    bool IsOffPlan = false,
+    bool PriceOnRequest = false);

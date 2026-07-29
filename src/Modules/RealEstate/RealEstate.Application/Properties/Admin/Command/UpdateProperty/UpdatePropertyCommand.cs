@@ -16,4 +16,8 @@ public sealed record UpdatePropertyCommand(
     RentTermsInput? Rent,
     PropertySpecsInput? Specs,
     Guid? AreaId = null,                         // optional: file the listing under a catalog Area
-    Guid? AgentId = null) : ICommand<Updated>;   // optional: assign the consultant who represents it
+    Guid? AgentId = null,                        // optional: assign the consultant who represents it
+    // Same two presentation flags as CreatePropertyCommand — trailing and defaulted so the
+    // existing positional construction in AdminPropertiesController keeps compiling.
+    bool IsOffPlan = false,
+    bool PriceOnRequest = false) : ICommand<Updated>;

@@ -51,6 +51,12 @@ public sealed class Property : AuditableEntity
     // "Exclusive" concept and stays what it is.
     public bool IsOffPlan { get; private set; }
 
+    // "Price on request": the listing still carries its real SaleTerms/RentTerms — the
+    // aggregate requires them for its ListingKind and that invariant is unchanged — this
+    // flag only says the figure must not be published. Presentation, not pricing, so the
+    // brokerage keeps a usable number internally while the public page shows "on request".
+    public bool PriceOnRequest { get; private set; }
+
     // Numeric mirror of Location.YCoordinate / Location.XCoordinate.
     //
     // The value object keeps the authoritative strings and stays untouched. These two exist
@@ -497,6 +503,20 @@ public sealed class Property : AuditableEntity
     public Result<Updated> ClearOffPlan()
     {
         IsOffPlan = false;
+        return Result.Updated;
+    }
+
+    // Unconditional on purpose: hiding or revealing the asking price is an editorial
+    // decision, not a lifecycle transition, so there is no status it can be illegal in.
+    public Result<Updated> MarkPriceOnRequest()
+    {
+        PriceOnRequest = true;
+        return Result.Updated;
+    }
+
+    public Result<Updated> ClearPriceOnRequest()
+    {
+        PriceOnRequest = false;
         return Result.Updated;
     }
 

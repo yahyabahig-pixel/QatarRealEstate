@@ -3,6 +3,8 @@
 // store can be swapped for real API calls without touching the UI (Prompt 3 requirement).
 // Images: Unsplash (placeholders only — original copy, no fgrealty content).
 // ---------------------------------------------------------------------------------------
+import { COMPANY } from '../config/company'
+
 const img = (id, w = 1200) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=${w}&q=80`
 
 export const AMENITIES = [
@@ -26,18 +28,18 @@ export const refFor = (type, purpose, n) =>
   `${REF_PREFIXES[`${type}-${purpose}`] || (type[0] + (purpose === 'rent' ? 'R' : 'S'))}-${String(n).padStart(6, '0')}`
 
 export const seedAgents = [
-  { id: 'ag1', name: 'Khalid Al-Mansour', slug: 'khalid-al-mansour', title: 'Founder & CEO', photo: img('1560250097-0b93528c311a', 600), phone: '+974 5550 1001', whatsapp: '97455501001', email: 'khalid@qatarprime.example', rating: 5.0, bio: 'Two decades shaping Doha’s luxury market, from The Pearl’s first towers to Lusail’s waterfront.', active: true },
-  { id: 'ag2', name: 'Sara El-Amin', slug: 'sara-el-amin', title: 'Director of Sales', photo: img('1573496359142-b8d87734a5a2', 600), phone: '+974 5550 1002', whatsapp: '97455501002', email: 'sara@qatarprime.example', rating: 4.9, bio: 'Specialist in Pearl Island waterfront residences and off-plan investment.', active: true },
-  { id: 'ag3', name: 'Omar Haddad', slug: 'omar-haddad', title: 'Senior Sales Agent', photo: img('1507003211169-0a1dd7228f2d', 600), phone: '+974 5550 1003', whatsapp: '97455501003', email: 'omar@qatarprime.example', rating: 4.8, bio: 'West Bay commercial towers and corporate leasing.', active: true },
-  { id: 'ag4', name: 'Layla Kassem', slug: 'layla-kassem', title: 'Real Estate Consultant', photo: img('1580489944761-15a19d654956', 600), phone: '+974 5550 1004', whatsapp: '97455501004', email: 'layla@qatarprime.example', rating: 5.0, bio: 'Family villas across Al Waab, Al Rayyan and West Bay Lagoon.', active: true },
-  { id: 'ag5', name: 'Yousef Darwish', slug: 'yousef-darwish', title: 'Real Estate Consultant', photo: img('1472099645785-5658abf4ff4e', 600), phone: '+974 5550 1005', whatsapp: '97455501005', email: 'yousef@qatarprime.example', rating: 4.7, bio: 'Lusail Marina and Fox Hills apartments — rentals and resale.', active: true },
-  { id: 'ag6', name: 'Noor Al-Thani', slug: 'noor-al-thani', title: 'Senior Sales Agent', photo: img('1438761681033-6461ffad8d80', 600), phone: '+974 5550 1006', whatsapp: '97455501006', email: 'noor@qatarprime.example', rating: 4.9, bio: 'Qetaifan Island and beachfront chalets.', active: true },
-  { id: 'ag7', name: 'Hassan Barakat', slug: 'hassan-barakat', title: 'Commercial Specialist', photo: img('1500648767791-00dcc994a43e', 600), phone: '+974 5550 1007', whatsapp: '97455501007', email: 'hassan@qatarprime.example', rating: 4.6, bio: 'Warehouses, retail and industrial across the Industrial Area and Barwa.', active: true },
-  { id: 'ag8', name: 'Mariam Fakhri', slug: 'mariam-fakhri', title: 'Leasing Consultant', photo: img('1544005313-94ddf0286df2', 600), phone: '+974 5550 1008', whatsapp: '97455501008', email: 'mariam@qatarprime.example', rating: 4.8, bio: 'Furnished rentals in Porto Arabia and Viva Bahriya.', active: true },
-  { id: 'ag9', name: 'Tariq Nassar', slug: 'tariq-nassar', title: 'Investment Advisor', photo: img('1519085360753-af0119f7cbe7', 600), phone: '+974 5550 1009', whatsapp: '97455501009', email: 'tariq@qatarprime.example', rating: 5.0, bio: 'Off-plan portfolios and rental-yield strategy for international investors.', active: true },
-  { id: 'ag10', name: 'Dana Suleiman', slug: 'dana-suleiman', title: 'Real Estate Consultant', photo: img('1487412720507-e7ab37603c6f', 600), phone: '+974 5550 1010', whatsapp: '97455501010', email: 'dana@qatarprime.example', rating: 0, bio: 'Msheireb Downtown and city-centre apartments.', active: true },
-  { id: 'ag11', name: 'Faisal Rahim', slug: 'faisal-rahim', title: 'Senior Sales Agent', photo: img('1506794778202-cad84cf45f1d', 600), phone: '+974 5550 1011', whatsapp: '97455501011', email: 'faisal@qatarprime.example', rating: 4.5, bio: 'Al Wakrah and south Doha family compounds.', active: true },
-  { id: 'ag12', name: 'Reem Qadi', slug: 'reem-qadi', title: 'Real Estate Consultant', photo: img('1531123897727-8f129e1688ce', 600), phone: '+974 5550 1012', whatsapp: '97455501012', email: 'reem@qatarprime.example', rating: 4.9, bio: 'Waterfront penthouses and branded residences.', active: true },
+  { id: 'ag1', name: 'Khalid Al-Mansour', slug: 'khalid-al-mansour', title: 'Founder & CEO', photo: img('1560250097-0b93528c311a', 600), phone: '+974 5550 1001', whatsapp: '97455501001', email: 'khalid@almadenah.example', rating: 5.0, bio: 'Two decades shaping Doha’s luxury market, from The Pearl’s first towers to Lusail’s waterfront.', active: true },
+  { id: 'ag2', name: 'Sara El-Amin', slug: 'sara-el-amin', title: 'Director of Sales', photo: img('1573496359142-b8d87734a5a2', 600), phone: '+974 5550 1002', whatsapp: '97455501002', email: 'sara@almadenah.example', rating: 4.9, bio: 'Specialist in Pearl Island waterfront residences and off-plan investment.', active: true },
+  { id: 'ag3', name: 'Omar Haddad', slug: 'omar-haddad', title: 'Senior Sales Agent', photo: img('1507003211169-0a1dd7228f2d', 600), phone: '+974 5550 1003', whatsapp: '97455501003', email: 'omar@almadenah.example', rating: 4.8, bio: 'West Bay commercial towers and corporate leasing.', active: true },
+  { id: 'ag4', name: 'Layla Kassem', slug: 'layla-kassem', title: 'Real Estate Consultant', photo: img('1580489944761-15a19d654956', 600), phone: '+974 5550 1004', whatsapp: '97455501004', email: 'layla@almadenah.example', rating: 5.0, bio: 'Family villas across Al Waab, Al Rayyan and West Bay Lagoon.', active: true },
+  { id: 'ag5', name: 'Yousef Darwish', slug: 'yousef-darwish', title: 'Real Estate Consultant', photo: img('1472099645785-5658abf4ff4e', 600), phone: '+974 5550 1005', whatsapp: '97455501005', email: 'yousef@almadenah.example', rating: 4.7, bio: 'Lusail Marina and Fox Hills apartments — rentals and resale.', active: true },
+  { id: 'ag6', name: 'Noor Al-Thani', slug: 'noor-al-thani', title: 'Senior Sales Agent', photo: img('1438761681033-6461ffad8d80', 600), phone: '+974 5550 1006', whatsapp: '97455501006', email: 'noor@almadenah.example', rating: 4.9, bio: 'Qetaifan Island and beachfront chalets.', active: true },
+  { id: 'ag7', name: 'Hassan Barakat', slug: 'hassan-barakat', title: 'Commercial Specialist', photo: img('1500648767791-00dcc994a43e', 600), phone: '+974 5550 1007', whatsapp: '97455501007', email: 'hassan@almadenah.example', rating: 4.6, bio: 'Warehouses, retail and industrial across the Industrial Area and Barwa.', active: true },
+  { id: 'ag8', name: 'Mariam Fakhri', slug: 'mariam-fakhri', title: 'Leasing Consultant', photo: img('1544005313-94ddf0286df2', 600), phone: '+974 5550 1008', whatsapp: '97455501008', email: 'mariam@almadenah.example', rating: 4.8, bio: 'Furnished rentals in Porto Arabia and Viva Bahriya.', active: true },
+  { id: 'ag9', name: 'Tariq Nassar', slug: 'tariq-nassar', title: 'Investment Advisor', photo: img('1519085360753-af0119f7cbe7', 600), phone: '+974 5550 1009', whatsapp: '97455501009', email: 'tariq@almadenah.example', rating: 5.0, bio: 'Off-plan portfolios and rental-yield strategy for international investors.', active: true },
+  { id: 'ag10', name: 'Dana Suleiman', slug: 'dana-suleiman', title: 'Real Estate Consultant', photo: img('1487412720507-e7ab37603c6f', 600), phone: '+974 5550 1010', whatsapp: '97455501010', email: 'dana@almadenah.example', rating: 0, bio: 'Msheireb Downtown and city-centre apartments.', active: true },
+  { id: 'ag11', name: 'Faisal Rahim', slug: 'faisal-rahim', title: 'Senior Sales Agent', photo: img('1506794778202-cad84cf45f1d', 600), phone: '+974 5550 1011', whatsapp: '97455501011', email: 'faisal@almadenah.example', rating: 4.5, bio: 'Al Wakrah and south Doha family compounds.', active: true },
+  { id: 'ag12', name: 'Reem Qadi', slug: 'reem-qadi', title: 'Real Estate Consultant', photo: img('1531123897727-8f129e1688ce', 600), phone: '+974 5550 1012', whatsapp: '97455501012', email: 'reem@almadenah.example', rating: 4.9, bio: 'Waterfront penthouses and branded residences.', active: true },
 ]
 
 export const seedAreas = [
@@ -96,14 +98,18 @@ export const seedArticles = [
   { id: 'ar9', title: 'An Info Guide for Our Clients', slug: 'client-info-guide', category: 'clients', coverImage: img('1523217582562-09d0def993a6'), body: 'The practical file every client should keep.\n\nDocuments\nQID or passport, and for purchases a proof of funds letter, speed every step.\n\nFees at a glance\nBuyers budget ~1.25% registration at the Ministry of Justice in freehold zones. Tenants budget one month’s deposit and agency fee per market norms.', published: true },
 ]
 
+// Company identity lives in config/company.js — the one place to edit it. This object
+// only reshapes it into the keys the UI already reads.
 export const seedSettings = {
-  siteName: 'Qatar Prime Estates',
-  phone: '+974 4444 8800',
-  whatsapp: '97444448800',
-  email: 'hello@qatarprime.example',
-  footerAbout: 'Qatar Prime Estates is the country’s destination for exceptional homes — a curated portfolio across The Pearl, Lusail and West Bay, backed by a team that treats every transaction as a reference.',
-  instagram: '#', linkedin: '#', youtube: '#', x: '#',
-  googleRating: 4.9, googleReviews: 337,
+  siteName: COMPANY.name,
+  phone: COMPANY.phone,
+  whatsapp: COMPANY.whatsapp,
+  email: COMPANY.email,
+  footerAbout: COMPANY.about,
+  footerAboutAr: COMPANY.aboutAr,
+  taxNumber: COMPANY.taxNumber,
+  instagram: COMPANY.instagram, linkedin: COMPANY.linkedin, youtube: COMPANY.youtube, x: COMPANY.x,
+  googleRating: COMPANY.googleRating, googleReviews: COMPANY.googleReviews,
 }
 
 export const seedInquiries = [

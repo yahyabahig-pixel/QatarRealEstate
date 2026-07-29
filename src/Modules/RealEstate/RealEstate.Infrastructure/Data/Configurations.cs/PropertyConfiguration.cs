@@ -137,6 +137,10 @@ public sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
 
         builder.Property(p => p.IsOffPlan).HasDefaultValue(false);
 
+        // Default false so every row that already exists keeps publishing its price when
+        // the column is added — the new flag opts a listing OUT, it never opts one in.
+        builder.Property(p => p.PriceOnRequest).HasDefaultValue(false);
+
         // Denormalised copies of Location_X / Location_Y as real floats. Nullable on purpose:
         // "we do not know where this is" is a legitimate state and the map hides those rows.
         builder.Property(p => p.Latitude).HasColumnType("float");

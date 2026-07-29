@@ -96,6 +96,17 @@ public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyComman
         var agentAssigned = property.AssignAgent(request.AgentId);
         if (agentAssigned.IsError) return agentAssigned.TopError;
 
+        // Presentation flags, applied through the aggregate's own mutators rather than by
+        // assigning the properties. Both are set unconditionally on every update because the
+        // admin form submits the whole record: an absent flag means "off", not "unchanged".
+        var offPlan = request.IsOffPlan ? property.MarkOffPlan() : property.ClearOffPlan();
+        if (offPlan.IsError) return offPlan.TopError;
+
+        var onRequest = request.PriceOnRequest
+            ? property.MarkPriceOnRequest()
+            : property.ClearPriceOnRequest();
+        if (onRequest.IsError) return onRequest.TopError;
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Updated;
     }

@@ -6,7 +6,7 @@ import {
 import { guessFeatureIcon } from '../lib/featureIcons'
 import { MOCK_MODE, tokenStore } from '../api/client'
 import {
-  publicApi, catalogApi, propertyCommand, mapFeature,
+  publicApi, catalogApi, propertyCommand, mapFeature, NAMED_FEATURES,
   agentsAdminApi, areasAdminApi, developmentsAdminApi, jobsAdminApi,
   propertiesAdminApi, featuresAdminApi, leadsApi, leadsAdminApi,
 } from '../api/realEstateApi'
@@ -202,19 +202,32 @@ export function DataProvider({ children }) {
   // Properties speak a different dialect (see realEstateApi.propertyCommand) and have a
   // richer lifecycle: create → attach media → set amenities → publish. No hard delete on
   // the backend — remove() archives, which is the domain-correct end of a listing.
-  // Two amenity selections are the same when they name the same features, order aside.
-  // The admin form submits the WHOLE record on save, so 'amenities' is present in every
-  // patch even when the user only flipped Exclusive -- and a pointless PUT is a pointless
-  // way to fail.
-  const sameAmenities = (a, b) => {
-    const left = [...(a || [])].sort()
-    const right = [...(b || [])].sort()
-    return left.length === right.length && left.every((name, i) => name === right[i])
+  // ONE selection builder for everything the property form stores as a catalog feature:
+  // the amenity chips, plus Furnishing (a Text feature — its value IS the chosen word) and
+  // Balcony (the "Balconies" feature, which the form already keeps inside `amenities`).
+  // "N/A" furnishing means "don't record it", so the feature is left off rather than
+  // stored as the literal string. Names the catalog doesn't know are dropped, which is
+  // what stops a stale chip from 400-ing the whole save.
+  const toFeatureSelection = (form = {}) => {
+    const names = new Set(form.amenities || [])
+    if (form.furnishing && form.furnishing !== 'N/A') names.add(NAMED_FEATURES.FURNISHING)
+    else names.delete(NAMED_FEATURES.FURNISHING)
+    return [...names]
+      .map(name => featureIdByName[name] && ({
+        featureId: featureIdByName[name],
+        value: name === NAMED_FEATURES.FURNISHING ? form.furnishing : 'Yes',
+      }))
+      .filter(Boolean)
   }
 
-  const toFeatureSelection = (names = []) => names
-    .map(name => featureIdByName[name] && ({ featureId: featureIdByName[name], value: 'Yes' }))
-    .filter(Boolean)
+  // Two selections are the same when they attach the same features with the same values,
+  // order aside. The admin form submits the WHOLE record on save, so 'amenities' is present
+  // in every patch even when the user only flipped Exclusive -- and a pointless PUT is a
+  // pointless way to fail.
+  const sameSelection = (a, b) => {
+    const key = (sel) => sel.map(s => `${s.featureId}=${s.value ?? ''}`).sort().join('|')
+    return key(a) === key(b)
+  }
 
   const livePropertyActions = {
     add: guard(async (form) => {
@@ -225,10 +238,8 @@ export function DataProvider({ children }) {
           url, mediaType: 'Image', width: 1200, height: 800, order: i, isPrimary: i === 0,
         })))
       }
-      if (form.amenities?.length) {
-        const sel = toFeatureSelection(form.amenities)
-        if (sel.length) await propertiesAdminApi.setFeatures(id, sel)
-      }
+      const sel = toFeatureSelection(form)
+      if (sel.length) await propertiesAdminApi.setFeatures(id, sel)
       if (form.status === 'available') await propertiesAdminApi.publication(id, 'Publish')
       // Exclusive = the domain's IsFeatured. Must come AFTER publish — the backend only
       // features published listings (a draft marked exclusive is simply not promoted yet).
@@ -242,8 +253,11 @@ export function DataProvider({ children }) {
       const current = await propertiesAdminApi.details(id)
       const merged = { ...current, ...patch }
       await propertiesAdminApi.update(id, propertyCommand(merged, typeIdByName, areaIdByName))
-      if ('amenities' in patch && !sameAmenities(current.amenities, patch.amenities)) {
-        await propertiesAdminApi.setFeatures(id, toFeatureSelection(merged.amenities))
+      if ('amenities' in patch || 'furnishing' in patch) {
+        const selection = toFeatureSelection(merged)
+        if (!sameSelection(toFeatureSelection(current), selection)) {
+          await propertiesAdminApi.setFeatures(id, selection)
+        }
       }
       if ('images' in patch) {
         // Sync media by URL: remove what the admin removed, add what they added.
