@@ -6,7 +6,25 @@ import { SectionHeading, Star } from '../components/ui'
 import { LogoMarquee } from '../components/misc'
 import { IconArrowRight, IconSearch } from '../components/icons'
 
-const HERO = 'https://images.unsplash.com/photo-1577717903315-1691ae25ab3f?auto=format&fit=crop&w=2000&q=80'
+// ---------------------------------------------------------------------------------------
+// HERO PHOTOGRAPHY
+// The West Bay skyline across Doha Bay — the one view that reads as Qatar instantly.
+// Served larger and at a higher quality than a card image because it fills the viewport.
+//
+// The photo is not relied on to match the brand: the two overlays below do that. An indigo
+// (#2B2D42) gradient unifies the whole frame and guarantees white text stays legible on any
+// crop, and a soft red bloom in the lower third ties the image to the primary accent. Swap
+// HERO for any of the ALT_HEROES and the composition still lands in palette.
+// ---------------------------------------------------------------------------------------
+const heroUrl = (id) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=2400&q=85`
+
+const HERO = heroUrl('1577717903315-1691ae25ab3f')   // Doha / West Bay skyline
+const ALT_HEROES = [
+  heroUrl('1512453979798-5ea266f8880c'),             // The Pearl marina
+  heroUrl('1449824913935-59a10b8d2000'),             // Lusail waterfront at dusk
+  heroUrl('1518684079-3c830dcef090'),                // Porto Arabia towers
+]
+
 const PILLS = ['Apartments in Porto Arabia', 'Rentals in West Bay', 'Villas in Al Waab', 'Off-plan in Lusail', 'Land in Qetaifan Island']
 
 export default function Home() {
@@ -40,9 +58,26 @@ export default function Home() {
   return (
     <>
       {/* HERO */}
-      <section className="relative h-screen min-h-[680px] flex items-center justify-center">
-        <img src={HERO} alt="Doha skyline" className="absolute inset-0 w-full h-full object-cover" />
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/70 via-ink/50 to-ink/80" />
+      <section className="relative h-screen min-h-[680px] flex items-center justify-center overflow-hidden">
+        <img
+          src={HERO}
+          alt="The West Bay skyline across Doha Bay, Qatar"
+          fetchPriority="high"
+          /* If the primary crop ever stops resolving, fall through the alternates rather than
+             leaving a bare indigo panel. Each onError advances one step and then stops. */
+          onError={(e) => {
+            const i = Number(e.currentTarget.dataset.fallback || 0)
+            if (i < ALT_HEROES.length) {
+              e.currentTarget.dataset.fallback = String(i + 1)
+              e.currentTarget.src = ALT_HEROES[i]
+            }
+          }}
+          className="absolute inset-0 w-full h-full object-cover scale-105"
+        />
+        {/* indigo unifier — carries the brand dark and keeps white type legible on any crop */}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/55 to-ink/90" />
+        {/* red bloom — ties the photograph to the primary accent without tinting faces or sky */}
+        <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[52rem] h-80 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
         <div className="relative text-center text-white px-4 w-full max-w-3xl">
           <div className="eyebrow !text-white/90 mb-4">Doha · Lusail · The Pearl</div>
           <h1 className="h-serif text-4xl md:text-6xl leading-[1.08] mb-4">
