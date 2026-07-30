@@ -3,9 +3,9 @@
 #
 #   sqlserver  - the database.  NOT reachable from the internet.
 #   backend    - the .NET API.  NOT reachable from the internet.
-#   frontend   - nginx serving React AND proxying /api to the backend.  NOT reachable
-#                from the internet either, since Caddy went in front of it.
-#   caddy      - the TLS edge.  The ONLY container that publishes ports (80, 443).
+#   frontend   - nginx serving React AND proxying /api to the backend.  The ONLY container
+#                that publishes a port (80), because the site runs on plain HTTP for now.
+#   caddy      - the TLS edge.  COMMENTED OUT until a domain exists; see the block below.
 #
 # Everything comes from the .env file that sits next to this file on the server. That file
 # is git-ignored and never leaves the VPS, which is why no password appears below.
@@ -111,11 +111,15 @@ services:
     image: qre-frontend:latest
     container_name: qre-frontend
 
-    # No "ports:" any more. Caddy is the only container that publishes to the internet;
-    # nginx is reachable only from inside the Docker network, as caddy:80 -> frontend:80.
-    # (To go back to plain HTTP, restore `ports: ["80:80"]` here and drop the caddy service.)
-    expose:
-      - "80"
+    # Plain HTTP on the bare IP while there is no domain. Let's Encrypt cannot issue a
+    # certificate for an IP address, and the only alternative - Caddy's self-signed local CA -
+    # shows every visitor a full-page security warning AND breaks the app, because the bundle
+    # is built against http://<ip> and the browser then blocks those calls as mixed content.
+    # A plain-HTTP site is the honest option until a hostname exists.
+    #
+    # To put Caddy back: swap this for `expose: ["80"]` and uncomment the caddy service below.
+    ports:
+      - "80:80"
 
     depends_on:
       - backend
@@ -127,32 +131,40 @@ services:
   #
   # Obtains and renews the certificate by itself - no certbot, no cron, no nginx reload.
   # See docker/caddy/Caddyfile for the two modes (self-signed vs Let's Encrypt).
+  #
+  # DISABLED while the site runs on a bare IP - see the note on frontend's ports above.
+  # To re-enable, once DNS points a hostname at this server:
+  #   1. uncomment this whole block
+  #   2. change frontend's `ports: ["80:80"]` back to `expose: ["80"]`
+  #   3. set SITE_ADDRESS / CADDY_TLS / PUBLIC_ORIGIN in .env (see .env.example, mode C)
+  #   4. docker compose build frontend   <- PUBLIC_ORIGIN is baked into the JS bundle
+  #   5. docker compose up -d
   # ---------------------------------------------------------------------------------------
-  caddy:
-    image: caddy:2-alpine
-    container_name: qre-caddy
-    restart: unless-stopped
-
-    ports:
-      - "80:80"        # HTTP-01 validation + the redirect to HTTPS. Must stay open.
-      - "443:443"      # HTTPS
-      - "443:443/udp"  # HTTP/3 (QUIC). Harmless if your firewall drops UDP.
-
-    environment:
-      # Both come from .env. See docker/caddy/Caddyfile for what they accept.
-      SITE_ADDRESS: ${SITE_ADDRESS:-:443}
-      CADDY_TLS: ${CADDY_TLS:-internal}
-
-    volumes:
-      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-      # caddy_data holds the issued certificates and the ACME account key. It MUST persist:
-      # losing it means re-requesting certificates on every restart, which will hit Let's
-      # Encrypt's rate limit (50 certs per domain per week) and then fail outright.
-      - caddy_data:/data
-      - caddy_config:/config
-
-    depends_on:
-      - frontend
+  # caddy:
+  #   image: caddy:2-alpine
+  #   container_name: qre-caddy
+  #   restart: unless-stopped
+  #
+  #   ports:
+  #     - "80:80"        # HTTP-01 validation + the redirect to HTTPS. Must stay open.
+  #     - "443:443"      # HTTPS
+  #     - "443:443/udp"  # HTTP/3 (QUIC). Harmless if your firewall drops UDP.
+  #
+  #   environment:
+  #     # Both come from .env. See docker/caddy/Caddyfile for what they accept.
+  #     SITE_ADDRESS: ${SITE_ADDRESS:-:443}
+  #     CADDY_TLS: ${CADDY_TLS:-internal}
+  #
+  #   volumes:
+  #     - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+  #     # caddy_data holds the issued certificates and the ACME account key. It MUST persist:
+  #     # losing it means re-requesting certificates on every restart, which will hit Let's
+  #     # Encrypt's rate limit (50 certs per domain per week) and then fail outright.
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #
+  #   depends_on:
+  #     - frontend
 
 # -----------------------------------------------------------------------------------------
 # Named volumes, so state survives "docker compose down", image rebuilds, container
