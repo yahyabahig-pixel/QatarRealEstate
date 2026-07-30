@@ -60,9 +60,16 @@ export function AreaDetail() {
         {all.length === 0 ? <EmptyState message="No live listings in this area right now." /> : (
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">{all.map(p => <PropertyCard key={p.id} p={p} />)}</div>
         )}
+        {/* Each of these used to drop onto an unfiltered /rent or /buy, losing the area the
+            visitor was already looking at. They now carry it through as ?q=. */}
         <div className="mt-12 flex flex-wrap gap-x-6 gap-y-2 text-sm">
-          {[`Apartments for rent in ${a.name}`, `Apartments for sale in ${a.name}`, `Villas in ${a.name}`, `Penthouses in ${a.name}`].map(l => (
-            <Link key={l} to={l.includes('rent') ? '/rent' : '/buy'} className="brand-link text-primary">{l}</Link>
+          {[
+            [`Apartments for rent in ${a.name}`, `/rent?q=${encodeURIComponent(a.name)}`],
+            [`Apartments for sale in ${a.name}`, `/buy?q=${encodeURIComponent(a.name)}`],
+            [`Villas in ${a.name}`, `/buy?q=${encodeURIComponent(a.name)}`],
+            [`Penthouses in ${a.name}`, `/rent?q=${encodeURIComponent(a.name)}`],
+          ].map(([label, to]) => (
+            <Link key={label} to={to} className="brand-link text-primary">{label}</Link>
           ))}
         </div>
       </div>

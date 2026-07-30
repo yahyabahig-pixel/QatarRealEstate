@@ -16,8 +16,17 @@ const itemLink = (label) => {
     'Find an Agent': '/find-agent', Careers: '/careers', 'About Us': '/about-us',
     'Contact Us': '/contact-us', 'List Your Property': '/list-property',
     'Off-Market Opportunities': '/off-market-opportunities', 'All Developments': '/developments',
+    // District entries under Developments. These used to fall through to the unfiltered
+    // list, so all three behaved identically to "All Developments". DevelopmentsIndex now
+    // reads ?area= and resolves it against its own chip labels.
+    'The Pearl': '/developments?area=The+Pearl',
+    Lusail: '/developments?area=Lusail',
+    'Qetaifan Island': '/developments?area=Qetaifan',
   }
   if (map[label]) return map[label]
+  // "Apartments for Rent", "Villas for Sale", ... -> the right listings route. A ?type=
+  // filter is deliberately NOT added: the live search DTO carries no PropertyType, so it
+  // would return an empty page. See the note at the top of Footer.jsx.
   if (label.includes('Rent')) return '/rent'
   if (label.includes('Sale')) return '/buy'
   return '/developments'

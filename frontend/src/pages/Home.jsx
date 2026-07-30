@@ -31,7 +31,17 @@ const ALT_HEROES = [
 // photograph, or up for a softer backdrop — nothing else needs touching.
 const HERO_BLUR = '14px'
 
-const PILLS = ['Apartments in Porto Arabia', 'Rentals in West Bay', 'Villas in Al Waab', 'Off-plan in Lusail', 'Land in Qetaifan Island']
+// [label, destination]. Previously a single `p.includes('Rental')` test sent four of these
+// five to an unfiltered /buy, so "Villas in Al Waab" and "Land in Qetaifan Island" led to
+// the same undifferentiated page. `q` is matched against title + area + district + city by
+// Listings.jsx, and works in mock and live mode alike.
+const PILLS = [
+  ['Apartments in Porto Arabia', '/buy?q=Porto+Arabia'],
+  ['Rentals in West Bay', '/rent?q=West+Bay'],
+  ['Villas in Al Waab', '/buy?q=Al+Waab'],
+  ['Off-plan in Lusail', '/buy?q=Lusail'],
+  ['Land in Qetaifan Island', '/buy?q=Qetaifan'],
+]
 
 export default function Home() {
   const { properties, developments, areas, agents, areaCount, propertyTypes } = useData()
@@ -121,9 +131,9 @@ export default function Home() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2 mt-6">
-            {PILLS.map(p => (
-              <Link key={p} to={p.includes('Rental') ? '/rent' : '/buy'}
-                className="border border-white/25 bg-white/5 backdrop-blur rounded-full px-4 py-1.5 text-xs font-medium hover:border-white hover:bg-white/15 transition-colors">{p}</Link>
+            {PILLS.map(([label, to]) => (
+              <Link key={label} to={to}
+                className="border border-white/25 bg-white/5 backdrop-blur rounded-full px-4 py-1.5 text-xs font-medium hover:border-white hover:bg-white/15 transition-colors">{label}</Link>
             ))}
           </div>
         </div>

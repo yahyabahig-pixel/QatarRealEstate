@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import PropertyCard from '../components/PropertyCard'
 import MapListingCard from '../components/MapListingCard'
@@ -394,10 +394,29 @@ export default function Listings({ purpose, offMarket = false }) {
                 <div>
                   <h2 className="h-serif text-2xl mb-3">Search by {purpose === 'rent' ? 'bedrooms' : 'property type'}</h2>
                   <div className="flex flex-wrap gap-x-6 gap-y-2">
+                    {/* These were <span>s: styled and cursor-pointer'd like links, but not
+                        links at all, and the counts were hardcoded (1, 2, 2, 1, 1) rather
+                        than measured. Now real <Link>s into this same route's own filters,
+                        with counts derived from `pool`.
+
+                        Bedroom labels read "N+" because Listings' beds filter is
+                        `p.bedrooms >= beds` — a minimum, not an exact match. Studio cannot
+                        use beds at all (beds=0 is truthy as a string, so the filter would
+                        match everything), so it searches the title instead, which is where
+                        "Studio" actually lives. */}
                     {(purpose === 'rent'
-                      ? [['Studio rentals', 1], ['1-bedroom rentals', 2], ['2-bedroom rentals', 2], ['3-bedroom rentals', 1], ['4+ bedroom rentals', 1]]
-                      : typeCounts.map(([t, c]) => [`${t}s for sale`, c])
-                    ).map(([lbl, c]) => <span key={lbl} className="brand-link text-primary cursor-pointer">{lbl} ({c})</span>)}
+                      ? [
+                          ['Studio rentals', '?q=Studio', pool.filter(p => p.bedrooms === 0).length],
+                          ['1+ bedroom rentals', '?beds=1', pool.filter(p => p.bedrooms >= 1).length],
+                          ['2+ bedroom rentals', '?beds=2', pool.filter(p => p.bedrooms >= 2).length],
+                          ['3+ bedroom rentals', '?beds=3', pool.filter(p => p.bedrooms >= 3).length],
+                          ['4+ bedroom rentals', '?beds=4', pool.filter(p => p.bedrooms >= 4).length],
+                        ]
+                      : typeCounts.map(([t, c]) => [`${t}s for sale`, `?type=${encodeURIComponent(t)}`, c])
+                    ).filter(([, , c]) => c > 0)
+                     .map(([lbl, qs, c]) => (
+                       <Link key={lbl} to={`/${purpose}${qs}`} className="brand-link text-primary">{lbl} ({c})</Link>
+                     ))}
                   </div>
                 </div>
               </div>

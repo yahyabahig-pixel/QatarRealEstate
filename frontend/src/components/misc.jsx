@@ -5,7 +5,7 @@ import { useToast } from './Toast'
 import { PARTNER_NAMES } from '../data/mockData'
 import PropertyCard from './PropertyCard'
 import { SectionHeading, WhatsAppIcon } from './ui'
-import { IconMail, IconTelegram, IconX } from './icons'
+import { IconMail, IconX } from './icons'
 
 export function LogoMarquee({ dark = false }) {
   const logos = [...PARTNER_NAMES, ...PARTNER_NAMES]
@@ -99,7 +99,6 @@ export function FloatingContact() {
       {open && (
         <div className="bg-ink text-white shadow-2xl shadow-black/25 border border-white/10 rounded-xl p-2 text-sm w-48">
           <a href={`https://wa.me/${settings.whatsapp}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><WhatsAppIcon /> WhatsApp</a>
-          <a href="#" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><IconTelegram /> Telegram</a>
           <a href={`mailto:${settings.email}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><IconMail /> Email</a>
         </div>
       )}
