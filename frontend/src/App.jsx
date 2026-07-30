@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Outlet, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
+import { BrowserRouter, Routes, Route, Outlet, useLocation, useNavigationType } from 'react-router-dom'
 import { DataProvider } from './store/DataContext'
 import { AuthProvider } from './store/AuthContext'
 import { ToastProvider } from './components/Toast'
@@ -24,6 +25,38 @@ import { DevelopmentsAdmin, AreasAdmin, AgentsAdmin, JobsAdmin, FeaturesAdmin, L
 import { AdminsAdmin, AdminDetail, PositionsAdmin, PositionDetail, PermissionsAdmin } from './admin/AuthAdminPages'
 import { ProtectedRoute, PermissionRoute } from './admin/guards'
 
+// ---------------------------------------------------------------------------------------
+// Reset the scroll position when the user navigates.
+//
+// THE BUG THIS FIXES: a browser keeps the scroll offset across a client-side navigation, and
+// React Router does not reset it. So clicking a link in the FOOTER — 1,700px down the page —
+// loaded the new route and left the window still 1,700px down, where every page shows that
+// same footer. The route had changed and the content had rendered, but the viewport looked
+// identical, so the links appeared to do nothing. Typing the URL and pressing Enter "worked"
+// only because a full page load starts at the top.
+//
+// Why the navigation TYPE matters:
+//   PUSH    a link click, or a filter link that only changes the query string -> go to top.
+//   REPLACE Listings.jsx rewrites the URL with { replace: true } on every filter keystroke.
+//           Scrolling to top there would yank the page away mid-typing, so it is skipped.
+//   POP     Back/Forward. The browser restores the previous offset itself; overriding that
+//           would lose the reader's place, which is the whole point of going Back.
+//
+// `behavior: 'instant'` is required because index.css sets `html { scroll-behavior: smooth }`,
+// which would otherwise animate a long scroll on every single navigation.
+// ---------------------------------------------------------------------------------------
+function ScrollToTop() {
+  const { pathname, search } = useLocation()
+  const navigationType = useNavigationType()
+
+  useEffect(() => {
+    if (navigationType !== 'PUSH') return
+    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
+  }, [pathname, search, navigationType])
+
+  return null
+}
+
 function PublicLayout() {
   const { pathname } = useLocation()
   const overHero = pathname === '/'
@@ -44,6 +77,7 @@ export default function App() {
       <ToastProvider>
         <AuthProvider>
           <DataProvider>
+            <ScrollToTop />
             <Routes>
               {/* PUBLIC SITE */}
               <Route element={<PublicLayout />}>

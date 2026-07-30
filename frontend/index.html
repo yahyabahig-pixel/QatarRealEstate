@@ -7,6 +7,23 @@
     <meta name="description" content="AL-Madenah RealEstate — buy and rent apartments, villas, penthouses and offices across The Pearl, Lusail, West Bay and Al Waab." />
     <meta property="og:site_name" content="AL-Madenah RealEstate" />
     <meta property="og:title" content="AL-Madenah RealEstate — Qatar's Most Exclusive Real Estate Portal" />
+    <!-- Icons. Files live in frontend/public/, which Vite copies to the site root at
+         build time, so every path below is absolute and needs no import.
+         Order is deliberate: .ico first for old browsers that only look for it, then the
+         SVG, which modern browsers prefer because it stays crisp at any size and in dark
+         mode. The 16/32 PNGs are the fallback for browsers with no SVG favicon support. -->
+    <link rel="icon" href="/favicon.ico" sizes="32x32" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+    <link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <!-- Tints the browser UI on Android/Chrome and the iOS status bar area. Matches the
+         manifest's theme_color and the site's --color-ink. -->
+    <meta name="theme-color" content="#2B2D42" />
+    <meta name="apple-mobile-web-app-title" content="AL-Madenah" />
+    <meta property="og:image" content="/icon-512.png" />
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
