@@ -2,124 +2,120 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { PageTitle, StatusBadge } from './adminUi'
-import { IconEye } from '../components/icons'
+import { IconEye, IconHome, IconUsers, IconInbox, IconSparkle, IconBuilding, IconCrane, IconBriefcase, IconPin, IconAward } from '../components/icons'
 import { MOCK_MODE } from '../api/client'
 import { propertiesAdminApi } from '../api/realEstateApi'
+import { WaveChart, StatTile, Donut, BarList, SERIES, BRAND, fmt } from './charts'
 
-const METRICS = [
-  ['newProperties', 'New properties'], ['published', 'Published'],
-  ['sold', 'Sold'], ['rented', 'Rented'], ['archived', 'Archived'], ['newLeads', 'Leads'],
-]
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+// ---------------------------------------------------------------------------------------
+//  Admin dashboard.
+//
+//  DATA CONTRACT — UNCHANGED. Everything below is derived from endpoints that already
+//  existed: /api/admin/properties (list), .../dashboard-statistics, .../most-viewed, plus
+//  the public catalogue slices DataContext already holds. No new endpoint, no new field,
+//  no statistic the API cannot answer. Where a number cannot be known — a trend with no
+//  previous month, a view timeline the backend does not keep — the UI omits it rather
+//  than inventing one.
+// ---------------------------------------------------------------------------------------
+
 const MONTHS_LONG = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
 const zeroMonths = () => MONTHS_LONG.map((name, i) => ({
   month: i + 1, monthName: name, newProperties: 0, published: 0, sold: 0, rented: 0, archived: 0, newLeads: 0,
 }))
 
-// Bar with a rounded TOP only — the data end; the baseline edge stays square.
-const topRoundedRect = (x, y, w, h, r) => {
-  const rr = Math.min(r, h, w / 2)
-  return `M${x},${y + h} L${x},${y + rr} Q${x},${y} ${x + rr},${y} L${x + w - rr},${y} Q${x + w},${y} ${x + w},${y + rr} L${x + w},${y + h} Z`
+// The mock seeds speak the UI's status vocabulary; the API speaks the domain's. One map
+// lets every derivation below run identically in both modes.
+const MOCK_STATUS = { available: 'Published', sold: 'Sold', rented: 'Rented', archived: 'Archived', draft: 'Draft', reserved: 'Published' }
+
+// NOTE: the spread comes FIRST — SERIES entries carry their own lowercase `key` (the
+// month-series field name) and would otherwise overwrite the API status name we index
+// `byStatus` with, silently emptying the donut.
+const STATUS_SLICES = [
+  { ...SERIES.published, key: 'Published' },
+  { ...SERIES.rented, key: 'Rented' },
+  { ...SERIES.sold, key: 'Sold' },
+  { ...SERIES.archived, key: 'Archived' },
+  { key: 'Draft', label: 'Draft', color: '#6C7891' },
+]
+
+const TIMELINE_METRICS = [
+  { key: 'newProperties', label: 'New listings', color: BRAND },
+  { key: 'newLeads', label: 'Leads', color: SERIES.rented.color },
+]
+
+const STATUS_SERIES = [SERIES.published, SERIES.rented, SERIES.sold, SERIES.archived]
+
+const topBy = (rows, pick, take = 5) => {
+  const counts = new Map()
+  rows.forEach(r => {
+    const k = (pick(r) || '').trim()
+    if (k) counts.set(k, (counts.get(k) || 0) + 1)
+  })
+  return [...counts.entries()].sort((a, b) => b[1] - a[1]).slice(0, take).map(([label, value]) => ({ label, value }))
 }
 
-// Single-series monthly bar chart, hand-rolled SVG. Series color #C42B41 is the brand
-// primary snapped into the dark-surface lightness band (validated); hover brightens to the
-// brand accent. All text stays in neutral ink tokens, never the series color.
-function MonthlyBarChart({ months, metricKey, metricLabel }) {
-  const [hover, setHover] = useState(null)
-  const W = 720, H = 210, padL = 36, padB = 24, padT = 18
-  const values = months.map(m => m[metricKey] ?? 0)
-  const maxV = Math.max(4, ...values)
-  const plotH = H - padT - padB
-  const slot = (W - padL) / 12
-  const barW = Math.min(26, slot * 0.45)
-  const yFor = (v) => padT + plotH * (1 - v / maxV)
-  const ticks = [0, Math.round(maxV / 2), maxV]
-  const peak = Math.max(...values)
-  const peakIdx = values.indexOf(peak)
-
+// `min-w-0` on the section is load-bearing: a grid item defaults to min-width:auto, so the
+// horizontal scroller and the truncating tables inside these cards would otherwise widen
+// their grid track and give the whole page a horizontal scrollbar on narrow screens.
+function Card({ title, subtitle, action, children, className = '' }) {
   return (
-    <div className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img"
-        aria-label={`${metricLabel} per month — peak ${peak} in ${months[peakIdx]?.monthName}`}>
-        {ticks.map(t => (
-          <g key={t}>
-            <line x1={padL} x2={W} y1={yFor(t)} y2={yFor(t)} stroke="rgba(255,255,255,0.07)" strokeWidth="1" />
-            <text x={padL - 8} y={yFor(t) + 3.5} textAnchor="end" fontSize="10" fill="#6b7280">{t.toLocaleString()}</text>
-          </g>
-        ))}
-        {values.map((v, i) => {
-          const x = padL + slot * i + (slot - barW) / 2
-          const h = (v / maxV) * plotH
-          return (
-            <g key={i}>
-              {v > 0 && (
-                <path d={topRoundedRect(x, yFor(v), barW, h, 4)}
-                  fill={hover === i ? '#EF233C' : '#C42B41'} />
-              )}
-              {/* selective direct label: the peak only — everything else lives in the tooltip */}
-              {i === peakIdx && v > 0 && (
-                <text x={x + barW / 2} y={yFor(v) - 5} textAnchor="middle" fontSize="10.5" fontWeight="600" fill="#d4d4d4">
-                  {v.toLocaleString()}
-                </text>
-              )}
-              <text x={padL + slot * i + slot / 2} y={H - 7} textAnchor="middle" fontSize="10" fill="#6b7280">
-                {MONTHS_SHORT[i]}
-              </text>
-              {/* hover hit target: the whole month column, larger than the mark */}
-              <rect x={padL + slot * i} y={padT} width={slot} height={plotH + padB} fill="transparent"
-                onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
-            </g>
-          )
-        })}
-      </svg>
-      {hover != null && (
-        <div className="absolute -top-1 pointer-events-none panel-dark !rounded-lg px-3 py-1.5 text-xs text-white shadow-xl shadow-black/40 whitespace-nowrap"
-          style={{ left: `${((padL + slot * hover + slot / 2) / W) * 100}%`, transform: 'translateX(-50%)' }}>
-          {months[hover].monthName}: <span className="font-semibold">{values[hover].toLocaleString()}</span>
-          <span className="text-neutral-400"> {metricLabel.toLowerCase()}</span>
+    <section className={`panel-dark p-4 sm:p-5 flex flex-col min-w-0 ${className}`}>
+      <div className="flex items-start justify-between gap-3 mb-3.5">
+        <div className="min-w-0">
+          <h2 className="text-white text-[13px] font-semibold tracking-tight">{title}</h2>
+          {subtitle && <p className="text-[10.5px] text-neutral-500 mt-0.5 leading-snug">{subtitle}</p>}
         </div>
-      )}
-      {/* screen-reader table view of the same data */}
-      <table className="sr-only">
-        <caption>{metricLabel} per month</caption>
-        <tbody>{months.map((m, i) => <tr key={m.month}><th scope="row">{m.monthName}</th><td>{values[i]}</td></tr>)}</tbody>
-      </table>
-    </div>
+        {action}
+      </div>
+      <div className="flex-1 min-h-0">{children}</div>
+    </section>
   )
 }
 
+const Chip = ({ active, onClick, children, dot }) => (
+  <button type="button" onClick={onClick} aria-pressed={active}
+    className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10.5px] font-medium transition-colors ${active ? 'border-primary bg-primary/12 text-white' : 'border-white/12 text-neutral-400 hover:border-white/30 hover:text-neutral-200'}`}>
+    {dot && <span className="w-1.5 h-1.5 rounded-full" style={{ background: dot }} />}
+    {children}
+  </button>
+)
+
+const CatalogueGrid = ({ items, cols }) => (
+  <div className={`grid gap-2.5 ${cols}`}>
+    {items.map(([label, value, icon, to]) => (
+      <Link key={label} to={to}
+        className="rounded-lg border border-white/8 px-3 py-2.5 hover:border-primary/50 hover:bg-white/4 transition-colors">
+        <div className="flex items-center gap-1.5 text-neutral-600 mb-1">{icon}</div>
+        <div className="text-lg font-bold text-white leading-none tabular-nums">{fmt(value)}</div>
+        <div className="text-[10px] text-neutral-500 mt-1 truncate">{label}</div>
+      </Link>
+    ))}
+  </div>
+)
+
 export default function Dashboard() {
-  const { properties, inquiries } = useData()
+  const { properties, inquiries, agents, areas, developments, propertyTypes, features, jobs } = useData()
 
   const [analytics, setAnalytics] = useState(null)   // most-viewed { totalViews, items }
-  const [liveStats, setLiveStats] = useState(null)   // dashboard statistics for the year
-  const [counts, setCounts] = useState(null)         // live status counts (admin list)
+  const [liveStats, setLiveStats] = useState(null)   // monthly statistics for the year
+  const [page, setPage] = useState(null)             // admin property page (rows + totalCount)
   const [year, setYear] = useState(new Date().getFullYear())
   const [metric, setMetric] = useState('newProperties')
 
-  // Most-viewed + status counts: one fetch each, real data, failures keep last state.
+  // Most-viewed + the admin property page. One fetch each; a failure keeps the last state
+  // rather than blanking the dashboard.
   useEffect(() => {
     if (MOCK_MODE) return
     let on = true
-    propertiesAdminApi.mostViewed(5).then(a => { if (on) setAnalytics(a) }).catch(() => {})
-    propertiesAdminApi.list({ pageSize: 100 }).then(page => {
-      if (!on) return
-      const items = page?.items || []
-      setCounts({
-        total: page?.totalCount ?? page?.total ?? items.length,
-        published: items.filter(i => i.status === 'Published').length,
-        sold: items.filter(i => i.status === 'Sold').length,
-        rented: items.filter(i => i.status === 'Rented').length,
-      })
-    }).catch(() => {})
+    propertiesAdminApi.mostViewed(6).then(a => { if (on) setAnalytics(a) }).catch(() => {})
+    propertiesAdminApi.list({ pageSize: 250 }).then(p => { if (on) setPage(p) }).catch(() => {})
     return () => { on = false }
   }, [])
 
-  // Monthly statistics for the selected year (live: grouped in SQL by the timestamps
-  // that actually describe each metric — CreatedAtUtc for new listings, the status
-  // history's own timestamps for published/sold/rented/archived).
+  // Monthly statistics for the selected year (live: grouped in SQL by the timestamps that
+  // actually describe each metric — CreatedAtUtc for new listings, the status history's
+  // own timestamps for published/sold/rented/archived).
   useEffect(() => {
     if (MOCK_MODE) return
     let on = true
@@ -148,135 +144,262 @@ export default function Dashboard() {
   }, [properties, inquiries, year])
 
   const stats = MOCK_MODE ? mockStats : (liveStats ?? { year, availableYears: [year], months: zeroMonths() })
-  const metricLabel = METRICS.find(([k]) => k === metric)?.[1] || ''
+  const months = stats.months
+
+  // ---- one normalised listing shape, so every derivation below runs in both modes ----
+  const rows = useMemo(() => {
+    if (MOCK_MODE) {
+      return properties.map(p => ({
+        status: MOCK_STATUS[p.status] || 'Published',
+        kind: p.purpose === 'rent' ? 'Rent' : 'Sale',
+        featured: !!p.exclusive, offPlan: !!p.offPlan, onRequest: !!p.priceOnRequest,
+        type: p.type || '', city: p.city || '', area: p.area || '', agentName: '',
+      }))
+    }
+    return (page?.items || []).map(p => ({
+      status: p.status,
+      kind: p.listingKind === 'Rent' ? 'Rent' : 'Sale',
+      featured: !!p.isFeatured, offPlan: !!p.isOffPlan, onRequest: !!p.priceOnRequest,
+      type: p.propertyType || '', city: p.city || '', area: p.area || '', agentName: p.agentName || '',
+    }))
+  }, [properties, page])
+
+  const totalCount = MOCK_MODE ? properties.length : (page?.totalCount ?? page?.total ?? rows.length)
+  const sampled = rows.length > 0 && totalCount > rows.length
+  const sampleNote = sampled ? `Newest ${fmt(rows.length)} of ${fmt(totalCount)} listings` : null
+
+  const byStatus = useMemo(() => {
+    const c = {}
+    rows.forEach(r => { c[r.status] = (c[r.status] || 0) + 1 })
+    return c
+  }, [rows])
+
+  const forSale = rows.filter(r => r.kind === 'Sale').length
+  const forRent = rows.length - forSale
+  const featured = rows.filter(r => r.featured).length
+  const offPlan = rows.filter(r => r.offPlan).length
+  const onRequest = rows.filter(r => r.onRequest).length
+
+  const topTypes = useMemo(() => topBy(rows, r => r.type, 6), [rows])
+  const topLocations = useMemo(() => topBy(rows, r => r.area || r.city, 6), [rows])
+  const topAgents = useMemo(() => topBy(rows, r => r.agentName, 6), [rows])
+  // Where enquiries come from — `typeLabel` in live mode, `source` in the mock seeds.
+  const leadSources = useMemo(() => topBy(inquiries, q => q.typeLabel || q.source, 4), [inquiries])
+
+  // Lead stages, counted from whatever statuses the data actually contains.
+  const leadStages = useMemo(() => {
+    const order = ['New', 'Contacted', 'Qualified', 'Converted', 'Closed', 'Lost', 'Archived']
+    const c = new Map()
+    inquiries.forEach(q => c.set(q.status, (c.get(q.status) || 0) + 1))
+    const rank = (s) => (order.indexOf(s) === -1 ? 99 : order.indexOf(s))
+    return [...c.entries()].sort((a, b) => rank(a[0]) - rank(b[0]))
+      .map(([label, value]) => ({ label, value }))
+  }, [inquiries])
 
   const totalViews = MOCK_MODE
     ? properties.reduce((sum, p) => sum + (p.viewsCount || 0), 0)
     : (analytics?.totalViews ?? 0)
+
   const mostViewed = MOCK_MODE
-    ? [...properties].sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0)).slice(0, 5).map(p => ({
+    ? [...properties].sort((a, b) => (b.viewsCount || 0) - (a.viewsCount || 0)).slice(0, 6).map(p => ({
         id: p.id, title: p.title, city: p.area || p.city || '', purpose: p.purpose,
         status: p.status, thumb: p.images?.[0] || '', views: p.viewsCount || 0,
       }))
     : (analytics?.items ?? [])
 
-  const c = MOCK_MODE
-    ? {
-        total: properties.length,
-        published: properties.filter(p => p.status === 'available').length,
-        sold: properties.filter(p => p.status === 'sold').length,
-        rented: properties.filter(p => p.status === 'rented').length,
-      }
-    : (counts ?? { total: properties.length, published: '—', sold: '—', rented: '—' })
+  // A trend is only shown when a real previous month exists in the SAME year being viewed.
+  const nowMonth = new Date().getMonth()
+  const isCurrentYear = year === new Date().getFullYear()
+  const trendFor = (key) => {
+    if (!isCurrentYear || nowMonth < 1) return null
+    return (months[nowMonth]?.[key] ?? 0) - (months[nowMonth - 1]?.[key] ?? 0)
+  }
+  const sparkFor = (key) => months.map(m => m[key] ?? 0)
 
-  const cards = [
-    ['Total properties', c.total], ['Published', c.published],
-    ['Sold', c.sold], ['Rented', c.rented],
-    ['Total leads', inquiries.length], ['Total property views', totalViews.toLocaleString()],
+  const activeMetric = TIMELINE_METRICS.find(m => m.key === metric) || TIMELINE_METRICS[0]
+  const statusChangeTotal = STATUS_SERIES.reduce(
+    (sum, s) => sum + months.reduce((a, m) => a + (m[s.key] ?? 0), 0), 0)
+
+  const catalogue = [
+    ['Agents', agents.length, <IconUsers key="a" className="w-4 h-4" />, '/admin/agents'],
+    ['Areas', areas.length, <IconPin key="b" className="w-4 h-4" />, '/admin/areas'],
+    ['Developments', developments.length, <IconCrane key="c" className="w-4 h-4" />, '/admin/developments'],
+    ['Property types', propertyTypes.length, <IconBuilding key="d" className="w-4 h-4" />, '/admin/properties'],
+    ['Amenities', features.length, <IconSparkle key="e" className="w-4 h-4" />, '/admin/features'],
+    ['Open roles', jobs.length, <IconBriefcase key="f" className="w-4 h-4" />, '/admin/jobs'],
   ]
 
   return (
-    <div>
+    <div className="space-y-4 sm:space-y-5">
       <PageTitle title="Dashboard" />
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
-        {cards.map(([k, v]) => (
-          <div key={k} className="panel-dark p-5">
-            <div className="text-3xl font-bold tracking-tight text-white">{v}</div>
-            <div className="text-xs font-medium text-neutral-500 mt-1.5">{k}</div>
-          </div>
-        ))}
+
+      {/* ---- headline numbers ------------------------------------------------------- */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
+        <StatTile label="Total properties" value={fmt(totalCount)} icon={<IconHome className="w-4 h-4" />}
+          trend={trendFor('newProperties')} spark={sparkFor('newProperties')} />
+        <StatTile label="Published" value={fmt(byStatus.Published ?? 0)} icon={<IconBuilding className="w-4 h-4" />}
+          trend={trendFor('published')} spark={sparkFor('published')} sparkColor={SERIES.published.color} />
+        <StatTile label="Total views" value={fmt(totalViews)} icon={<IconEye className="w-4 h-4" />}
+          hint="All time" />
+        <StatTile label="Leads" value={fmt(inquiries.length)} icon={<IconInbox className="w-4 h-4" />}
+          trend={trendFor('newLeads')} spark={sparkFor('newLeads')} sparkColor={SERIES.rented.color} />
+        <StatTile label="Featured" value={fmt(featured)} icon={<IconAward className="w-4 h-4" />}
+          hint="Shown on the homepage" />
+        <StatTile label="Consultants" value={fmt(agents.length)} icon={<IconUsers className="w-4 h-4" />}
+          hint={`${fmt(developments.length)} developments`} />
       </div>
 
-      {/* Property statistics — real monthly activity, always 12 months, zeros visible */}
-      <div className="panel-dark p-5 mb-6">
-        <div className="flex items-center justify-between gap-3 flex-wrap mb-4">
-          <div>
-            <h2 className="text-white text-sm font-semibold">Property statistics</h2>
-            <p className="text-[11px] text-neutral-500 mt-0.5">
-              New listings by creation date · status changes by their history timestamps
-            </p>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {METRICS.map(([k, label]) => (
-              <button key={k} type="button" onClick={() => setMetric(k)} aria-pressed={metric === k}
-                className={`rounded-full border px-3 py-1 text-[11px] font-medium transition-colors ${metric === k ? 'bg-primary text-white border-primary' : 'border-white/15 text-neutral-400 hover:border-primary hover:text-primary'}`}>
-                {label.replace(' properties', '')}
-              </button>
-            ))}
-            <select className="field-dark !w-auto !py-1 !px-2.5 text-xs" value={year}
+      {/* ---- the two timelines, side by side, each half the content width ----------- */}
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-5">
+        <Card
+          title="Listing activity"
+          subtitle="New listings by creation date"
+          action={
+            <select className="field-dark !w-auto !py-1 !px-2 text-[11px]" value={year}
               onChange={e => setYear(+e.target.value)} aria-label="Year">
               {(stats.availableYears || [year]).map(y => <option key={y} value={y}>{y}</option>)}
             </select>
+          }>
+          <div className="flex items-center gap-1.5 mb-2">
+            {TIMELINE_METRICS.map(m => (
+              <Chip key={m.key} active={metric === m.key} onClick={() => setMetric(m.key)} dot={m.color}>{m.label}</Chip>
+            ))}
+            <span className="ml-auto text-[11px] text-neutral-500 whitespace-nowrap">
+              <span className="font-semibold text-neutral-300 tabular-nums">{fmt(sparkFor(metric).reduce((a, b) => a + b, 0))}</span> in {year}
+            </span>
           </div>
-        </div>
-        <MonthlyBarChart months={stats.months} metricKey={metric} metricLabel={metricLabel} />
+          <WaveChart months={months} series={[{ key: activeMetric.key, label: activeMetric.label, color: activeMetric.color }]} />
+        </Card>
+
+        <Card
+          title="Status changes"
+          subtitle="By their history timestamps"
+          action={<span className="text-[11px] text-neutral-500 whitespace-nowrap"><span className="font-semibold text-neutral-300 tabular-nums">{fmt(statusChangeTotal)}</span> in {year}</span>}>
+          <WaveChart months={months} series={STATUS_SERIES} />
+        </Card>
       </div>
 
-      {/* Most viewed — real data from the view recorder, ranked in the database */}
-      <div className="panel-dark p-5 mb-6">
-        <h2 className="text-white mb-1 text-sm font-semibold">Most viewed properties</h2>
-        <p className="text-[11px] text-neutral-500 mb-4">All time · counted by the site's view tracker</p>
-        {mostViewed.length === 0 ? (
-          <p className="text-sm text-neutral-500 py-4">No views recorded yet — counts appear as soon as visitors open listings.</p>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead className="text-neutral-500 text-left text-xs uppercase tracking-wider">
-                <tr><th className="py-2 pr-3">#</th><th className="py-2 pr-3">Property</th><th className="py-2 pr-3 hidden sm:table-cell">Location</th><th className="py-2 pr-3">Views</th><th className="py-2 hidden md:table-cell">Status</th></tr>
-              </thead>
+      {/* ---- composition, demand, pipeline ----------------------------------------- */}
+      <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
+        <Card title="Most viewed" subtitle="All time · site view tracker">
+          {mostViewed.length === 0 ? (
+            <p className="text-xs text-neutral-500 py-3">No views recorded yet — counts appear as soon as visitors open listings.</p>
+          ) : (
+            <ol className="divide-y divide-white/6 -my-1">
+              {mostViewed.slice(0, 6).map((p, i) => (
+                <li key={p.id}>
+                  <Link to={`/property/${p.purpose || 'buy'}/${p.id}`}
+                    className="group flex items-center gap-2.5 py-1.5 rounded-lg transition-colors hover:bg-white/4">
+                    <span className="w-4 text-[10.5px] font-bold text-neutral-600 tabular-nums shrink-0 text-center">{i + 1}</span>
+                    {p.thumb
+                      ? <img src={p.thumb} alt="" loading="lazy" className="w-8 h-8 rounded-md object-cover shrink-0" />
+                      : <span className="w-8 h-8 rounded-md bg-white/6 shrink-0" />}
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[12px] text-neutral-200 group-hover:text-primary transition-colors truncate leading-tight">{p.title}</span>
+                      <span className="block text-[10px] text-neutral-500 truncate">{p.city || '—'}</span>
+                    </span>
+                    <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold text-neutral-200 tabular-nums shrink-0">
+                      <IconEye className="w-3.5 h-3.5 text-neutral-500" />{fmt(p.views)}
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Card>
+
+        <Card title="Portfolio mix" subtitle={sampleNote || 'Every listing by status'}>
+          <Donut
+            total={totalCount}
+            centerLabel="listings in total"
+            slices={STATUS_SLICES.filter(s => (byStatus[s.key] ?? 0) > 0)
+              .map(s => ({ label: s.label, value: byStatus[s.key] ?? 0, color: s.color }))}
+          />
+          <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-4 pt-3.5 border-t border-white/6 text-[11px]">
+            {[['For sale', forSale], ['For rent', forRent], ['Off-plan', offPlan], ['Price on request', onRequest]].map(([l, v]) => (
+              <div key={l} className="flex items-baseline justify-between gap-2">
+                <span className="text-neutral-500 truncate">{l}</span>
+                <span className="font-semibold text-neutral-200 tabular-nums">{fmt(v)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Third of three in a two-column grid at tablet width — span the row rather than
+            leaving a hole beside it. */}
+        <Card className="md:col-span-2 xl:col-span-1"
+          title="Lead pipeline" subtitle={`${fmt(inquiries.length)} enquiries by stage`}
+          action={<Link to="/admin/leads" className="text-[11px] text-primary brand-link whitespace-nowrap">All leads →</Link>}>
+          <BarList rows={leadStages} color={SERIES.rented.color}
+            emptyMessage="No enquiries yet — leads appear here as the contact forms are used." />
+          {leadSources.length > 0 && (
+            <div className="mt-4 pt-3.5 border-t border-white/6">
+              <p className="text-[10.5px] uppercase tracking-wider text-neutral-600 mb-2.5">Where they came from</p>
+              <BarList rows={leadSources} color={SERIES.archived.color} />
+            </div>
+          )}
+        </Card>
+      </div>
+
+      {/* ---- distributions. The consultant card only exists when listings actually carry
+              an assigned agent, so the column count follows the data. ---------------- */}
+      <div className={`grid md:grid-cols-2 gap-4 sm:gap-5 ${topAgents.length > 0 ? 'xl:grid-cols-3' : ''}`}>
+        <Card title="Top property types" subtitle={sampleNote || 'Listings per type'}>
+          <BarList rows={topTypes} color={SERIES.published.color} emptyMessage="No listings to break down yet." />
+        </Card>
+
+        <Card title="Top locations" subtitle={sampleNote || 'Listings per area'}>
+          <BarList rows={topLocations} color={BRAND} emptyMessage="No listings to break down yet." />
+        </Card>
+
+        {topAgents.length > 0 && (
+          <Card title="Listings per consultant" subtitle="Assigned agent on each listing">
+            <BarList rows={topAgents} color={SERIES.archived.color} />
+          </Card>
+        )}
+      </div>
+
+      <Card title="Catalogue" subtitle="What the public site draws from">
+        <CatalogueGrid items={catalogue} cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
+      </Card>
+
+      {/* ---- recent activity -------------------------------------------------------- */}
+      <div className="grid lg:grid-cols-2 gap-4 sm:gap-5">
+        <Card title="Recent leads" subtitle="Newest enquiries first"
+          action={<Link to="/admin/leads" className="text-[11px] text-primary brand-link whitespace-nowrap">All leads →</Link>}>
+          {inquiries.length === 0 ? (
+            <p className="text-xs text-neutral-500 py-3">No enquiries yet.</p>
+          ) : (
+            <table className="w-full text-[12px]">
               <tbody className="divide-y divide-white/6">
-                {mostViewed.map((p, i) => (
-                  <tr key={p.id} className="hover:bg-white/4 transition-colors">
-                    <td className="py-2.5 pr-3 text-neutral-500 font-semibold">{i + 1}</td>
-                    <td className="py-2.5 pr-3">
-                      <Link to={`/property/${p.purpose || 'buy'}/${p.id}`} className="flex items-center gap-3 group">
-                        {p.thumb && <img src={p.thumb} alt="" className="w-14 h-10 object-cover rounded shrink-0" />}
-                        <span className="text-white group-hover:text-primary transition-colors truncate max-w-[260px]">{p.title}</span>
-                      </Link>
-                    </td>
-                    <td className="py-2.5 pr-3 text-neutral-400 hidden sm:table-cell">{p.city || '—'}</td>
-                    <td className="py-2.5 pr-3 whitespace-nowrap">
-                      <span className="inline-flex items-center gap-1.5 text-primary font-semibold">
-                        <IconEye className="w-4 h-4" /> {(p.views ?? 0).toLocaleString()}
-                      </span>
-                    </td>
-                    <td className="py-2.5 hidden md:table-cell"><StatusBadge value={p.status} /></td>
+                {inquiries.slice(0, 5).map(q => (
+                  <tr key={q.id}>
+                    <td className="py-2 pr-2 text-neutral-200 truncate max-w-[140px]">{q.name}</td>
+                    <td className="py-2 pr-2 text-neutral-500 hidden sm:table-cell truncate max-w-[150px]">{q.typeLabel || q.source}</td>
+                    <td className="py-2 text-right"><StatusBadge value={q.status} /></td>
                   </tr>
                 ))}
               </tbody>
             </table>
-          </div>
-        )}
-      </div>
+          )}
+        </Card>
 
-      <div className="grid lg:grid-cols-2 gap-6">
-        <div className="panel-dark p-5">
-          <h2 className="text-white mb-4 text-sm font-semibold">Recent leads</h2>
-          <table className="w-full text-sm">
-            <tbody className="divide-y divide-white/6">
-              {inquiries.slice(0, 5).map(q => (
-                <tr key={q.id}>
-                  <td className="py-2.5">{q.name}</td>
-                  <td className="py-2.5 text-neutral-500 hidden sm:table-cell">{q.source}</td>
-                  <td className="py-2.5 text-right"><StatusBadge value={q.status} /></td>
-                </tr>
+        <Card title="Recently added" subtitle="Latest listings on the site"
+          action={<Link to="/admin/properties" className="text-[11px] text-primary brand-link whitespace-nowrap">All properties →</Link>}>
+          {properties.length === 0 ? (
+            <p className="text-xs text-neutral-500 py-3">No listings yet.</p>
+          ) : (
+            <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1">
+              {properties.slice(0, 8).map(p => (
+                <Link key={p.id} to="/admin/properties" className="shrink-0 w-32 group">
+                  <img src={p.images?.[0]} alt="" loading="lazy"
+                    className="w-32 h-20 object-cover rounded-lg mb-1.5 border border-white/8" />
+                  <div className="text-[11px] text-neutral-400 group-hover:text-primary transition-colors line-clamp-2 leading-snug">{p.title}</div>
+                </Link>
               ))}
-            </tbody>
-          </table>
-          <Link to="/admin/leads" className="text-primary text-sm brand-link inline-block mt-3">All leads →</Link>
-        </div>
-
-        <div className="panel-dark p-5">
-          <h2 className="text-white mb-4 text-sm font-semibold">Recently added properties</h2>
-          <div className="flex gap-4 overflow-x-auto no-scrollbar">
-            {properties.slice(0, 6).map(p => (
-              <Link key={p.id} to="/admin/properties" className="shrink-0 w-44">
-                <img src={p.images[0]} alt="" className="w-44 h-28 object-cover rounded-lg mb-2" />
-                <div className="text-xs text-neutral-300 line-clamp-2">{p.title}</div>
-              </Link>
-            ))}
-          </div>
-        </div>
+            </div>
+          )}
+        </Card>
       </div>
     </div>
   )
