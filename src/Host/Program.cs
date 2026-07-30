@@ -7,6 +7,7 @@ using Host.ErrorHandling;
 using Host.Middleware;
 using Host.OpenApi;
 using Host.Startup;
+using Microsoft.AspNetCore.DataProtection;
 using RealEstate.Api;
 using RealEstate.Application;
 using RealEstate.Infrastructure;
@@ -33,6 +34,31 @@ builder.Services.AddRealEstateApi();                                 // controll
 builder.Services.AddAuthApplication();                               // MediatR + validators
 builder.Services.AddAuthInfrastructure(builder.Configuration);       // Identity + JWT + AuthDbContext
 builder.Services.AddAuthApi();                                       // controllers
+
+// ---- data protection ------------------------------------------------------------------
+// Identity protects its password-reset and email-confirmation tokens - and the antiforgery
+// cookie - with a key ring. Left to itself the framework writes that ring under the
+// container user's home directory, which is part of the container's writable layer and is
+// therefore thrown away on every rebuild: outstanding tokens stop validating, and each
+// restart logs "No XML encryptor configured".
+//
+// DataProtection:KeyRingPath points at a directory backed by a named volume (see
+// docker-compose.yml). It is deliberately left unset outside containers, so `dotnet run` on
+// a dev machine keeps the framework default and local behaviour is unchanged.
+//
+// SetApplicationName is not optional here: without it the ring is isolated by content-root
+// path, so the same keys silently stop matching if the app is ever published elsewhere.
+var dataProtection = builder.Services
+    .AddDataProtection()
+    .SetApplicationName("QatarRealEstate");
+
+var keyRingPath = builder.Configuration["DataProtection:KeyRingPath"];
+if (!string.IsNullOrWhiteSpace(keyRingPath))
+{
+    // CreateDirectory is idempotent, and doing it here means a bad mount or a permission
+    // mistake fails loudly at startup rather than on the first password-reset request.
+    dataProtection.PersistKeysToFileSystem(Directory.CreateDirectory(keyRingPath));
+}
 
 // ---- authorization: permission policies for ALL modules -------------------------------
 builder.Services.AddPermissionAuthorization();

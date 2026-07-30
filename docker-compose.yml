@@ -78,9 +78,19 @@ services:
       Startup__SeedData: ${SEED_DATA}
       Startup__UseHttpsRedirection: "false"
 
+      # Where Identity's key ring is written. Without this the keys land in the container's
+      # writable layer and are destroyed on every rebuild, which invalidates every
+      # outstanding password-reset and email-confirmation token. The path is created and
+      # chowned in Dockerfile.backend before the USER switch.
+      DataProtection__KeyRingPath: /home/app/.aspnet/DataProtection-Keys
+
     depends_on:
       sqlserver:
         condition: service_healthy
+
+    # Keeps the key ring across "docker compose down", rebuilds and reboots.
+    volumes:
+      - dpkeys:/home/app/.aspnet/DataProtection-Keys
 
     # Again no "ports:". The API listens on 8080 inside the private network; only nginx
     # talks to it.
@@ -149,8 +159,15 @@ services:
 # recreation and VPS reboots. Deleting them is the ONLY way to lose the data.
 #   mssql-data   - the database
 #   caddy_data   - TLS certificates + the ACME account key (see the warning above)
+#   dpkeys       - the DataProtection key ring; losing it logs everyone's pending
+#                  password-reset and email-confirmation links out, nothing worse
+#
+# Compose prefixes these with the project name, so on disk they are qre_mssql-data,
+# qre_caddy_data, qre_caddy_config and qre_dpkeys. Use the prefixed names with
+# "docker volume inspect".
 # -----------------------------------------------------------------------------------------
 volumes:
   mssql-data:
   caddy_data:
   caddy_config:
+  dpkeys:

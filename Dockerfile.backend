@@ -62,6 +62,15 @@ EXPOSE 8080
 
 COPY --from=build /app/publish .
 
+# Home for the DataProtection key ring (see DataProtection:KeyRingPath in Program.cs).
+# This has to happen BEFORE the USER switch below: after it the process is an unprivileged
+# numeric UID and cannot create anything under a root-owned directory. docker-compose.yml
+# mounts a named volume over this path, and an empty named volume inherits the ownership of
+# the image directory it covers - so the chown must be baked into the image, not applied at
+# runtime.
+RUN mkdir -p /home/app/.aspnet/DataProtection-Keys \
+ && chown -R $APP_UID:$APP_UID /home/app/.aspnet
+
 # Run as the unprivileged user Microsoft bakes into their images. If the container is
 # ever compromised, the attacker is not root inside it.
 USER $APP_UID
