@@ -18,12 +18,18 @@ import { IconArrowRight, IconSearch } from '../components/icons'
 // ---------------------------------------------------------------------------------------
 const heroUrl = (id) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=2400&q=85`
 
-const HERO = heroUrl('1577717903315-1691ae25ab3f')   // Doha / West Bay skyline
+const HERO = heroUrl('1646207795621-733fe1646f9b')   // Qatar flag, National Museum of Qatar, Doha
+// Fallbacks, all Qatar, so a fallback can never substitute another city for the hero.
 const ALT_HEROES = [
-  heroUrl('1512453979798-5ea266f8880c'),             // The Pearl marina
-  heroUrl('1449824913935-59a10b8d2000'),             // Lusail waterfront at dusk
-  heroUrl('1518684079-3c830dcef090'),                // Porto Arabia towers
+  heroUrl('1577717903315-1691ae25ab3f'),             // Doha / West Bay skyline
+  heroUrl('1507904139316-3c7422a97a49'),             // Doha skyline at blue hour
+  heroUrl('1662050196100-6f8afc83d585'),             // Doha skyline across the bay
 ]
+
+// The requested "blur 70%". CSS blur takes a length, not a percentage, so it is expressed here
+// as a single tunable constant: 70% of a 20px ceiling. Turn it down towards 0px to sharpen the
+// photograph, or up for a softer backdrop — nothing else needs touching.
+const HERO_BLUR = '14px'
 
 const PILLS = ['Apartments in Porto Arabia', 'Rentals in West Bay', 'Villas in Al Waab', 'Off-plan in Lusail', 'Land in Qetaifan Island']
 
@@ -72,7 +78,10 @@ export default function Home() {
               e.currentTarget.src = ALT_HEROES[i]
             }
           }}
-          className="absolute inset-0 w-full h-full object-cover scale-105"
+          /* scale-115 (not 105) because a blur samples past the element's edges and would
+             otherwise feather them into the background — the overscan hides that entirely. */
+          style={{ filter: `blur(${HERO_BLUR})` }}
+          className="absolute inset-0 w-full h-full object-cover scale-115"
         />
         {/* indigo unifier — carries the brand dark and keeps white type legible on any crop */}
         <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/55 to-ink/90" />

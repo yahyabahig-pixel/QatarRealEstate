@@ -264,6 +264,60 @@ public sealed class RealEstateDbSeeder
         }
 
         // -----------------------------------------------------------------------------------
+        // Cover-image refresh.
+        //
+        // The insert above is matched on Slug, so changing CoverImageUrl in a seed catalog has
+        // NO effect on a development that already exists — it would keep the photo it was first
+        // seeded with forever. That is why swapping the catalogs' photography alone appeared to
+        // change nothing. This step brings existing rows up to the catalog.
+        //
+        // Deliberately narrow: it writes ONLY CoverImageUrl, only for slugs the catalog knows,
+        // and only when the stored value actually differs. Every other column is passed straight
+        // back through Update() unchanged, so an edit an admin made to a name, price or payment
+        // plan is preserved. Once a row matches the catalog the Where never matches it again.
+        //
+        // If you would rather own the photography in the admin panel and never have the seeder
+        // touch it, delete this block — refresh-development-cover-images.sql does the same job
+        // as a one-off.
+        var bySlugAll = catalog.ToDictionary(x => x.Slug, StringComparer.Ordinal);
+        // A plain List, not Dictionary.Keys — EF translates Contains on a List to a SQL IN.
+        var catalogSlugs = catalog.Select(x => x.Slug).ToList();
+        var stale = await _db.Developments
+            .Where(d => catalogSlugs.Contains(d.Slug))
+            .ToListAsync(ct);
+
+        var refreshed = 0;
+        foreach (var dev in stale)
+        {
+            var seed = bySlugAll[dev.Slug];
+            if (string.Equals(dev.CoverImageUrl, seed.CoverImageUrl, StringComparison.Ordinal))
+                continue;
+
+            // Deliberately NOT MustSucceed: a cosmetic image swap must never be able to abort
+            // startup. If one row will not revalidate (an admin edit that predates a stricter
+            // rule, say), log it and move on — the rest of the seed data still lands.
+            var result = dev.Update(dev.Name, dev.Location, dev.DeliveryYear, seed.CoverImageUrl,
+                                    dev.Slug, dev.Description, dev.UnitsCount, dev.DeveloperName,
+                                    dev.StartingPrice, dev.PaymentPlan);
+
+            if (result.IsError)
+            {
+                _log?.LogWarning(
+                    "Seed: could not refresh the cover image of '{Name}' — [{Code}] {Description}",
+                    dev.Name, result.TopError.Code, result.TopError.Description);
+                continue;
+            }
+
+            refreshed++;
+        }
+
+        if (refreshed > 0)
+        {
+            await _db.SaveChangesAsync(ct);
+            _log?.LogInformation("Seed: refreshed the cover image on {Count} development(s).", refreshed);
+        }
+
+        // -----------------------------------------------------------------------------------
         // Backfill for rows migrated from the AreaName era. The EF-generated migration
         // renamed AreaName into Location_Street and left city/state/coordinates empty, so
         // any development still carrying that placeholder shape gets the catalog's full

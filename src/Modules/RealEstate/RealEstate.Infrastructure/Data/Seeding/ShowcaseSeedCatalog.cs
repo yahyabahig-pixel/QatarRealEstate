@@ -82,6 +82,11 @@ internal static class ShowcaseSeedCatalog
     private static string Img(string id) => $"{U}{id}?auto=format&fit=crop&w=1600&q=80";
     private static string Cover(string id) => $"{U}{id}?auto=format&fit=crop&w=1200&q=80";
 
+    // Development covers only. Pinned to one 3:2 crop at 1800px because the same image is used
+    // both as the 320x384 card in the homepage developments rail and as the full-width hero on
+    // the development detail page — one aspect ratio, sharp on retina at both sizes.
+    private static string DevCover(string id) => $"{U}{id}?auto=format&fit=crop&w=1800&h=1200&q=85";
+
     // -----------------------------------------------------------------------------------------
     //  Extra property types. Matched on Name (uniquely indexed) exactly like SeedCatalog's.
     //  "Land" in particular is what lets the frontend card drop the bed/bath row for plots.
@@ -171,7 +176,7 @@ internal static class ShowcaseSeedCatalog
         {
             Name = "Marsa Arabia Island Towers", Slug = "marsa-arabia-island-towers",
             Area = "The Pearl", Lat = 25.3688, Lng = 51.5461, DeliveryYear = 2028,
-            CoverImageUrl = Cover("1518684079-3c830dcef090"),
+            CoverImageUrl = DevCover("1669300884869-e6e11c67c031"),
             Description = "Two towers on their own island inside The Pearl, above a 90-berth marina, "
                         + "a cinema and a covered retail promenade. Studios to four-bedroom duplexes.",
             UnitsCount = 310, DeveloperName = "Pearl Waterfront Co.",
@@ -181,7 +186,7 @@ internal static class ShowcaseSeedCatalog
         {
             Name = "Lusail Boulevard Residences", Slug = "lusail-boulevard-residences",
             Area = "Lusail Marina District", Lat = 25.4287, Lng = 51.4913, DeliveryYear = 2027,
-            CoverImageUrl = Cover("1449824913935-59a10b8d2000"),
+            CoverImageUrl = DevCover("1700901546317-7e1829579632"),
             Description = "Directly on Lusail Boulevard, the country's event spine. Serviced "
                         + "apartments over ground-floor restaurants, with a rental-management "
                         + "programme run by the developer.",
@@ -192,7 +197,7 @@ internal static class ShowcaseSeedCatalog
         {
             Name = "Simaisma Beach Collection", Slug = "simaisma-beach-collection",
             Area = "Simaisma", Lat = 25.6481, Lng = 51.5334, DeliveryYear = 2029,
-            CoverImageUrl = Cover("1493809842364-78817add7ffb"),
+            CoverImageUrl = DevCover("1706197024342-4f3f556c9060"),
             Description = "Eighteen beachfront villas on a private stretch of the northern coast. "
                         + "Each plot reaches the waterline; no shared walls anywhere in the scheme.",
             UnitsCount = 18, DeveloperName = "Island Estates Qatar",
@@ -202,7 +207,7 @@ internal static class ShowcaseSeedCatalog
         {
             Name = "Qetaifan North Beach Plots", Slug = "qetaifan-north-beach-plots",
             Area = "Qetaifan Island", Lat = 25.4534, Lng = 51.5472, DeliveryYear = 2026,
-            CoverImageUrl = Cover("1613977257363-707ba9348227"),
+            CoverImageUrl = DevCover("1647755453118-aad22e0f7cc0"),
             Description = "Serviced freehold plots on Qetaifan Island North with infrastructure "
                         + "complete and design guidelines issued — build to your own architect's "
                         + "drawings inside an approved envelope.",
@@ -213,7 +218,7 @@ internal static class ShowcaseSeedCatalog
         {
             Name = "Msheireb Metro Lofts", Slug = "msheireb-metro-lofts",
             Area = "Msheireb Downtown", Lat = 25.2871, Lng = 51.5249, DeliveryYear = 2027,
-            CoverImageUrl = Cover("1512917774080-9991f1c4c750"),
+            CoverImageUrl = DevCover("1647252285041-9b2886aff1c6"),
             Description = "Double-height loft apartments above the Msheireb interchange, where the "
                         + "Red, Green and Gold metro lines meet. The best-connected address in Qatar.",
             UnitsCount = 122, DeveloperName = "Downtown Regeneration Co.",
@@ -223,7 +228,7 @@ internal static class ShowcaseSeedCatalog
         {
             Name = "West Bay Lagoon Villas", Slug = "west-bay-lagoon-villas",
             Area = "West Bay Lagoon", Lat = 25.3812, Lng = 51.4934, DeliveryYear = 2028,
-            CoverImageUrl = Cover("1502672260266-1c1ef2d93688"),
+            CoverImageUrl = DevCover("1682953329199-1d4a39a46685"),
             Description = "Twelve replacement villas on the lagoon's last undeveloped frontage — "
                         + "private moorings, staff wings and basement parking for four cars.",
             UnitsCount = 12, DeveloperName = "Doha Gate Partners",
