@@ -1,4 +1,4 @@
-using RealEstate.Domain.Entities;
+﻿using RealEstate.Domain.Entities;
 namespace RealEstate.Application.Abstractions.Persistence;
 
 public interface IPropertyRepository
@@ -11,4 +11,10 @@ public interface IPropertyRepository
     Task AddAsync(Property property, CancellationToken ct = default);
 
     Task<bool> PropertyTypeExistsAsync(Guid propertyTypeId, CancellationToken ct = default);
+    //GetByIdWithFeaturesAsync
+    Task<Property?> GetByIdWithFeaturesAsync(Guid id, CancellationToken ct = default);
+
+    // Hard delete. Media, features and status history are configured Cascade; Leads keep
+    // their loose PropertyId reference, so past inquiries survive as sales history.
+    void Remove(Property property);
 }

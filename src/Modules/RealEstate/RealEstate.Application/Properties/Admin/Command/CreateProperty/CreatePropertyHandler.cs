@@ -1,4 +1,4 @@
-
+﻿
 using System.Runtime.CompilerServices;
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
@@ -6,21 +6,28 @@ using RealEstate.Application.Abstractions.Messaging;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
+using RealEstate.Application.Properties.Admin.Policies;
 using RealEstate.Domain.Entities;
 using RealEstate.Domain.ValueObjects;
 
 public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyCommand, Guid>
 {
     private readonly IPropertyRepository _properties;
+    private readonly IAreaRepository _areas;
+    private readonly IAgentRepository _agents;
     private readonly IUnitOfWork _unitOfWork;
     private readonly PropertyAuthorizationPolicy _authorization;
 
     public CreatePropertyHandler(
            IPropertyRepository properties,
+           IAreaRepository areas,
+           IAgentRepository agents,
            IUnitOfWork unitOfWork,
            PropertyAuthorizationPolicy authorization)
     {
         _properties = properties;
+        _areas = areas;
+        _agents = agents;
         _unitOfWork = unitOfWork;
         _authorization = authorization;
     }
@@ -79,6 +86,38 @@ public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyComman
             rent: rent,
             specs: specs);
         if (property.IsError) return property.TopError;
+
+        // Area is a CATALOG reference: when provided it must be one of the defined Areas.
+        if (request.AreaId is { } areaId && areaId != Guid.Empty)
+        {
+            if (await _areas.GetByIdAsync(areaId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AreaErrors.NotFound;
+
+            var assigned = property.Value.AssignArea(areaId);
+            if (assigned.IsError) return assigned.TopError;
+        }
+
+        // Agent is a CATALOG reference too: when provided it must be a real agent.
+        if (request.AgentId is { } assignAgentId && assignAgentId != Guid.Empty)
+        {
+            if (await _agents.GetByIdAsync(assignAgentId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AgentErrors.NotFound;
+
+            var agentAssigned = property.Value.AssignAgent(assignAgentId);
+            if (agentAssigned.IsError) return agentAssigned.TopError;
+        }
+
+        // Presentation flags, applied through the aggregate's own mutators rather than by
+        // assigning the properties — the entity keeps its private setters and stays the
+        // only thing that decides what a valid listing looks like.
+        var offPlan = request.IsOffPlan ? property.Value.MarkOffPlan() : property.Value.ClearOffPlan();
+        if (offPlan.IsError) return offPlan.TopError;
+
+        var onRequest = request.PriceOnRequest
+            ? property.Value.MarkPriceOnRequest()
+            : property.Value.ClearPriceOnRequest();
+        if (onRequest.IsError) return onRequest.TopError;
+
         await _properties.AddAsync(property.Value, cancellationToken);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return property.Value.Id;

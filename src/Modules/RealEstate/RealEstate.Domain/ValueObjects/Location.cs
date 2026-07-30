@@ -12,7 +12,7 @@ public sealed record Location
     public string CountryName { get; init; } = null!;
     public string CityName { get; init; } = null!;
     public string StreetName { get; init; } = null!;
-    public string PostalCode { get; init; } = null!;
+    public string? PostalCode { get; init; } = null!;
     public string State { get; init; } = null!;
     public string XCoordinate { get; init; } = null!;
     public string YCoordinate { get; init; } = null!;

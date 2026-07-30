@@ -8,7 +8,17 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
+
+    <!-- Composition root: the ONLY project that references both ends of each module. -->
+    <ProjectReference Include="..\Modules\RealEstate\RealEstate.Api\RealEstate.Api.csproj" />
     <ProjectReference Include="..\Modules\RealEstate\RealEstate.Infrastructure\RealEstate.Infrastructure.csproj" />
+    <ProjectReference Include="..\Modules\Auth\Auth.Api\Auth.Api.csproj" />
+    <ProjectReference Include="..\Modules\Auth\Auth.Infrastructure\Auth.Infrastructure.csproj" />
   </ItemGroup>
 
 </Project>

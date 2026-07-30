@@ -1,0 +1,185 @@
+# =========================================================================================
+# The whole application, described as three containers.
+#
+#   sqlserver  - the database.  NOT reachable from the internet.
+#   backend    - the .NET API.  NOT reachable from the internet.
+#   frontend   - nginx serving React AND proxying /api to the backend.  The ONLY container
+#                that publishes a port (80), because the site runs on plain HTTP for now.
+#   caddy      - the TLS edge.  COMMENTED OUT until a domain exists; see the block below.
+#
+# Everything comes from the .env file that sits next to this file on the server. That file
+# is git-ignored and never leaves the VPS, which is why no password appears below.
+# =========================================================================================
+
+services:
+
+  # ---------------------------------------------------------------------------------------
+  # SQL Server
+  # ---------------------------------------------------------------------------------------
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    container_name: qre-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${SA_PASSWORD}
+      # Express is the free-for-production edition. Its limits: 4 cores, ~1.4 GB buffer
+      # pool, 50 GB per database. Property photos live in the DB as varbinary, so the
+      # 50 GB ceiling is the number that matters here.
+      MSSQL_PID: Express
+      # Keep SQL Server from claiming all 11 GB of the VPS and starving the API.
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+
+    # NOTE: there is deliberately NO "ports:" section. Without it, port 1433 exists only on
+    # Docker's private network. The database is invisible to the internet no matter what the
+    # firewall says - which matters because Docker writes its own iptables rules and can
+    # publish a port straight past UFW.
+    volumes:
+      - mssql-data:/var/opt/mssql
+
+    # The API must not start migrating until SQL Server actually answers queries. This probe
+    # runs a trivial SELECT; the backend waits for it to pass.
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------------------
+  # ASP.NET Core API
+  # ---------------------------------------------------------------------------------------
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: qre-backend:latest
+    container_name: qre-backend
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+
+      # .NET turns a double underscore into a config-section separator, so this environment
+      # variable overrides ConnectionStrings:RealEstateDb from appsettings.json. "sqlserver"
+      # is the service name above - Docker's DNS resolves it to that container.
+      ConnectionStrings__RealEstateDb: "Server=sqlserver,1433;Database=QatarRealEstate;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+
+      Jwt__Secret: ${JWT_SECRET}
+
+      MainAdmin__Email: ${MAIN_ADMIN_EMAIL}
+      MainAdmin__Password: ${MAIN_ADMIN_PASSWORD}
+      MainAdmin__FullName: ${MAIN_ADMIN_NAME}
+
+      # Same-origin means CORS never actually fires, but the allowlist is kept accurate so
+      # nothing surprises you if a request ever does come from elsewhere.
+      Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN}
+
+      Startup__ApplyMigrations: "true"
+      Startup__SeedData: ${SEED_DATA}
+      Startup__UseHttpsRedirection: "false"
+
+      # Where Identity's key ring is written. Without this the keys land in the container's
+      # writable layer and are destroyed on every rebuild, which invalidates every
+      # outstanding password-reset and email-confirmation token. The path is created and
+      # chowned in Dockerfile.backend before the USER switch.
+      DataProtection__KeyRingPath: /home/app/.aspnet/DataProtection-Keys
+
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+    # Keeps the key ring across "docker compose down", rebuilds and reboots.
+    volumes:
+      - dpkeys:/home/app/.aspnet/DataProtection-Keys
+
+    # Again no "ports:". The API listens on 8080 inside the private network; only nginx
+    # talks to it.
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------------------
+  # nginx: React static files + /api reverse proxy
+  # ---------------------------------------------------------------------------------------
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+      # Vite bakes these into the JavaScript bundle at BUILD time. Changing either one
+      # requires a rebuild of this image, not just a restart.
+      args:
+        VITE_API_URL: ${PUBLIC_ORIGIN}
+        VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+    image: qre-frontend:latest
+    container_name: qre-frontend
+
+    # Plain HTTP on the bare IP while there is no domain. Let's Encrypt cannot issue a
+    # certificate for an IP address, and the only alternative - Caddy's self-signed local CA -
+    # shows every visitor a full-page security warning AND breaks the app, because the bundle
+    # is built against http://<ip> and the browser then blocks those calls as mixed content.
+    # A plain-HTTP site is the honest option until a hostname exists.
+    #
+    # To put Caddy back: swap this for `expose: ["80"]` and uncomment the caddy service below.
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
+
+    restart: unless-stopped
+
+  # ---------------------------------------------------------------------------------------
+  # Caddy: the TLS edge. The ONLY container exposed to the internet.
+  #
+  # Obtains and renews the certificate by itself - no certbot, no cron, no nginx reload.
+  # See docker/caddy/Caddyfile for the two modes (self-signed vs Let's Encrypt).
+  #
+  # DISABLED while the site runs on a bare IP - see the note on frontend's ports above.
+  # To re-enable, once DNS points a hostname at this server:
+  #   1. uncomment this whole block
+  #   2. change frontend's `ports: ["80:80"]` back to `expose: ["80"]`
+  #   3. set SITE_ADDRESS / CADDY_TLS / PUBLIC_ORIGIN in .env (see .env.example, mode C)
+  #   4. docker compose build frontend   <- PUBLIC_ORIGIN is baked into the JS bundle
+  #   5. docker compose up -d
+  # ---------------------------------------------------------------------------------------
+  # caddy:
+  #   image: caddy:2-alpine
+  #   container_name: qre-caddy
+  #   restart: unless-stopped
+  #
+  #   ports:
+  #     - "80:80"        # HTTP-01 validation + the redirect to HTTPS. Must stay open.
+  #     - "443:443"      # HTTPS
+  #     - "443:443/udp"  # HTTP/3 (QUIC). Harmless if your firewall drops UDP.
+  #
+  #   environment:
+  #     # Both come from .env. See docker/caddy/Caddyfile for what they accept.
+  #     SITE_ADDRESS: ${SITE_ADDRESS:-:443}
+  #     CADDY_TLS: ${CADDY_TLS:-internal}
+  #
+  #   volumes:
+  #     - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+  #     # caddy_data holds the issued certificates and the ACME account key. It MUST persist:
+  #     # losing it means re-requesting certificates on every restart, which will hit Let's
+  #     # Encrypt's rate limit (50 certs per domain per week) and then fail outright.
+  #     - caddy_data:/data
+  #     - caddy_config:/config
+  #
+  #   depends_on:
+  #     - frontend
+
+# -----------------------------------------------------------------------------------------
+# Named volumes, so state survives "docker compose down", image rebuilds, container
+# recreation and VPS reboots. Deleting them is the ONLY way to lose the data.
+#   mssql-data   - the database
+#   caddy_data   - TLS certificates + the ACME account key (see the warning above)
+#   dpkeys       - the DataProtection key ring; losing it logs everyone's pending
+#                  password-reset and email-confirmation links out, nothing worse
+#
+# Compose prefixes these with the project name, so on disk they are qre_mssql-data,
+# qre_caddy_data, qre_caddy_config and qre_dpkeys. Use the prefixed names with
+# "docker volume inspect".
+# -----------------------------------------------------------------------------------------
+volumes:
+  mssql-data:
+  caddy_data:
+  caddy_config:
+  dpkeys:

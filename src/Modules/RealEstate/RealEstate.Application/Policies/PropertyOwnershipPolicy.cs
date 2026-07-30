@@ -3,6 +3,7 @@ using BuildingBlocks.Domain.Common.Results.Errors;
 using RealEstate.Application.Abstractions.Authentication;
 using RealEstate.Application.Common;
 using RealEstate.Domain.Entities;
+
 namespace RealEstate.Application.policies;
 
 public sealed class PropertyOwnershipPolicy

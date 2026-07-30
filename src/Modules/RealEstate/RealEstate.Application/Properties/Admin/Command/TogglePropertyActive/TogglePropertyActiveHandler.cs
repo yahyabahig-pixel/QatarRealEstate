@@ -27,7 +27,7 @@ public sealed class TogglePropertyActiveHandler : ICommandHandler<ToggleProperty
         var canModify = _ownership.CanModify(property);
         if (canModify.IsError) return canModify.TopError;
 
-        var result = request.IsActive ? property.Publish() : property.Unpublish();
+        var result = request.IsActive ? property.Activate() : property.Deactivate();
         if (result.IsError) return result.TopError;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);

@@ -1,4 +1,4 @@
-// Properties/Admin/UpdateProperty/UpdatePropertyHandler.cs
+﻿// Properties/Admin/UpdateProperty/UpdatePropertyHandler.cs
 
 using BuildingBlocks.Domain.Common.Results;
 using BuildingBlocks.Domain.Common.Results.Errors;
@@ -14,13 +14,18 @@ namespace RealEstate.Application.Properties.Admin.UpdateProperty;
 public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyCommand, Updated>
 {
     private readonly IPropertyRepository _properties;
+    private readonly IAreaRepository _areas;
+    private readonly IAgentRepository _agents;
     private readonly IUnitOfWork _unitOfWork;
     private readonly PropertyOwnershipPolicy _ownership;
 
     public UpdatePropertyHandler(
-        IPropertyRepository properties, IUnitOfWork unitOfWork, PropertyOwnershipPolicy ownership)
+        IPropertyRepository properties, IAreaRepository areas, IAgentRepository agents,
+        IUnitOfWork unitOfWork, PropertyOwnershipPolicy ownership)
     {
         _properties = properties;
+        _areas = areas;
+        _agents = agents;
         _unitOfWork = unitOfWork;
         _ownership = ownership;
     }
@@ -71,6 +76,36 @@ public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyComman
             });
             if (specsResult.IsError) return specsResult.TopError;
         }
+
+        // Area is a CATALOG reference: when provided it must be one of the defined Areas.
+        // null clears the assignment.
+        if (request.AreaId is { } areaId && areaId != Guid.Empty)
+        {
+            if (await _areas.GetByIdAsync(areaId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AreaErrors.NotFound;
+        }
+        var areaAssigned = property.AssignArea(request.AreaId);
+        if (areaAssigned.IsError) return areaAssigned.TopError;
+
+        // Agent mirrors Area: validated when provided, null clears the assignment.
+        if (request.AgentId is { } assignAgentId && assignAgentId != Guid.Empty)
+        {
+            if (await _agents.GetByIdAsync(assignAgentId, cancellationToken) is null)
+                return RealEstate.Domain.DomainErros.AgentErrors.NotFound;
+        }
+        var agentAssigned = property.AssignAgent(request.AgentId);
+        if (agentAssigned.IsError) return agentAssigned.TopError;
+
+        // Presentation flags, applied through the aggregate's own mutators rather than by
+        // assigning the properties. Both are set unconditionally on every update because the
+        // admin form submits the whole record: an absent flag means "off", not "unchanged".
+        var offPlan = request.IsOffPlan ? property.MarkOffPlan() : property.ClearOffPlan();
+        if (offPlan.IsError) return offPlan.TopError;
+
+        var onRequest = request.PriceOnRequest
+            ? property.MarkPriceOnRequest()
+            : property.ClearPriceOnRequest();
+        if (onRequest.IsError) return onRequest.TopError;
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Updated;

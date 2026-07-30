@@ -1,0 +1,21 @@
+{
+  "name": "AL-Madenah RealEstate",
+  "short_name": "AL-Madenah",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "theme_color": "#2B2D42",
+  "background_color": "#ffffff",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "type": "image/png",
+      "sizes": "192x192"
+    },
+    {
+      "src": "/icon-512.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ]
+}

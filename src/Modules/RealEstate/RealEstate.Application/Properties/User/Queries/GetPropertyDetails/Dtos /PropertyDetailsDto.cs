@@ -1,4 +1,4 @@
-using RealEstate.Domain.Enums;
+﻿using RealEstate.Domain.Enums;
 namespace RealEstate.Application.Properties.User.Queries.GetPropertyDetails.Dtos;
 
 public sealed record PropertyDetailsDto(
@@ -18,4 +18,29 @@ public sealed record PropertyDetailsDto(
     bool IsActive,
     int ViewsCount,
     IReadOnlyList<MediaDto> Media,
-    IReadOnlyList<FeatureDto> Features);
+    IReadOnlyList<FeatureDto> Features,
+    Guid? AreaId = null,          // catalog Area link (null = not filed under an area)
+    string? AreaName = null)
+{
+    // Numeric mirror of Location.Y / Location.X, carried on Property itself and set on every
+    // write. Declared as init members rather than positional parameters so the EF projection
+    // can fill them with an object initialiser without disturbing any existing call site.
+    //
+    // Both null means "we do not know where this is" -- half a coordinate is treated as none
+    // at all -- and the detail page hides its whole map block on exactly that signal, rather
+    // than dropping a pin somewhere plausible and wrong.
+    public double? Latitude { get; init; }
+    public double? Longitude { get; init; }
+
+    // The assigned consultant ("Listed by" card + WhatsApp deep link on the details page).
+    // Init member for the same reason as the coordinates: no existing call site changes.
+    public PropertyAgentDto? Agent { get; init; }
+
+    // Presentation flags carried on Property. "Exclusive" is deliberately absent because it
+    // already has a positional home above: IsFeatured. Init members, same reason as the rest.
+    //
+    // PriceOnRequest hides the figure; it does not remove it. Sale/Rent above still carry the
+    // real terms -- the aggregate requires them -- so the client decides what to print.
+    public bool IsOffPlan { get; init; }
+    public bool PriceOnRequest { get; init; }
+}
