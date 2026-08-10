@@ -42,6 +42,11 @@
   --color-error: #b91c1c;
   --color-info: #1d4ed8;
 
+  /* Warm accent for hover glows only — champagne gold. Chosen over peach because peach
+     sits too close to the brand red; muted gold reads premium next to ink + red and is
+     never used at full strength (max ~28% alpha in shadows/rings). */
+  --color-champagne: #C9A24B;
+
   --font-serif: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
 
@@ -51,6 +56,35 @@
 
 html { scroll-behavior: smooth; }
 body { @apply font-sans text-neutral-800 bg-paper antialiased; }
+
+/* Soft ambience so the paper background is not perfectly flat: one warm champagne wash
+   near the top edge, one cool mist wash on the opposite side. Both are ≤7% alpha —
+   felt more than seen — and they scroll with the page (no fixed-attachment paint cost). */
+body {
+  background-image:
+    radial-gradient(70rem 44rem at 88% -10%, rgb(201 162 75 / 0.05), transparent 62%),
+    radial-gradient(58rem 40rem at -12% 24%, rgb(141 153 174 / 0.07), transparent 60%);
+  background-repeat: no-repeat;
+}
+
+/* ============================================================================
+   ARABIC / RTL
+   The I18nProvider owns <html lang dir>. Layout direction comes from dir="rtl"
+   (flex/grid flip on their own; Tailwind logical utilities and rtl: variants
+   handle the rest). The rules below cover what an attribute cannot:
+   - typography: IBM Plex Sans Arabic + neutralized letter-spacing (Arabic
+     script must not be tracked out like Latin smallcaps)
+   ========================================================================== */
+html[lang="ar"] body,
+html[lang="ar"] button, html[lang="ar"] input,
+html[lang="ar"] select, html[lang="ar"] textarea {
+  font-family: "IBM Plex Sans Arabic", "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+html[lang="ar"] .h-serif { letter-spacing: 0; }
+html[lang="ar"] .eyebrow { letter-spacing: .04em; }
+html[lang="ar"] .tracking-\[0\.18em\],
+html[lang="ar"] .tracking-\[0\.25em\],
+html[lang="ar"] .tracking-wider { letter-spacing: .04em !important; }
 
 ::selection { background: rgb(239 35 60 / 0.18); }
 
@@ -74,7 +108,7 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
   /* animated underline hover for accent links */
   .brand-link { @apply relative inline-block; }
   .brand-link::after {
-    content: ""; position: absolute; left: 0; bottom: -2px; height: 1.5px; width: 0;
+    content: ""; position: absolute; inset-inline-start: 0; bottom: -2px; height: 1.5px; width: 0;
     background: var(--color-primary); transition: width .25s ease;
   }
   .brand-link:hover::after { width: 100%; }
@@ -125,7 +159,8 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold
            cursor-pointer select-none transition-all duration-150
            focus-visible:ring-2 focus-visible:ring-primary/40
-           active:scale-[.98] disabled:opacity-50 disabled:pointer-events-none;
+           hover:-translate-y-px active:translate-y-0 active:scale-[.98]
+           disabled:opacity-50 disabled:pointer-events-none;
   }
   .btn-primary { @apply bg-primary text-white hover:bg-primary-dark shadow-sm shadow-primary/20; }
   .btn-dark { @apply bg-ink text-white hover:bg-coal shadow-sm; }
@@ -193,7 +228,7 @@ body { @apply font-sans text-neutral-800 bg-paper antialiased; }
 .qre-split { display: grid; grid-template-columns: 1fr; grid-auto-rows: minmax(0, 1fr); height: calc(100vh - 8.5rem); }
 @media (min-width: 1024px) { .qre-split { grid-template-columns: 44% 56%; } }
 .qre-split-list {
-  overflow-y: auto; border-right: 1px solid var(--line); background: var(--bg);
+  overflow-y: auto; border-inline-end: 1px solid var(--line); background: var(--bg);
   /* The card grid inside sizes itself from THIS pane's width (container query), not the
      viewport — the same markup is 2-up in the 44% desktop pane and 1-up on a phone. */
   container-type: inline-size;
@@ -233,7 +268,7 @@ body[data-map-view] .qre-cta-band { display: none; }
 
 /* ---- persistent location search (listings map) ---- */
 .qre-map-search {
-  position: absolute; top: 14px; left: 14px; z-index: 5;
+  position: absolute; top: 14px; inset-inline-start: 14px; z-index: 5;
   width: min(280px, calc(100% - 118px)); /* clears the zoom controls top-right */
 }
 .qre-map-search input {
@@ -245,22 +280,22 @@ body[data-map-view] .qre-cta-band { display: none; }
 .qre-map-search input:focus { border-color: var(--ink); }
 .qre-map-search input::placeholder { color: var(--muted); }
 .qre-map-search .qre-map-search-icon {
-  position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+  position: absolute; inset-inline-start: 12px; top: 50%; transform: translateY(-50%);
   width: 15px; height: 15px; color: var(--muted); pointer-events: none;
 }
 .qre-map-search-clear {
-  position: absolute; right: 8px; top: 50%; transform: translateY(-50%);
+  position: absolute; inset-inline-end: 8px; top: 50%; transform: translateY(-50%);
   width: 22px; height: 22px; border-radius: 999px; cursor: pointer;
   display: flex; align-items: center; justify-content: center; color: var(--muted);
 }
 .qre-map-search-clear:hover { color: var(--ink); background: #EEF0F4; }
 .qre-map-search-results {
-  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  position: absolute; top: calc(100% + 6px); inset-inline: 0;
   background: var(--bg); border: 1px solid var(--line); border-radius: 12px;
   box-shadow: 0 8px 24px rgba(43, 45, 66, .16); overflow: hidden;
 }
 .qre-map-search-results button {
-  display: block; width: 100%; text-align: left; padding: 9px 12px;
+  display: block; width: 100%; text-align: start; padding: 9px 12px;
   font-size: 13px; color: var(--ink); cursor: pointer;
 }
 .qre-map-search-results button:hover { background: #F7F8FA; color: var(--brand); }
@@ -282,8 +317,8 @@ body[data-map-view] .qre-cta-band { display: none; }
   font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase;
   padding: 3px 8px; border-radius: 999px;
 }
-.qre-badge-brand { left: 8px; background: var(--brand); color: #fff; }
-.qre-badge-ink { right: 8px; background: var(--ink); color: #fff; }
+.qre-badge-brand { inset-inline-start: 8px; background: var(--brand); color: #fff; }
+.qre-badge-ink { inset-inline-end: 8px; background: var(--ink); color: #fff; }
 
 /* ---- detail-page location block ---- */
 .qre-detail-map { width: 100%; height: 400px; border-radius: 12px; overflow: hidden; }
@@ -337,3 +372,136 @@ body[data-map-view] .qre-cta-band { display: none; }
 }
 .qre-popup-btn:hover { background: var(--brand); color: #fff; }
 .mapboxgl-popup-close-button { width: 22px; height: 22px; font-size: 14px; color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+
+
+/* ============================================================================
+   MICRO-INTERACTIONS — deliberately quiet. Everything here is transform/opacity
+   (no layout impact), hover states are desktop-only via @media (hover:hover),
+   and entrance motion respects prefers-reduced-motion.
+   ========================================================================== */
+
+/* ---- card hover: the existing 4px .lift plus a very soft champagne glow ---- */
+@media (hover: hover) {
+  .lift:hover {
+    box-shadow:
+      0 2px 4px rgb(43 45 66 / 0.05),
+      0 16px 40px rgb(43 45 66 / 0.11),
+      0 0 0 1px rgb(201 162 75 / 0.28),
+      0 10px 34px -8px rgb(201 162 75 / 0.22);
+  }
+}
+
+/* ---- first-paint entrance: gentle fade-up with a short stagger ---- */
+@media (prefers-reduced-motion: no-preference) {
+  @keyframes qre-fade-up {
+    from { opacity: 0; transform: translateY(14px); }
+    to   { opacity: 1; transform: none; }
+  }
+  .stagger-fade > * { animation: qre-fade-up 0.45s cubic-bezier(0.22, 0.61, 0.36, 1) both; }
+  .stagger-fade > :nth-child(1)  { animation-delay: 0.04s; }
+  .stagger-fade > :nth-child(2)  { animation-delay: 0.09s; }
+  .stagger-fade > :nth-child(3)  { animation-delay: 0.14s; }
+  .stagger-fade > :nth-child(4)  { animation-delay: 0.19s; }
+  .stagger-fade > :nth-child(5)  { animation-delay: 0.24s; }
+  .stagger-fade > :nth-child(6)  { animation-delay: 0.29s; }
+  .stagger-fade > :nth-child(7)  { animation-delay: 0.33s; }
+  .stagger-fade > :nth-child(8)  { animation-delay: 0.37s; }
+  /* anything deeper in the list appears together — a long tail of delays feels slow */
+  .stagger-fade > :nth-child(n+9) { animation-delay: 0.4s; }
+
+  /* favourite-heart pop when it turns on */
+  @keyframes qre-pop {
+    0%   { transform: scale(0.5); }
+    60%  { transform: scale(1.25); }
+    100% { transform: scale(1); }
+  }
+  .animate-heart-pop { animation: qre-pop 0.32s cubic-bezier(0.34, 1.56, 0.64, 1); }
+}
+
+/* ---- compact map-view card: warm hover; red stays reserved for the
+        "selected from the map pin" state (.is-active) ---- */
+.qre-mapcard { transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s; }
+.qre-mapcard .qre-mapcard-media img { transition: transform 0.6s cubic-bezier(0.22, 0.61, 0.36, 1); }
+@media (hover: hover) {
+  .qre-mapcard:hover {
+    border-color: rgb(201 162 75 / 0.55);
+    transform: translateY(-2px);
+    box-shadow: 0 6px 18px rgb(43 45 66 / 0.10), 0 0 0 1px rgb(201 162 75 / 0.22);
+  }
+  .qre-mapcard:hover .qre-mapcard-media img { transform: scale(1.04); }
+}
+
+/* ------------------------------------------------------------------------------------------
+   AI PROPERTY ASSISTANT — chat window entrance, bubbles and typing dots. Same restraint
+   as the rest of the MICRO-INTERACTIONS block: transform/opacity only, fully disabled
+   under prefers-reduced-motion.
+   ------------------------------------------------------------------------------------------ */
+.qre-chat-in {
+  animation: qre-chat-in 0.28s cubic-bezier(0.16, 1, 0.3, 1) both;
+  transform-origin: bottom right;
+}
+[dir="rtl"] .qre-chat-in { transform-origin: bottom left; }
+@keyframes qre-chat-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); }
+  to   { opacity: 1; transform: none; }
+}
+
+.qre-bubble-in { animation: qre-bubble-in 0.22s ease-out both; }
+@keyframes qre-bubble-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: none; }
+}
+
+.qre-dot {
+  width: 6px; height: 6px; border-radius: 9999px;
+  background: var(--color-mist);
+  animation: qre-dot 1s infinite ease-in-out;
+}
+.qre-dot:nth-child(2) { animation-delay: 0.15s; }
+.qre-dot:nth-child(3) { animation-delay: 0.3s; }
+@keyframes qre-dot {
+  0%, 100% { opacity: 0.35; transform: translateY(0); }
+  50%      { opacity: 1;    transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .qre-chat-in, .qre-bubble-in, .qre-dot { animation: none; }
+}
+
+/* ---- assistant mascot: idle breathing/sway, periodic blink, badge pulse ---- */
+.qre-mascot { filter: drop-shadow(0 5px 10px rgb(43 45 66 / 0.28)); }
+.qre-mascot-bob {
+  animation: qre-m-bob 3.4s ease-in-out infinite;
+  transform-origin: 60px 72px;
+}
+@keyframes qre-m-bob {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30%      { transform: translateY(-3px) rotate(-2deg); }
+  65%      { transform: translateY(-1px) rotate(1.7deg); }
+}
+.qre-m-blink {
+  transform-origin: 60px 62.5px;
+  animation: qre-m-blink 4.6s infinite;
+}
+@keyframes qre-m-blink {
+  0%, 91%, 94.5%, 100% { transform: scaleY(1); }
+  92.6%                { transform: scaleY(0.08); }
+}
+.qre-badge-pulse { animation: qre-badge-pulse 2.2s infinite; }
+@keyframes qre-badge-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgb(239 35 60 / 0.4); }
+  60%      { box-shadow: 0 0 0 8px rgb(239 35 60 / 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .qre-mascot-bob, .qre-m-blink, .qre-badge-pulse { animation: none; }
+}
+
+/* ---- assistant chat canvas: quiet depth instead of flat gray — a faint brand-red
+        breath at the top corner, warm champagne at the bottom, on a soft vertical
+        gradient. All washes stay ≤6% so text and cards keep full contrast. ---- */
+.qre-chat-canvas {
+  background:
+    radial-gradient(120% 55% at 100% 0%, rgb(239 35 60 / 0.05), transparent 62%),
+    radial-gradient(120% 55% at 0% 100%, rgb(201 162 75 / 0.07), transparent 62%),
+    linear-gradient(180deg, #FCFCFD 0%, #F2F3F7 100%);
+}

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../store/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 import { MOCK_MODE } from '../api/client'
 
 // NOTE: real authentication comes from the backend (ASP.NET Core Identity + JWT,
@@ -8,6 +9,7 @@ import { MOCK_MODE } from '../api/client'
 // ONLY while VITE_API_URL is unset (mock mode) so the UI can be developed standalone.
 export default function Login() {
   const { login } = useAuth()
+  const { t } = useI18n()
   const navigate = useNavigate()
   const location = useLocation()
   const [email, setEmail] = useState('')
@@ -23,7 +25,7 @@ export default function Login() {
       await login(email, password)
       navigate(location.state?.from?.pathname || '/admin', { replace: true })
     } catch (err) {
-      setError(err.problem?.title || err.message || 'Login failed.')
+      setError(err.problem?.title || err.message || t('admin.login.failed'))
     } finally { setBusy(false) }
   }
 
@@ -33,22 +35,22 @@ export default function Login() {
       <div className="w-full max-w-sm panel-dark !rounded-2xl p-8 shadow-2xl shadow-black/40">
         <div className="text-center mb-8">
           <div className="h-serif text-2xl text-white">Prime<span className="text-primary">Admin</span></div>
-          <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest">Command Center</p>
+          <p className="text-xs text-neutral-500 mt-1 uppercase tracking-widest">{t('admin.login.commandCenter')}</p>
         </div>
         <form onSubmit={submit} className="space-y-4">
-          <input type="email" required placeholder="Email" className="field-dark" value={email} onChange={e => setEmail(e.target.value)} />
-          <input type="password" required placeholder="Password" className="field-dark" value={password} onChange={e => setPassword(e.target.value)} />
+          <input type="email" required placeholder={t('admin.login.email')} className="field-dark" value={email} onChange={e => setEmail(e.target.value)} />
+          <input type="password" required placeholder={t('admin.login.password')} className="field-dark" value={password} onChange={e => setPassword(e.target.value)} />
           <label className="flex items-center gap-2 text-sm text-neutral-400">
             <input type="checkbox" checked={remember} onChange={e => setRemember(e.target.checked)} className="accent-primary" />
-            Remember me
+            {t('admin.login.remember')}
           </label>
           {error && <p className="text-red-400 text-sm bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2.5">{error}</p>}
-          <button disabled={busy} className="btn-primary w-full disabled:opacity-50">{busy ? 'Signing in…' : 'Sign In'}</button>
+          <button disabled={busy} className="btn-primary w-full disabled:opacity-50">{busy ? t('admin.login.signingIn') : t('admin.login.signIn')}</button>
         </form>
         {MOCK_MODE && (
           <p className="text-[11px] text-neutral-600 mt-6 text-center">
-            Demo mode — use <span className="text-neutral-400">admin@demo.com / admin123</span>.<br />
-            Set VITE_API_URL to connect the real backend.
+            {t('admin.login.demoNote')} <span className="text-neutral-400">admin@demo.com / admin123</span>.<br />
+            {t('admin.login.demoNote2')}
           </p>
         )}
       </div>

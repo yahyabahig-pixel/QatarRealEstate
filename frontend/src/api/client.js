@@ -23,6 +23,18 @@ export class ApiError extends Error {
   }
 }
 
+// One readable message out of an ApiError: the ProblemDetails title PLUS every
+// validation detail the backend sent (dict-of-arrays for ValidationProblemDetails,
+// or [{code, description}] for domain errors). "Validation failed" alone tells the
+// admin nothing — the reason underneath is what they need.
+export const describeApiError = (err, fallback = 'Request failed.') => {
+  const parts = [err?.problem?.title || err?.message || fallback]
+  const errs = err?.errors
+  if (Array.isArray(errs)) parts.push(errs.map(e => e.description || e.code).filter(Boolean).join('\n'))
+  else if (errs && typeof errs === 'object') parts.push(Object.values(errs).flat().join('\n'))
+  return parts.filter(Boolean).join('\n')
+}
+
 let onUnauthorized = () => {}
 export const setUnauthorizedHandler = (fn) => { onUnauthorized = fn }
 

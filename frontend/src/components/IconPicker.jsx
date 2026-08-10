@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useI18n } from '../i18n/I18nContext'
 import { FEATURE_ICON_CATEGORIES, resolveFeatureIcon, searchFeatureIcons } from '../lib/featureIcons'
 import { IconCheck, IconSearch, IconX } from './icons'
 
@@ -8,6 +9,7 @@ import { IconCheck, IconSearch, IconX } from './icons'
    "swimming-pool") — the only thing the database ever stores. Styled for the dark admin.
    ------------------------------------------------------------------------------------- */
 export default function IconPicker({ value = '', onChange }) {
+  const { t } = useI18n()
   const [q, setQ] = useState('')
   const [category, setCategory] = useState('')
 
@@ -32,15 +34,15 @@ export default function IconPicker({ value = '', onChange }) {
             </button>
           </>
         ) : (
-          <span className="text-neutral-500">No icon selected — pick one below (optional).</span>
+          <span className="text-neutral-500">{t('iconPicker.none')}</span>
         )}
       </div>
 
       {/* search */}
       <div className="relative">
         <IconSearch className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
-        <input className="field-dark !pl-9 !py-2" placeholder="Search icons… (e.g. pool, car, security)"
-          value={q} onChange={e => setQ(e.target.value)} aria-label="Search icons" />
+        <input className="field-dark !ps-9 !py-2" placeholder={t('iconPicker.search')}
+          value={q} onChange={e => setQ(e.target.value)} aria-label={t('iconPicker.searchAria')} />
       </div>
 
       {/* category filter */}
@@ -59,9 +61,9 @@ export default function IconPicker({ value = '', onChange }) {
 
       {/* icon grid */}
       {results.length === 0 ? (
-        <p className="text-xs text-neutral-500 py-4 text-center">No icons match “{q}”. Try “pool”, “car”, “view”…</p>
+        <p className="text-xs text-neutral-500 py-4 text-center">{t('iconPicker.noMatch', { q })}</p>
       ) : (
-        <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-56 overflow-y-auto pr-1">
+        <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5 max-h-56 overflow-y-auto pe-1">
           {results.map(e => (
             <button key={e.key} type="button" title={`${e.name} (${e.category})`}
               onClick={() => onChange?.(e.key)} aria-pressed={value === e.key}

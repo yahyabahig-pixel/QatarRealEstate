@@ -1,12 +1,16 @@
 import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Outlet, useLocation, useNavigationType } from 'react-router-dom'
+import { I18nProvider } from './i18n/I18nContext'
+import { UiTextSync } from './i18n/uiText'
 import { DataProvider } from './store/DataContext'
 import { AuthProvider } from './store/AuthContext'
 import { ToastProvider } from './components/Toast'
+import { PriceLabelSync } from './components/ui'
 import Navbar from './components/Navbar'
 import Footer from './components/Footer'
 import CtaBand from './components/CtaBand'
 import { FloatingContact } from './components/misc'
+import AssistantWidget from './assistant/AssistantWidget'
 
 import Home from './pages/Home'
 import Listings from './pages/Listings'
@@ -16,6 +20,7 @@ import { AreasIndex, AreaDetail } from './pages/AreasPages'
 import { AgentsIndex, AgentProfile } from './pages/AgentsPages'
 import Careers from './pages/Careers'
 import { AboutUs, ContactUs, ListProperty, NotFound } from './pages/SupportPages'
+import Favourites from './pages/Favourites'
 
 import AdminLayout from './admin/AdminLayout'
 import Login from './admin/Login'
@@ -67,6 +72,8 @@ function PublicLayout() {
       <CtaBand />
       <Footer />
       <FloatingContact />
+      {/* AI property assistant — public pages only (the admin console stays clean) */}
+      <AssistantWidget />
     </>
   )
 }
@@ -74,10 +81,13 @@ function PublicLayout() {
 export default function App() {
   return (
     <BrowserRouter>
+      <I18nProvider>
       <ToastProvider>
         <AuthProvider>
           <DataProvider>
             <ScrollToTop />
+            <PriceLabelSync />
+            <UiTextSync />
             <Routes>
               {/* PUBLIC SITE */}
               <Route element={<PublicLayout />}>
@@ -91,6 +101,7 @@ export default function App() {
                 <Route path="/areas/:slug" element={<AreaDetail />} />
                 <Route path="/find-agent" element={<AgentsIndex />} />
                 <Route path="/find-agent/:slug" element={<AgentProfile />} />
+                <Route path="/favourites" element={<Favourites />} />
                 <Route path="/careers" element={<Careers />} />
                 <Route path="/about-us" element={<AboutUs />} />
                 <Route path="/contact-us" element={<ContactUs />} />
@@ -121,6 +132,7 @@ export default function App() {
           </DataProvider>
         </AuthProvider>
       </ToastProvider>
+      </I18nProvider>
     </BrowserRouter>
   )
 }

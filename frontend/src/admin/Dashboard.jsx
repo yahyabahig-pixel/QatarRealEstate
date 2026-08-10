@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { useI18n } from '../i18n/I18nContext'
 import { PageTitle, StatusBadge } from './adminUi'
 import { IconEye, IconHome, IconUsers, IconInbox, IconSparkle, IconBuilding, IconCrane, IconBriefcase, IconPin, IconAward } from '../components/icons'
 import { MOCK_MODE } from '../api/client'
@@ -36,12 +37,12 @@ const STATUS_SLICES = [
   { ...SERIES.rented, key: 'Rented' },
   { ...SERIES.sold, key: 'Sold' },
   { ...SERIES.archived, key: 'Archived' },
-  { key: 'Draft', label: 'Draft', color: '#6C7891' },
+  { key: 'Draft', label: 'Draft', labelKey: 'admin.status.Draft', color: '#6C7891' },
 ]
 
 const TIMELINE_METRICS = [
-  { key: 'newProperties', label: 'New listings', color: BRAND },
-  { key: 'newLeads', label: 'Leads', color: SERIES.rented.color },
+  { key: 'newProperties', labelKey: 'admin.dashboard.newListings', color: BRAND },
+  { key: 'newLeads', labelKey: 'admin.dashboard.leads', color: SERIES.rented.color },
 ]
 
 const STATUS_SERIES = [SERIES.published, SERIES.rented, SERIES.sold, SERIES.archived]
@@ -96,6 +97,7 @@ const CatalogueGrid = ({ items, cols }) => (
 
 export default function Dashboard() {
   const { properties, inquiries, agents, areas, developments, propertyTypes, features, jobs } = useData()
+  const { t } = useI18n()
 
   const [analytics, setAnalytics] = useState(null)   // most-viewed { totalViews, items }
   const [liveStats, setLiveStats] = useState(null)   // monthly statistics for the year
@@ -166,7 +168,7 @@ export default function Dashboard() {
 
   const totalCount = MOCK_MODE ? properties.length : (page?.totalCount ?? page?.total ?? rows.length)
   const sampled = rows.length > 0 && totalCount > rows.length
-  const sampleNote = sampled ? `Newest ${fmt(rows.length)} of ${fmt(totalCount)} listings` : null
+  const sampleNote = sampled ? t('admin.dashboard.newestOf', { a: fmt(rows.length), b: fmt(totalCount) }) : null
 
   const byStatus = useMemo(() => {
     const c = {}
@@ -221,69 +223,69 @@ export default function Dashboard() {
     (sum, s) => sum + months.reduce((a, m) => a + (m[s.key] ?? 0), 0), 0)
 
   const catalogue = [
-    ['Agents', agents.length, <IconUsers key="a" className="w-4 h-4" />, '/admin/agents'],
-    ['Areas', areas.length, <IconPin key="b" className="w-4 h-4" />, '/admin/areas'],
-    ['Developments', developments.length, <IconCrane key="c" className="w-4 h-4" />, '/admin/developments'],
-    ['Property types', propertyTypes.length, <IconBuilding key="d" className="w-4 h-4" />, '/admin/properties'],
-    ['Amenities', features.length, <IconSparkle key="e" className="w-4 h-4" />, '/admin/features'],
-    ['Open roles', jobs.length, <IconBriefcase key="f" className="w-4 h-4" />, '/admin/jobs'],
+    [t('admin.dashboard.catAgents'), agents.length, <IconUsers key="a" className="w-4 h-4" />, '/admin/agents'],
+    [t('admin.dashboard.catAreas'), areas.length, <IconPin key="b" className="w-4 h-4" />, '/admin/areas'],
+    [t('admin.dashboard.catDevelopments'), developments.length, <IconCrane key="c" className="w-4 h-4" />, '/admin/developments'],
+    [t('admin.dashboard.catTypes'), propertyTypes.length, <IconBuilding key="d" className="w-4 h-4" />, '/admin/properties'],
+    [t('admin.dashboard.catAmenities'), features.length, <IconSparkle key="e" className="w-4 h-4" />, '/admin/features'],
+    [t('admin.dashboard.catRoles'), jobs.length, <IconBriefcase key="f" className="w-4 h-4" />, '/admin/jobs'],
   ]
 
   return (
     <div className="space-y-4 sm:space-y-5">
-      <PageTitle title="Dashboard" />
+      <PageTitle title={t('admin.dashboard.title')} />
 
       {/* ---- headline numbers ------------------------------------------------------- */}
       <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-3 sm:gap-4">
-        <StatTile label="Total properties" value={fmt(totalCount)} icon={<IconHome className="w-4 h-4" />}
+        <StatTile label={t('admin.dashboard.totalProperties')} value={fmt(totalCount)} icon={<IconHome className="w-4 h-4" />}
           trend={trendFor('newProperties')} spark={sparkFor('newProperties')} />
-        <StatTile label="Published" value={fmt(byStatus.Published ?? 0)} icon={<IconBuilding className="w-4 h-4" />}
+        <StatTile label={t('admin.dashboard.published')} value={fmt(byStatus.Published ?? 0)} icon={<IconBuilding className="w-4 h-4" />}
           trend={trendFor('published')} spark={sparkFor('published')} sparkColor={SERIES.published.color} />
-        <StatTile label="Total views" value={fmt(totalViews)} icon={<IconEye className="w-4 h-4" />}
-          hint="All time" />
-        <StatTile label="Leads" value={fmt(inquiries.length)} icon={<IconInbox className="w-4 h-4" />}
+        <StatTile label={t('admin.dashboard.totalViews')} value={fmt(totalViews)} icon={<IconEye className="w-4 h-4" />}
+          hint={t('admin.dashboard.allTime')} />
+        <StatTile label={t('admin.dashboard.leads')} value={fmt(inquiries.length)} icon={<IconInbox className="w-4 h-4" />}
           trend={trendFor('newLeads')} spark={sparkFor('newLeads')} sparkColor={SERIES.rented.color} />
-        <StatTile label="Featured" value={fmt(featured)} icon={<IconAward className="w-4 h-4" />}
-          hint="Shown on the homepage" />
-        <StatTile label="Consultants" value={fmt(agents.length)} icon={<IconUsers className="w-4 h-4" />}
-          hint={`${fmt(developments.length)} developments`} />
+        <StatTile label={t('admin.dashboard.featured')} value={fmt(featured)} icon={<IconAward className="w-4 h-4" />}
+          hint={t('admin.dashboard.onHomepage')} />
+        <StatTile label={t('admin.dashboard.consultants')} value={fmt(agents.length)} icon={<IconUsers className="w-4 h-4" />}
+          hint={t('admin.dashboard.nDevelopments', { n: fmt(developments.length) })} />
       </div>
 
       {/* ---- the two timelines, side by side, each half the content width ----------- */}
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-5">
         <Card
-          title="Listing activity"
-          subtitle="New listings by creation date"
+          title={t('admin.dashboard.listingActivity')}
+          subtitle={t('admin.dashboard.byCreationDate')}
           action={
             <select className="field-dark !w-auto !py-1 !px-2 text-[11px]" value={year}
-              onChange={e => setYear(+e.target.value)} aria-label="Year">
+              onChange={e => setYear(+e.target.value)} aria-label={t('admin.dashboard.year')}>
               {(stats.availableYears || [year]).map(y => <option key={y} value={y}>{y}</option>)}
             </select>
           }>
           <div className="flex items-center gap-1.5 mb-2">
             {TIMELINE_METRICS.map(m => (
-              <Chip key={m.key} active={metric === m.key} onClick={() => setMetric(m.key)} dot={m.color}>{m.label}</Chip>
+              <Chip key={m.key} active={metric === m.key} onClick={() => setMetric(m.key)} dot={m.color}>{t(m.labelKey)}</Chip>
             ))}
-            <span className="ml-auto text-[11px] text-neutral-500 whitespace-nowrap">
-              <span className="font-semibold text-neutral-300 tabular-nums">{fmt(sparkFor(metric).reduce((a, b) => a + b, 0))}</span> in {year}
+            <span className="ms-auto text-[11px] text-neutral-500 whitespace-nowrap">
+              <span className="font-semibold text-neutral-300 tabular-nums">{fmt(sparkFor(metric).reduce((a, b) => a + b, 0))}</span> {t('admin.dashboard.inYear', { year })}
             </span>
           </div>
-          <WaveChart months={months} series={[{ key: activeMetric.key, label: activeMetric.label, color: activeMetric.color }]} />
+          <WaveChart months={months} series={[{ key: activeMetric.key, label: t(activeMetric.labelKey), color: activeMetric.color }]} />
         </Card>
 
         <Card
-          title="Status changes"
-          subtitle="By their history timestamps"
-          action={<span className="text-[11px] text-neutral-500 whitespace-nowrap"><span className="font-semibold text-neutral-300 tabular-nums">{fmt(statusChangeTotal)}</span> in {year}</span>}>
+          title={t('admin.dashboard.statusChanges')}
+          subtitle={t('admin.dashboard.byHistory')}
+          action={<span className="text-[11px] text-neutral-500 whitespace-nowrap"><span className="font-semibold text-neutral-300 tabular-nums">{fmt(statusChangeTotal)}</span> {t('admin.dashboard.inYear', { year })}</span>}>
           <WaveChart months={months} series={STATUS_SERIES} />
         </Card>
       </div>
 
       {/* ---- composition, demand, pipeline ----------------------------------------- */}
       <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
-        <Card title="Most viewed" subtitle="All time · site view tracker">
+        <Card title={t('admin.dashboard.mostViewed')} subtitle={t('admin.dashboard.mostViewedSub')}>
           {mostViewed.length === 0 ? (
-            <p className="text-xs text-neutral-500 py-3">No views recorded yet — counts appear as soon as visitors open listings.</p>
+            <p className="text-xs text-neutral-500 py-3">{t('admin.dashboard.noViews')}</p>
           ) : (
             <ol className="divide-y divide-white/6 -my-1">
               {mostViewed.slice(0, 6).map((p, i) => (
@@ -308,15 +310,15 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Portfolio mix" subtitle={sampleNote || 'Every listing by status'}>
+        <Card title={t('admin.dashboard.portfolioMix')} subtitle={sampleNote || t('admin.dashboard.everyListing')}>
           <Donut
             total={totalCount}
-            centerLabel="listings in total"
+            centerLabel={t('admin.dashboard.listingsTotal')}
             slices={STATUS_SLICES.filter(s => (byStatus[s.key] ?? 0) > 0)
-              .map(s => ({ label: s.label, value: byStatus[s.key] ?? 0, color: s.color }))}
+              .map(s => ({ label: s.labelKey ? t(s.labelKey) : s.label, value: byStatus[s.key] ?? 0, color: s.color }))}
           />
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 mt-4 pt-3.5 border-t border-white/6 text-[11px]">
-            {[['For sale', forSale], ['For rent', forRent], ['Off-plan', offPlan], ['Price on request', onRequest]].map(([l, v]) => (
+            {[[t('admin.dashboard.forSale'), forSale], [t('admin.dashboard.forRent'), forRent], [t('admin.dashboard.offPlan'), offPlan], [t('admin.dashboard.priceOnRequest'), onRequest]].map(([l, v]) => (
               <div key={l} className="flex items-baseline justify-between gap-2">
                 <span className="text-neutral-500 truncate">{l}</span>
                 <span className="font-semibold text-neutral-200 tabular-nums">{fmt(v)}</span>
@@ -328,13 +330,13 @@ export default function Dashboard() {
         {/* Third of three in a two-column grid at tablet width — span the row rather than
             leaving a hole beside it. */}
         <Card className="md:col-span-2 xl:col-span-1"
-          title="Lead pipeline" subtitle={`${fmt(inquiries.length)} enquiries by stage`}
-          action={<Link to="/admin/leads" className="text-[11px] text-primary brand-link whitespace-nowrap">All leads →</Link>}>
+          title={t('admin.dashboard.leadPipeline')} subtitle={t('admin.dashboard.byStage', { n: fmt(inquiries.length) })}
+          action={<Link to="/admin/leads" className="text-[11px] text-primary brand-link whitespace-nowrap">{t('admin.dashboard.allLeads')}</Link>}>
           <BarList rows={leadStages} color={SERIES.rented.color}
-            emptyMessage="No enquiries yet — leads appear here as the contact forms are used." />
+            emptyMessage={t('admin.dashboard.noEnquiries')} />
           {leadSources.length > 0 && (
             <div className="mt-4 pt-3.5 border-t border-white/6">
-              <p className="text-[10.5px] uppercase tracking-wider text-neutral-600 mb-2.5">Where they came from</p>
+              <p className="text-[10.5px] uppercase tracking-wider text-neutral-600 mb-2.5">{t('admin.dashboard.whereFrom')}</p>
               <BarList rows={leadSources} color={SERIES.archived.color} />
             </div>
           )}
@@ -344,39 +346,39 @@ export default function Dashboard() {
       {/* ---- distributions. The consultant card only exists when listings actually carry
               an assigned agent, so the column count follows the data. ---------------- */}
       <div className={`grid md:grid-cols-2 gap-4 sm:gap-5 ${topAgents.length > 0 ? 'xl:grid-cols-3' : ''}`}>
-        <Card title="Top property types" subtitle={sampleNote || 'Listings per type'}>
-          <BarList rows={topTypes} color={SERIES.published.color} emptyMessage="No listings to break down yet." />
+        <Card title={t('admin.dashboard.topTypes')} subtitle={sampleNote || t('admin.dashboard.perType')}>
+          <BarList rows={topTypes} color={SERIES.published.color} emptyMessage={t('admin.dashboard.noBreakdown')} />
         </Card>
 
-        <Card title="Top locations" subtitle={sampleNote || 'Listings per area'}>
-          <BarList rows={topLocations} color={BRAND} emptyMessage="No listings to break down yet." />
+        <Card title={t('admin.dashboard.topLocations')} subtitle={sampleNote || t('admin.dashboard.perArea')}>
+          <BarList rows={topLocations} color={BRAND} emptyMessage={t('admin.dashboard.noBreakdown')} />
         </Card>
 
         {topAgents.length > 0 && (
-          <Card title="Listings per consultant" subtitle="Assigned agent on each listing">
+          <Card title={t('admin.dashboard.perConsultant')} subtitle={t('admin.dashboard.assignedAgent')}>
             <BarList rows={topAgents} color={SERIES.archived.color} />
           </Card>
         )}
       </div>
 
-      <Card title="Catalogue" subtitle="What the public site draws from">
+      <Card title={t('admin.dashboard.catalogue')} subtitle={t('admin.dashboard.catalogueSub')}>
         <CatalogueGrid items={catalogue} cols="grid-cols-2 sm:grid-cols-3 xl:grid-cols-6" />
       </Card>
 
       {/* ---- recent activity -------------------------------------------------------- */}
       <div className="grid lg:grid-cols-2 gap-4 sm:gap-5">
-        <Card title="Recent leads" subtitle="Newest enquiries first"
-          action={<Link to="/admin/leads" className="text-[11px] text-primary brand-link whitespace-nowrap">All leads →</Link>}>
+        <Card title={t('admin.dashboard.recentLeads')} subtitle={t('admin.dashboard.newestFirst')}
+          action={<Link to="/admin/leads" className="text-[11px] text-primary brand-link whitespace-nowrap">{t('admin.dashboard.allLeads')}</Link>}>
           {inquiries.length === 0 ? (
-            <p className="text-xs text-neutral-500 py-3">No enquiries yet.</p>
+            <p className="text-xs text-neutral-500 py-3">{t('admin.dashboard.noEnquiriesShort')}</p>
           ) : (
             <table className="w-full text-[12px]">
               <tbody className="divide-y divide-white/6">
                 {inquiries.slice(0, 5).map(q => (
                   <tr key={q.id}>
-                    <td className="py-2 pr-2 text-neutral-200 truncate max-w-[140px]">{q.name}</td>
-                    <td className="py-2 pr-2 text-neutral-500 hidden sm:table-cell truncate max-w-[150px]">{q.typeLabel || q.source}</td>
-                    <td className="py-2 text-right"><StatusBadge value={q.status} /></td>
+                    <td className="py-2 pe-2 text-neutral-200 truncate max-w-[140px]">{q.name}</td>
+                    <td className="py-2 pe-2 text-neutral-500 hidden sm:table-cell truncate max-w-[150px]">{q.typeLabel || q.source}</td>
+                    <td className="py-2 text-end"><StatusBadge value={q.status} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -384,10 +386,10 @@ export default function Dashboard() {
           )}
         </Card>
 
-        <Card title="Recently added" subtitle="Latest listings on the site"
-          action={<Link to="/admin/properties" className="text-[11px] text-primary brand-link whitespace-nowrap">All properties →</Link>}>
+        <Card title={t('admin.dashboard.recentlyAdded')} subtitle={t('admin.dashboard.latestListings')}
+          action={<Link to="/admin/properties" className="text-[11px] text-primary brand-link whitespace-nowrap">{t('admin.dashboard.allProperties')}</Link>}>
           {properties.length === 0 ? (
-            <p className="text-xs text-neutral-500 py-3">No listings yet.</p>
+            <p className="text-xs text-neutral-500 py-3">{t('admin.dashboard.noListings')}</p>
           ) : (
             <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1">
               {properties.slice(0, 8).map(p => (

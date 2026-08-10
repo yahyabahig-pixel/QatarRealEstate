@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { useI18n } from '../i18n/I18nContext'
 import { useToast } from '../components/Toast'
 import { CenterNotice, CrudPage, Field, ImageUpload, Modal, PageTitle, Spinner, StatusBadge, useConfirm } from './adminUi'
 import { resolveFeatureIcon } from '../lib/featureIcons'
@@ -24,6 +25,7 @@ const DEV_EMPTY = {
 
 export function DevelopmentsAdmin() {
   const { developments, developmentActions } = useData()
+  const { t } = useI18n()
   const toast = useToast()
   const [confirm, confirmDialog] = useConfirm()
   const [editing, setEditing] = useState(null)      // null | {} | row
@@ -63,8 +65,8 @@ export function DevelopmentsAdmin() {
   const save = async (e) => {
     e.preventDefault()
     if (saving) return
-    if (!form.coverImage) { setNotice({ kind: 'error', message: 'Upload a cover image before saving.' }); return }
-    if (!form.x || !form.y) { setNotice({ kind: 'error', message: 'Select the project location on the map before saving.\nSearch for the area or click the map in the Location section.' }); return }
+    if (!form.coverImage) { setNotice({ kind: 'error', message: t('admin.dev.needCover') }); return }
+    if (!form.x || !form.y) { setNotice({ kind: 'error', message: t('admin.dev.needLocation') }); return }
     setSaving(true)
     // Human-readable label for cards/chips, derived from the Location — never typed.
     const area = [form.street || form.locState, form.city].filter(Boolean).join(', ') || form.area
@@ -75,32 +77,32 @@ export function DevelopmentsAdmin() {
     setSaving(false)
     if (res && res.ok === false) { setNotice({ kind: 'error', message: res.error }); return }
     setEditing(null)
-    setNotice({ kind: 'success', message: `Development ${isEdit ? 'updated' : 'added'} successfully.` })
+    setNotice({ kind: 'success', message: t('admin.dev.savedOk', { verb: isEdit ? t('admin.crud.updated') : t('admin.crud.added') }) })
     setTimeout(() => setNotice(n => (n?.kind === 'success' ? null : n)), 2200)
   }
 
   const remove = async (id) => {
     const res = await Promise.resolve(developmentActions.remove(id))
     if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
-    else toast('Deleted.', 'error')
+    else toast(t('admin.crud.deleted'), 'error')
   }
 
   return (
     <div>
-      <PageTitle title="Developments"
-        action={<button className="btn-primary !py-2" onClick={() => open(null)}>+ Add Development</button>} />
-      <input placeholder="Search developments…" className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
+      <PageTitle title={t('admin.dev.title')}
+        action={<button className="btn-primary !py-2" onClick={() => open(null)}>{t('admin.dev.add')}</button>} />
+      <input placeholder={t('admin.dev.search')} className="field-dark max-w-xs mb-4" value={search} onChange={e => setSearch(e.target.value)} />
 
       {rows.length === 0 ? (
         <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
-          Nothing here yet.
-          <div className="mt-4"><button className="btn-primary !py-2" onClick={() => open(null)}>+ Add</button></div>
+          {t('admin.crud.nothingYet')}
+          <div className="mt-4"><button className="btn-primary !py-2" onClick={() => open(null)}>+ {t('admin.crud.add')}</button></div>
         </div>
       ) : (
         <div className="overflow-x-auto panel-dark !rounded-xl">
           <table className="w-full text-sm">
-            <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
-              <tr>{['', 'Project', 'Location', 'Delivery', 'Units', 'Developer', 'Actions'].map(h => <th key={h} className="px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
+            <thead className="bg-white/4 text-neutral-400 text-start text-xs uppercase tracking-wider">
+              <tr>{['', t('admin.dev.thProject'), t('admin.dev.thLocation'), t('admin.dev.thDelivery'), t('admin.dev.thUnits'), t('admin.dev.thDeveloper'), t('admin.crud.actions')].map((h, i) => <th key={i} className="px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-white/6">
               {rows.map(d => (
@@ -112,9 +114,9 @@ export function DevelopmentsAdmin() {
                   <td className="px-4 py-2">{d.unitsCount}</td>
                   <td className="px-4 py-2 text-neutral-400">{d.developer || '—'}</td>
                   <td className="px-4 py-2 whitespace-nowrap">
-                    <button className="text-primary hover:underline mr-3" onClick={() => open(d)}>Edit</button>
+                    <button className="text-primary hover:underline me-3" onClick={() => open(d)}>{t('admin.crud.edit')}</button>
                     <button className="text-red-400 hover:underline"
-                      onClick={() => confirm(`Delete "${d.name}"? This cannot be undone.`, () => remove(d.id))}>Delete</button>
+                      onClick={() => confirm(t('admin.crud.deleteConfirm', { name: d.name }), () => remove(d.id))}>{t('admin.crud.delete')}</button>
                   </td>
                 </tr>
               ))}
@@ -124,19 +126,19 @@ export function DevelopmentsAdmin() {
       )}
 
       {editing !== null && (
-        <Modal title={editing.id ? `Edit — ${form.name}` : 'Add Development'} onClose={() => !saving && setEditing(null)} wide>
+        <Modal title={editing.id ? t('admin.dev.editTitle', { name: form.name }) : t('admin.dev.addTitle')} onClose={() => !saving && setEditing(null)} wide>
           <form onSubmit={save} className="grid md:grid-cols-2 gap-4">
-            <div className="md:col-span-2"><Field label="Project name"><input required className="field-dark" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field></div>
-            <Field label="Delivery year"><input type="number" min="2000" max="2100" className="field-dark" value={form.deliveryYear} onChange={e => setForm({ ...form, deliveryYear: +e.target.value })} /></Field>
-            <Field label="Units count"><input type="number" min="0" className="field-dark" value={form.unitsCount} onChange={e => setForm({ ...form, unitsCount: +e.target.value })} /></Field>
-            <Field label="Developer"><input className="field-dark" value={form.developer} onChange={e => setForm({ ...form, developer: e.target.value })} /></Field>
-            <Field label="Starting price (QAR — 0 means “price on request”)"><input type="number" min="0" className="field-dark" value={form.startingPrice} onChange={e => setForm({ ...form, startingPrice: +e.target.value })} /></Field>
-            <Field label="Payment plan"><input className="field-dark" value={form.paymentPlan} onChange={e => setForm({ ...form, paymentPlan: e.target.value })} placeholder="e.g. 20/80 over 4 years" /></Field>
-            <Field label="Slug (URL name)"><input className="field-dark" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} placeholder="derived from the name if empty" /></Field>
-            <div className="md:col-span-2"><Field label="Description"><textarea rows="3" className="field-dark" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></Field></div>
+            <div className="md:col-span-2"><Field label={t('admin.dev.fName')}><input required className="field-dark" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field></div>
+            <Field label={t('admin.dev.fDelivery')}><input type="number" min="2000" max="2100" className="field-dark" value={form.deliveryYear} onChange={e => setForm({ ...form, deliveryYear: +e.target.value })} /></Field>
+            <Field label={t('admin.dev.fUnits')}><input type="number" min="0" className="field-dark" value={form.unitsCount} onChange={e => setForm({ ...form, unitsCount: +e.target.value })} /></Field>
+            <Field label={t('admin.dev.fDeveloper')}><input className="field-dark" value={form.developer} onChange={e => setForm({ ...form, developer: e.target.value })} /></Field>
+            <Field label={t('admin.dev.fStarting')}><input type="number" min="0" className="field-dark" value={form.startingPrice} onChange={e => setForm({ ...form, startingPrice: +e.target.value })} /></Field>
+            <Field label={t('admin.dev.fPayment')}><input className="field-dark" value={form.paymentPlan} onChange={e => setForm({ ...form, paymentPlan: e.target.value })} placeholder={t('admin.dev.paymentPh')} /></Field>
+            <Field label={t('admin.dev.fSlug')}><input className="field-dark" value={form.slug} onChange={e => setForm({ ...form, slug: e.target.value })} placeholder={t('admin.dev.slugPh')} /></Field>
+            <div className="md:col-span-2"><Field label={t('admin.dev.fDescription')}><textarea rows="3" className="field-dark" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></Field></div>
 
             <div className="md:col-span-2">
-              <Field label="Location (search or click the map — the address fills in automatically)">
+              <Field label={t('admin.dev.fLocation')}>
                 <LocationPicker
                   value={{ x: form.x, y: form.y, country: form.locCountry, city: form.city, street: form.street, state: form.locState, description: form.locDescription }}
                   onChange={applyLocation}
@@ -145,16 +147,16 @@ export function DevelopmentsAdmin() {
             </div>
 
             <div className="md:col-span-2">
-              <Field label="Cover image (uploaded from your device)">
+              <Field label={t('admin.dev.fCover')}>
                 <ImageUpload value={form.coverImage} onChange={url => setForm(f => ({ ...f, coverImage: url }))} onBusy={setUploading} />
               </Field>
             </div>
 
 
             <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>{t('admin.crud.cancel')}</button>
               <button className="btn-primary flex items-center gap-2" disabled={saving || uploading}>
-                {saving && <Spinner />}{saving ? 'Saving…' : 'Save Development'}
+                {saving && <Spinner />}{saving ? t('admin.crud.saving') : t('admin.dev.saveDev')}
               </button>
             </div>
           </form>
@@ -168,56 +170,59 @@ export function DevelopmentsAdmin() {
 
 export function AreasAdmin() {
   const { areas, areaActions, areaCount } = useData()
-  return <CrudPage title="Areas" rows={areas} actions={areaActions}
+  const { t } = useI18n()
+  return <CrudPage title={t('admin.cat.areasTitle')} singular={t('admin.cat.areaCol')} rows={areas} actions={areaActions}
     defaults={{ name: '', photo: '', intro: '', slug: '' }}
     columns={[
       { key: 'photo', label: '', render: r => <img src={r.photo} alt="" className="w-16 h-11 object-cover" /> },
-      { key: 'name', label: 'Area' },
+      { key: 'name', label: t('admin.cat.areaCol') },
       // property count is COMPUTED from listings, never typed by hand
-      { key: 'count', label: 'Properties', render: r => areaCount(r.name) },
+      { key: 'count', label: t('admin.cat.propsCol'), render: r => areaCount(r.name) },
     ]}
     fields={[
-      { key: 'name', label: 'Area name', required: true }, { key: 'slug', label: 'Slug (url name)' },
-      { key: 'photo', label: 'Photo (uploaded from your device)', type: 'image' },
-      { key: 'intro', label: 'Intro text', type: 'textarea' },
+      { key: 'name', label: t('admin.cat.areaName'), required: true }, { key: 'slug', label: t('admin.cat.slugUrl') },
+      { key: 'photo', label: t('admin.cat.photoUpload'), type: 'image' },
+      { key: 'intro', label: t('admin.cat.introText'), type: 'textarea' },
     ]} />
 }
 
 export function AgentsAdmin() {
   const { agents, agentActions } = useData()
-  return <CrudPage title="Agents" rows={agents} actions={agentActions}
+  const { t } = useI18n()
+  return <CrudPage title={t('admin.cat.agentsTitle')} singular={t('admin.nav.agents')} rows={agents} actions={agentActions}
     defaults={{ name: '', title: '', photo: '', phone: '', whatsapp: '', email: '', rating: 0, bio: '', active: true }}
     columns={[
       { key: 'photo', label: '', render: r => <img src={r.photo} alt="" className="w-11 h-11 rounded-full object-cover" /> },
-      { key: 'name', label: 'Name' }, { key: 'title', label: 'Title' }, { key: 'phone', label: 'Phone' },
-      { key: 'rating', label: 'Rating', render: r => r.rating > 0 ? `★ ${r.rating.toFixed(1)}` : '—' },
-      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'active' : 'hidden'} map={{ active: 'bg-green-500/15 text-green-400', hidden: 'bg-white/10 text-neutral-400' }} /> },
+      { key: 'name', label: t('admin.cat.nameCol') }, { key: 'title', label: t('admin.cat.titleCol') }, { key: 'phone', label: t('admin.cat.phoneCol') },
+      { key: 'rating', label: t('admin.cat.ratingCol'), render: r => r.rating > 0 ? `★ ${r.rating.toFixed(1)}` : '—' },
+      { key: 'active', label: t('admin.cat.activeCol'), render: r => <StatusBadge value={r.active ? 'active' : 'hidden'} map={{ active: 'bg-green-500/15 text-green-400', hidden: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
-      { key: 'name', label: 'Full name', required: true }, { key: 'title', label: 'Job title', required: true },
-      { key: 'photo', label: 'Portrait photo (uploaded from your device)', type: 'image', required: true },
-      { key: 'phone', label: 'Phone' },
-      { key: 'whatsapp', label: 'WhatsApp number' }, { key: 'email', label: 'Email' },
-      { key: 'rating', label: 'Rating (0–5)', type: 'number' }, { key: 'active', label: 'Active (visible on site)', type: 'toggle' },
-      { key: 'bio', label: 'Short bio', type: 'textarea' },
+      { key: 'name', label: t('admin.cat.fullName'), required: true }, { key: 'title', label: t('admin.cat.jobTitle'), required: true },
+      { key: 'photo', label: t('admin.cat.portrait'), type: 'image', required: true },
+      { key: 'phone', label: t('admin.cat.phone') },
+      { key: 'whatsapp', label: t('admin.cat.whatsappNo') }, { key: 'email', label: t('admin.cat.email') },
+      { key: 'rating', label: t('admin.cat.rating05'), type: 'number' }, { key: 'active', label: t('admin.cat.activeVisible'), type: 'toggle' },
+      { key: 'bio', label: t('admin.cat.shortBio'), type: 'textarea' },
     ]} />
 }
 
 export function JobsAdmin() {
   const { jobs, jobActions } = useData()
-  return <CrudPage title="Jobs" rows={jobs} actions={jobActions}
+  const { t } = useI18n()
+  return <CrudPage title={t('admin.cat.jobsTitle')} singular={t('admin.nav.jobs')} rows={jobs} actions={jobActions}
     defaults={{ title: '', department: 'Sales', type: 'Full-time', location: 'Doha, Qatar', description: '', active: true }}
     columns={[
-      { key: 'title', label: 'Title' }, { key: 'department', label: 'Department' },
-      { key: 'type', label: 'Type' }, { key: 'location', label: 'Location' },
-      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'open' : 'closed'} map={{ open: 'bg-green-500/15 text-green-400', closed: 'bg-white/10 text-neutral-400' }} /> },
+      { key: 'title', label: t('admin.cat.titleCol') }, { key: 'department', label: t('admin.cat.deptCol') },
+      { key: 'type', label: t('admin.cat.typeCol') }, { key: 'location', label: t('admin.cat.locationCol') },
+      { key: 'active', label: t('admin.cat.activeCol'), render: r => <StatusBadge value={r.active ? 'open' : 'closed'} map={{ open: 'bg-green-500/15 text-green-400', closed: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
-      { key: 'title', label: 'Job title', required: true },
-      { key: 'department', label: 'Department', type: 'select', options: ['Marketing', 'Operations', 'Sales', 'Technology'] },
-      { key: 'type', label: 'Type', type: 'select', options: ['Full-time', 'Part-time'] },
-      { key: 'location', label: 'Location' }, { key: 'active', label: 'Active', type: 'toggle' },
-      { key: 'description', label: 'Description (2–3 lines)', type: 'textarea', required: true },
+      { key: 'title', label: t('admin.cat.jobTitleF'), required: true },
+      { key: 'department', label: t('admin.cat.department'), type: 'select', options: ['Marketing', 'Operations', 'Sales', 'Technology'] },
+      { key: 'type', label: t('admin.cat.type'), type: 'select', options: ['Full-time', 'Part-time'] },
+      { key: 'location', label: t('admin.cat.location') }, { key: 'active', label: t('admin.cat.activeF'), type: 'toggle' },
+      { key: 'description', label: t('admin.cat.desc23'), type: 'textarea', required: true },
     ]} />
 }
 
@@ -227,24 +232,25 @@ export function FeaturesAdmin() {
   // Deleting a feature that listings still use returns 409 Feature.InUse from the API;
   // deactivating is the safe everyday way to retire one.
   const { features, featureActions } = useData()
-  return <CrudPage title="Property Features" rows={features} actions={featureActions}
+  const { t } = useI18n()
+  return <CrudPage title={t('admin.cat.featuresTitle')} singular={t('admin.cat.featureCol')} rows={features} actions={featureActions}
     defaults={{ name: '', valueType: 'Boolean', icon: '', active: true }}
     columns={[
-      { key: 'name', label: 'Feature' },
-      { key: 'valueType', label: 'Value type' },
-      { key: 'icon', label: 'Icon', render: r => {
+      { key: 'name', label: t('admin.cat.featureCol') },
+      { key: 'valueType', label: t('admin.cat.valueTypeCol') },
+      { key: 'icon', label: t('admin.cat.iconCol'), render: r => {
         const resolved = resolveFeatureIcon(r.icon)
         return resolved
           ? <span className="inline-flex items-center gap-2"><span className="w-7 h-7 rounded-lg bg-primary/15 text-primary flex items-center justify-center"><resolved.Icon className="w-4 h-4" /></span><span className="text-xs text-neutral-400">{resolved.name}</span></span>
           : '—'
       } },
-      { key: 'active', label: 'Active', render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-500/15 text-green-400', retired: 'bg-white/10 text-neutral-400' }} /> },
+      { key: 'active', label: t('admin.cat.activeCol'), render: r => <StatusBadge value={r.active ? 'offered' : 'retired'} map={{ offered: 'bg-green-500/15 text-green-400', retired: 'bg-white/10 text-neutral-400' }} /> },
     ]}
     fields={[
-      { key: 'name', label: 'Feature name (e.g. Swimming Pool)', required: true },
-      { key: 'valueType', label: 'Value type', type: 'select', options: [['Boolean', 'Yes / No (presence only)'], ['Text', 'Text value (e.g. floor type)'], ['Number', 'Numeric value (e.g. parking count)'] ] },
-      { key: 'icon', label: 'Icon (pick from the real-estate icon set)', type: 'icon' },
-      { key: 'active', label: 'Active (offered on new listings)', type: 'toggle' },
+      { key: 'name', label: t('admin.cat.featureName'), required: true },
+      { key: 'valueType', label: t('admin.cat.valueType'), type: 'select', options: [['Boolean', t('admin.cat.vBool')], ['Text', t('admin.cat.vText')], ['Number', t('admin.cat.vNumber')] ] },
+      { key: 'icon', label: t('admin.cat.iconPick'), type: 'icon' },
+      { key: 'active', label: t('admin.cat.activeOffered'), type: 'toggle' },
     ]} />
 }
 
@@ -260,6 +266,7 @@ const LEAD_TYPE_LABELS = { PropertyInquiry: 'Property Inquiry', ListingRequest: 
 
 export function LeadsAdmin() {
   const { inquiries, inquiryActions, properties, agents } = useData()
+  const { t } = useI18n()
   const toast = useToast()
   const [confirm, confirmDialog] = useConfirm()
   const [selected, setSelected] = useState(null)     // detail (mapped lead or {loading})
@@ -279,7 +286,7 @@ export function LeadsAdmin() {
   const linked = (l) => {
     if (typeOf(l) === 'ListingRequest')
       return [l.propertyTypeName || l.type, l.purpose === 'rent' ? 'For Rent' : l.purpose ? 'For Sale' : null, l.locationLabel]
-        .filter(Boolean).join(' · ') || 'Listing request'
+        .filter(Boolean).join(' · ') || t('admin.leads.listingRequestRow')
     if (l.propertyTitle) return l.propertyTitle
     if (l.propertyId) return properties.find(p => p.id === l.propertyId)?.title || null
     if (l.agentId) return agents.find(a => a.id === l.agentId)?.name || null
@@ -304,41 +311,41 @@ export function LeadsAdmin() {
   const setStatus = async (l, status) => {
     const res = await Promise.resolve(inquiryActions.update(l.id, { status }))
     if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
-    else toast('Lead status updated.')
+    else toast(t('admin.leads.statusUpdated'))
   }
 
   const remove = async (id) => {
     const res = await Promise.resolve(inquiryActions.remove(id))
     if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
-    else { toast('Lead deleted.', 'error'); setSelected(null) }
+    else { toast(t('admin.leads.deleted'), 'error'); setSelected(null) }
   }
 
   return (
     <div>
-      <PageTitle title="Leads" />
+      <PageTitle title={t('admin.leads.title')} />
       <div className="flex gap-3 flex-wrap mb-4">
-        <input placeholder="Search name, email or phone…" className="field-dark max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
+        <input placeholder={t('admin.leads.search')} className="field-dark max-w-xs" value={q} onChange={e => setQ(e.target.value)} />
         <select className="field-dark !w-auto" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-          <option value="">Type (all)</option>
-          <option value="PropertyInquiry">Property Inquiry</option>
-          <option value="ListingRequest">Listing Request</option>
-          <option value="GeneralInquiry">General Inquiry</option>
+          <option value="">{t('admin.leads.typeAll')}</option>
+          <option value="PropertyInquiry">{t('admin.leads.propertyInquiry')}</option>
+          <option value="ListingRequest">{t('admin.leads.listingRequest')}</option>
+          <option value="GeneralInquiry">{t('admin.leads.generalInquiry')}</option>
         </select>
         <select className="field-dark !w-auto" value={statusFilter} onChange={e => setStatusFilter(e.target.value)}>
-          <option value="">Status (all)</option>
-          {LEAD_STATUSES.map(st => <option key={st}>{st}</option>)}
+          <option value="">{t('admin.leads.statusAll')}</option>
+          {LEAD_STATUSES.map(st => <option key={st} value={st}>{t(`admin.status.${st}`)}</option>)}
         </select>
       </div>
 
       {rows.length === 0 ? (
         <div className="border border-dashed border-white/15 rounded-xl p-14 text-center text-neutral-500">
-          No leads match. New inquiries from the website land here automatically.
+          {t('admin.leads.empty')}
         </div>
       ) : (
         <div className="overflow-x-auto panel-dark !rounded-xl">
           <table className="w-full text-sm">
-            <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
-              <tr>{['Date', 'Name', 'Contact', 'Type', 'Regarding', 'Status', 'Actions'].map(h => <th key={h} className="px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
+            <thead className="bg-white/4 text-neutral-400 text-start text-xs uppercase tracking-wider">
+              <tr>{[t('admin.leads.thDate'), t('admin.leads.thName'), t('admin.leads.thContact'), t('admin.leads.thType'), t('admin.leads.thRegarding'), t('admin.leads.thStatus'), t('admin.leads.thActions')].map((h, i) => <th key={i} className="px-4 py-3 whitespace-nowrap">{h}</th>)}</tr>
             </thead>
             <tbody className="divide-y divide-white/6">
               {rows.map(l => (
@@ -351,14 +358,14 @@ export function LeadsAdmin() {
                   <td className="px-4 py-3 max-w-[220px]"><div className="truncate text-neutral-300">{linked(l) || '—'}</div><div className="text-[11px] text-neutral-500">{l.source}</div></td>
                   <td className="px-4 py-3" onClick={e => e.stopPropagation()}>
                     <select value={l.status} className="field-dark !py-1 !w-auto" onChange={e => setStatus(l, e.target.value)}>
-                      {LEAD_STATUSES.map(st => <option key={st}>{st}</option>)}
+                      {LEAD_STATUSES.map(st => <option key={st} value={st}>{t(`admin.status.${st}`)}</option>)}
                       {!LEAD_STATUSES.includes(l.status) && <option>{l.status}</option>}
                     </select>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                    <button className="text-primary hover:underline mr-3" onClick={() => view(l)}>View</button>
+                    <button className="text-primary hover:underline me-3" onClick={() => view(l)}>{t('admin.crud.view')}</button>
                     <button className="text-red-400 hover:underline"
-                      onClick={() => confirm(`Delete the lead from "${l.name}"? This cannot be undone.`, () => remove(l.id))}>Delete</button>
+                      onClick={() => confirm(t('admin.leads.deleteConfirm', { name: l.name }), () => remove(l.id))}>{t('admin.crud.delete')}</button>
                   </td>
                 </tr>
               ))}
@@ -368,21 +375,21 @@ export function LeadsAdmin() {
       )}
 
       {selected && (
-        <Modal title={selected.loading ? 'Loading…' : `Lead — ${selected.name}`} onClose={() => setSelected(null)} wide>
+        <Modal title={selected.loading ? t('admin.leads.loading') : t('admin.leads.leadTitle', { name: selected.name })} onClose={() => setSelected(null)} wide>
           {selected.loading ? (
-            <div className="py-14 text-center text-neutral-400"><Spinner /> <span className="ml-2">Loading lead…</span></div>
+            <div className="py-14 text-center text-neutral-400"><Spinner /> <span className="ms-2">{t('admin.leads.loadingLead')}</span></div>
           ) : (
             <div className="space-y-4 text-sm text-neutral-300">
               <div className="flex flex-wrap items-center gap-2">
                 <StatusBadge value={selected.typeLabel || LEAD_TYPE_LABELS[typeOf(selected)]}
                   map={{ 'Property Inquiry': 'bg-blue-500/15 text-blue-400', 'Listing Request': 'bg-primary/15 text-primary', 'General Inquiry': 'bg-white/10 text-neutral-300' }} />
                 <StatusBadge value={selected.status} />
-                <span className="text-neutral-500 text-xs ml-auto">{selected.date} · {selected.source}</span>
+                <span className="text-neutral-500 text-xs ms-auto">{selected.date} · {selected.source}</span>
               </div>
               <div className="grid sm:grid-cols-2 gap-x-6 gap-y-1.5">
-                <p><span className="text-neutral-500">Phone:</span> {selected.phone}</p>
-                <p><span className="text-neutral-500">Email:</span> {selected.email}</p>
-                {selected.agentName && <p><span className="text-neutral-500">Agent:</span> {selected.agentName}</p>}
+                <p><span className="text-neutral-500">{t('admin.leads.phone')}</span> {selected.phone}</p>
+                <p><span className="text-neutral-500">{t('admin.leads.email')}</span> {selected.email}</p>
+                {selected.agentName && <p><span className="text-neutral-500">{t('admin.leads.agent')}</span> {selected.agentName}</p>}
               </div>
               {selected.message && <div className="border border-white/8 bg-ink rounded-lg p-4 whitespace-pre-line">{selected.message}</div>}
 
@@ -395,17 +402,17 @@ export function LeadsAdmin() {
                     <div className="text-xs text-neutral-500">{[selected.property.type, selected.property.city].filter(Boolean).join(' · ')}</div>
                     {selected.property.price != null && <div className="text-primary text-xs font-semibold mt-0.5">{Number(selected.property.price).toLocaleString()} {selected.property.currency || 'QAR'}</div>}
                   </div>
-                  <span className="ml-auto text-primary text-xs whitespace-nowrap">View property →</span>
+                  <span className="ms-auto text-primary text-xs whitespace-nowrap">{t('admin.leads.viewProperty')}</span>
                 </Link>
               )}
 
               {(selected.propertyTypeName || selected.location) && (
                 <div className="panel-dark p-4 space-y-1.5">
-                  <div className="text-xs uppercase tracking-wider text-neutral-500 mb-1">Owner's property</div>
-                  {selected.propertyTypeName && <p><span className="text-neutral-500">Type:</span> {selected.propertyTypeName}</p>}
-                  {selected.purpose && <p><span className="text-neutral-500">Transaction:</span> {selected.purpose === 'rent' ? 'For Rent' : 'For Sale'}</p>}
+                  <div className="text-xs uppercase tracking-wider text-neutral-500 mb-1">{t('admin.leads.ownersProperty')}</div>
+                  {selected.propertyTypeName && <p><span className="text-neutral-500">{t('admin.leads.type')}</span> {selected.propertyTypeName}</p>}
+                  {selected.purpose && <p><span className="text-neutral-500">{t('admin.leads.transaction')}</span> {selected.purpose === 'rent' ? t('common.forRent') : t('common.forSale')}</p>}
                   {selected.location && (
-                    <p><span className="text-neutral-500">Location:</span> {[selected.location.street, selected.location.state, selected.location.city, selected.location.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ')}</p>
+                    <p><span className="text-neutral-500">{t('admin.leads.location')}</span> {[selected.location.street, selected.location.state, selected.location.city, selected.location.country].filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ')}</p>
                   )}
                   {selected.location && Number.isFinite(selected.location.lat) && Number.isFinite(selected.location.lng) && (
                     <div className="pt-2">
@@ -427,29 +434,30 @@ export function LeadsAdmin() {
 
 export function SettingsAdmin() {
   const { settings, setSettings } = useData()
+  const { t } = useI18n()
   const toast = useToast()
   const [f, setF] = useState(settings)
   const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
   return (
     <div className="max-w-2xl">
-      <PageTitle title="Settings" />
-      <form className="grid md:grid-cols-2 gap-4" onSubmit={e => { e.preventDefault(); setSettings(f); toast('Settings saved — live across the site.') }}>
-        <Field label="Site name"><input className="field-dark" value={f.siteName} onChange={set('siteName')} /></Field>
-        <Field label="Contact phone"><input className="field-dark" value={f.phone} onChange={set('phone')} /></Field>
-        <Field label="WhatsApp number"><input className="field-dark" value={f.whatsapp} onChange={set('whatsapp')} /></Field>
-        <Field label="Contact email"><input className="field-dark" value={f.email} onChange={set('email')} /></Field>
-        <Field label="Instagram URL"><input className="field-dark" value={f.instagram} onChange={set('instagram')} /></Field>
-        <Field label="LinkedIn URL"><input className="field-dark" value={f.linkedin} onChange={set('linkedin')} /></Field>
-        <Field label="Tax number (placeholder — replace with the issued number)">
+      <PageTitle title={t('admin.settings.title')} />
+      <form className="grid md:grid-cols-2 gap-4" onSubmit={e => { e.preventDefault(); setSettings(f); toast(t('admin.settings.saved')) }}>
+        <Field label={t('admin.settings.siteName')}><input className="field-dark" value={f.siteName} onChange={set('siteName')} /></Field>
+        <Field label={t('admin.settings.contactPhone')}><input className="field-dark" value={f.phone} onChange={set('phone')} /></Field>
+        <Field label={t('admin.settings.whatsappNumber')}><input className="field-dark" value={f.whatsapp} onChange={set('whatsapp')} /></Field>
+        <Field label={t('admin.settings.contactEmail')}><input className="field-dark" value={f.email} onChange={set('email')} /></Field>
+        <Field label={t('admin.settings.instagram')}><input className="field-dark" value={f.instagram} onChange={set('instagram')} /></Field>
+        <Field label={t('admin.settings.linkedin')}><input className="field-dark" value={f.linkedin} onChange={set('linkedin')} /></Field>
+        <Field label={t('admin.settings.taxNumber')}>
           <input className="field-dark" value={f.taxNumber ?? ''} onChange={set('taxNumber')} />
         </Field>
-        <div className="md:col-span-2"><Field label="Footer about text"><textarea rows="3" className="field-dark" value={f.footerAbout} onChange={set('footerAbout')} /></Field></div>
+        <div className="md:col-span-2"><Field label={t('admin.settings.footerAbout')}><textarea rows="3" className="field-dark" value={f.footerAbout} onChange={set('footerAbout')} /></Field></div>
         <div className="md:col-span-2">
-          <Field label="Footer about text (Arabic)">
+          <Field label={t('admin.settings.footerAboutAr')}>
             <textarea rows="2" dir="rtl" lang="ar" className="field-dark text-right" value={f.footerAboutAr ?? ''} onChange={set('footerAboutAr')} />
           </Field>
         </div>
-        <div className="md:col-span-2"><button className="btn-primary">Save Settings</button></div>
+        <div className="md:col-span-2"><button className="btn-primary">{t('admin.settings.save')}</button></div>
       </form>
     </div>
   )

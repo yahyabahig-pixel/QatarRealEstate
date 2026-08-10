@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, Star } from '../components/ui'
-import { LogoMarquee } from '../components/misc'
 import { IconArrowRight, IconSearch } from '../components/icons'
 
 // ---------------------------------------------------------------------------------------
@@ -31,20 +31,9 @@ const ALT_HEROES = [
 // photograph, or up for a softer backdrop — nothing else needs touching.
 const HERO_BLUR = '14px'
 
-// [label, destination]. Previously a single `p.includes('Rental')` test sent four of these
-// five to an unfiltered /buy, so "Villas in Al Waab" and "Land in Qetaifan Island" led to
-// the same undifferentiated page. `q` is matched against title + area + district + city by
-// Listings.jsx, and works in mock and live mode alike.
-const PILLS = [
-  ['Apartments in Porto Arabia', '/buy?q=Porto+Arabia'],
-  ['Rentals in West Bay', '/rent?q=West+Bay'],
-  ['Villas in Al Waab', '/buy?q=Al+Waab'],
-  ['Off-plan in Lusail', '/buy?q=Lusail'],
-  ['Land in Qetaifan Island', '/buy?q=Qetaifan'],
-]
-
 export default function Home() {
   const { properties, developments, areas, agents, areaCount, propertyTypes } = useData()
+  const { t, typeLabel } = useI18n()
   const navigate = useNavigate()
   const [tab, setTab] = useState('rent')
   const [q, setQ] = useState('')
@@ -56,10 +45,10 @@ export default function Home() {
   const topAgents = agents.filter(a => a.active).slice(0, 4)
 
   const stats = [
-    [properties.length.toLocaleString() + '+', 'Curated listings'],
-    [areas.length, 'Prime districts'],
-    [developments.length, 'New developments'],
-    [agents.filter(a => a.active).length, 'Expert consultants'],
+    [properties.length.toLocaleString() + '+', t('home.stats.listings')],
+    [areas.length, t('home.stats.districts')],
+    [developments.length, t('home.stats.developments')],
+    [agents.filter(a => a.active).length, t('home.stats.consultants')],
   ]
 
   const search = (e) => {
@@ -95,47 +84,45 @@ export default function Home() {
         />
         {/* indigo unifier — carries the brand dark and keeps white type legible on any crop */}
         <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/55 to-ink/90" />
-        {/* red bloom — ties the photograph to the primary accent without tinting faces or sky */}
-        <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[52rem] h-80 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+        {/* logo-red cast — a quiet full-bleed tint that pulls the backdrop toward the
+            brand red of the logo (stronger at the base, breathing at the top) */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/15 via-primary/5 to-primary/25 pointer-events-none" />
+        {/* red blooms — tie the photograph to the primary accent without tinting faces */}
+        <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[56rem] h-80 rounded-full bg-primary/30 blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -end-24 w-[30rem] h-[30rem] rounded-full bg-primary/15 blur-3xl pointer-events-none" />
         <div className="relative text-center text-white px-4 w-full max-w-3xl">
-          <div className="eyebrow !text-white/90 mb-4">Doha · Lusail · The Pearl</div>
+          <div className="eyebrow !text-white/90 mb-4">{t('home.heroEyebrow')}</div>
           <h1 className="h-serif text-4xl md:text-6xl leading-[1.08] mb-4">
-            Qatar's Most Exclusive<br />Real Estate Portal
+            {t('home.heroTitle1')}<br />{t('home.heroTitle2')}
           </h1>
           <p className="text-white/70 text-sm md:text-base mb-8 max-w-xl mx-auto">
-            Buy and rent apartments, villas, penthouses and offices across Qatar's finest addresses.
+            {t('home.heroSubtitle')}
           </p>
 
-          <div className="bg-white text-neutral-900 shadow-2xl shadow-ink/40 rounded-2xl overflow-hidden text-left">
+          <div className="bg-white text-neutral-900 shadow-2xl shadow-ink/40 rounded-2xl overflow-hidden text-start">
             <div className="flex gap-1 p-2 pb-0">
-              {['rent', 'buy'].map(t => (
-                <button key={t} onClick={() => setTab(t)} aria-pressed={tab === t}
-                  className={`flex-1 py-2.5 text-sm font-semibold capitalize rounded-xl transition-colors ${tab === t ? 'bg-ink text-white shadow-sm' : 'text-neutral-600 hover:bg-neutral-100'}`}>
-                  {t === 'rent' ? 'For Rent' : 'For Sale'}
+              {['rent', 'buy'].map(tab_ => (
+                <button key={tab_} onClick={() => setTab(tab_)} aria-pressed={tab === tab_}
+                  className={`flex-1 py-2.5 text-sm font-semibold capitalize rounded-xl transition-colors ${tab === tab_ ? 'bg-ink text-white shadow-sm' : 'text-neutral-600 hover:bg-neutral-100'}`}>
+                  {tab_ === 'rent' ? t('common.forRent') : t('common.forSale')}
                 </button>
               ))}
             </div>
             <form onSubmit={search} className="p-4 grid md:grid-cols-[1fr_auto_auto_auto] gap-3">
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Location, area, or keyword…" className="field" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('home.searchPlaceholder')} className="field" />
               <select value={type} onChange={e => setType(e.target.value)} className="field md:w-44">
-                <option value="">Property type</option>
-                {propertyTypes.map(t => <option key={t.id}>{t.name}</option>)}
+                <option value="">{t('home.propertyType')}</option>
+                {propertyTypes.map(pt => <option key={pt.id} value={pt.name}>{typeLabel(pt.name)}</option>)}
               </select>
               <select value={price} onChange={e => setPrice(e.target.value)} className="field md:w-40">
-                <option value="">Max price</option>
+                <option value="">{t('home.maxPrice')}</option>
                 {(tab === 'rent' ? [5000, 10000, 20000, 50000] : [1000000, 3000000, 6000000, 15000000]).map(v =>
                   <option key={v} value={v}>{v.toLocaleString()} QAR</option>)}
               </select>
-              <button className="btn-primary"><IconSearch className="w-4 h-4" /> Search</button>
+              <button className="btn-primary"><IconSearch className="w-4 h-4" /> {t('home.search')}</button>
             </form>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-2 mt-6">
-            {PILLS.map(([label, to]) => (
-              <Link key={label} to={to}
-                className="border border-white/25 bg-white/5 backdrop-blur rounded-full px-4 py-1.5 text-xs font-medium hover:border-white hover:bg-white/15 transition-colors">{label}</Link>
-            ))}
-          </div>
         </div>
 
         {/* STATISTICS — anchored to the hero's bottom edge */}
@@ -156,19 +143,19 @@ export default function Home() {
       {/* DEVELOPMENTS SLIDER */}
       <section className="bg-ink text-white py-20">
         <div className="max-w-7xl mx-auto px-4">
-          <SectionHeading dark eyebrow="Off-plan & new launches" title="Unlock High-Value Investment Opportunities"
-            subtitle="Escrow-backed projects from Qatar's most trusted developers." link="/developments" linkLabel="All developments" />
+          <SectionHeading dark eyebrow={t('home.devEyebrow')} title={t('home.devTitle')}
+            subtitle={t('home.devSubtitle')} link="/developments" linkLabel={t('home.devLink')} />
           <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4 snap-x">
             {developments.map(d => (
               <Link key={d.id} to={`/development/${d.slug}`} className="relative shrink-0 w-80 h-96 overflow-hidden rounded-2xl group snap-start">
                 <img src={d.coverImage} alt={d.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 <div className="absolute inset-0 bg-gradient-to-t from-ink/95 via-ink/25 to-transparent" />
                 <div className="absolute bottom-0 p-5">
-                  <div className="text-white/80 text-xs uppercase tracking-wider mb-1">Available from {d.deliveryYear}</div>
+                  <div className="text-white/80 text-xs uppercase tracking-wider mb-1">{t('home.availableFrom', { year: d.deliveryYear })}</div>
                   <h3 className="h-serif text-2xl">{d.name}</h3>
                   <p className="text-sm text-neutral-300">{d.area}</p>
                   <span className="inline-flex items-center gap-1.5 mt-3 text-primary text-xs font-semibold uppercase tracking-wider opacity-0 translate-y-1 group-hover:opacity-100 group-hover:translate-y-0 transition-all">
-                    Explore project <IconArrowRight className="w-3.5 h-3.5" />
+                    {t('home.exploreProject')} <IconArrowRight className="w-3.5 h-3.5 rtl:-scale-x-100" />
                   </span>
                 </div>
               </Link>
@@ -179,34 +166,26 @@ export default function Home() {
 
       {/* FEATURED */}
       <section className="max-w-7xl mx-auto px-4 py-20">
-        <SectionHeading eyebrow="Hand-picked" title="Featured Properties"
-          subtitle="An exclusive selection of Qatar's most remarkable homes, verified and listed by our senior consultants." link="/buy" />
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <SectionHeading eyebrow={t('home.featuredEyebrow')} title={t('home.featuredTitle')}
+          subtitle={t('home.featuredSubtitle')} link="/buy" />
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-fade">
           {featured.map(p => <PropertyCard key={p.id} p={p} />)}
-        </div>
-      </section>
-
-      {/* PARTNERS */}
-      <section className="border-y border-neutral-200 bg-white">
-        <div className="max-w-7xl mx-auto px-4">
-          <p className="text-center eyebrow pt-10">Trusted by Leading Partners & Developers</p>
-          <LogoMarquee />
         </div>
       </section>
 
       {/* TRENDING AREAS */}
       <section className="max-w-7xl mx-auto px-4 py-20">
-        <SectionHeading eyebrow="Where Qatar is moving" title="Explore Qatar's Trending Areas"
-          subtitle="Neighbourhood guides for the districts shaping the market." link="/areas" />
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <SectionHeading eyebrow={t('home.areasEyebrow')} title={t('home.areasTitle')}
+          subtitle={t('home.areasSubtitle')} link="/areas" />
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 stagger-fade">
           {trendingAreas.map(a => (
             <Link key={a.id} to={`/areas/${a.slug}`} className="relative h-80 overflow-hidden rounded-2xl group lift">
               <img src={a.photo} alt={a.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-ink/85 to-transparent" />
               <div className="absolute bottom-0 p-5 text-white">
                 <h3 className="h-serif text-xl">{a.name}</h3>
-                <p className="text-sm text-neutral-300">{areaCount(a.name)} properties</p>
-                <span className="inline-block mt-2 text-primary text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">Explore Area →</span>
+                <p className="text-sm text-neutral-300">{areaCount(a.name)} {t('common.properties')}</p>
+                <span className="inline-block mt-2 text-primary text-xs font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">{t('home.exploreArea')}</span>
               </div>
             </Link>
           ))}
@@ -217,9 +196,9 @@ export default function Home() {
       {topAgents.length > 0 && (
         <section className="bg-white border-t border-neutral-200 py-20">
           <div className="max-w-7xl mx-auto px-4">
-            <SectionHeading eyebrow="Our people" title="Guided by Qatar's Finest Agents"
-              subtitle="Senior consultants who know every tower, compound and marina berth in their district." link="/find-agent" linkLabel="Meet the team" />
-            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <SectionHeading eyebrow={t('home.agentsEyebrow')} title={t('home.agentsTitle')}
+              subtitle={t('home.agentsSubtitle')} link="/find-agent" linkLabel={t('home.meetTeam')} />
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 stagger-fade">
               {topAgents.map(a => (
                 <Link key={a.id} to={`/find-agent/${a.slug}`} className="card lift overflow-hidden group">
                   <div className="overflow-hidden">

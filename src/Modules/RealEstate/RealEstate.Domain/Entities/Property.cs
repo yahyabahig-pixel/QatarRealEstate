@@ -352,7 +352,11 @@ public sealed class Property : AuditableEntity
         if (Status == PropertyStatus.Published)
             return PropertyErrors.AlreadyPublished;
 
-        if (Status == PropertyStatus.Archived || Status == PropertyStatus.Sold || Status == PropertyStatus.Rented)
+        // Sold and Rented stay non-publishable: re-listing a closed deal is a business
+        // decision, not a status flip. ARCHIVED is different — the admin console offers
+        // "Restore (Publish)" on archived listings, so the domain must allow it; without
+        // this an archived listing was permanently stuck (no transition out at all).
+        if (Status == PropertyStatus.Sold || Status == PropertyStatus.Rented)
             return PropertyErrors.NotPublishable;
 
         Status = PropertyStatus.Published;

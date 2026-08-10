@@ -20,7 +20,7 @@ export const AMENITIES = [
 export const PROPERTY_TYPES = [
   'Apartment', 'Standalone Villa', 'Land', 'Townhouse', 'Compound Villa', 'Warehouse',
   'Penthouse', 'Duplex', 'Whole Building', 'Commercial Villa', 'Retail Shop', 'Labor Camp',
-  'Factory', 'Chalet', 'Business Opportunity', 'Office', 'Palace', 'Hotel',
+  'Factory', 'Chalet', 'Business Opportunity', 'Office', 'Palace', 'Hotel', 'Commercial Shop',
 ]
 
 export const REF_PREFIXES = {

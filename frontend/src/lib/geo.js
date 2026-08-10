@@ -1,15 +1,19 @@
-import { MAPBOX_TOKEN } from './mapbox'
-
 // ---------------------------------------------------------------------------------------
 // Geocoding helpers + Qatar geography constants.
 //
+// Geocoding now runs on Photon (photon.komoot.io) — an open, no-key geocoder built on
+// OpenStreetMap data, designed for search-as-you-type. It replaced the Mapbox Geocoding
+// API when the map engine moved to MapLibre + OpenFreeMap, so the whole map stack works
+// with no account and no token. Function signatures and return shapes are UNCHANGED —
+// the pickers and search boxes built against the old implementation run as-is.
+//
 // COORDINATE CONVENTION (do not change): X = LONGITUDE, Y = LATITUDE.
-// This matches both Mapbox ([lng, lat] everywhere) and the backend Location value
+// This matches both MapLibre ([lng, lat] everywhere) and the backend Location value
 // object (XCoordinate = longitude, YCoordinate = latitude). Every function here takes
 // and returns them explicitly named so a swap cannot slip through unnoticed.
 // ---------------------------------------------------------------------------------------
 
-const GEO = 'https://api.mapbox.com/geocoding/v5/mapbox.places'
+const PHOTON = 'https://photon.komoot.io'
 
 export const QATAR_CENTER = [51.44, 25.32]            // [lng, lat]
 export const QATAR_ZOOM = 8.3
@@ -23,44 +27,44 @@ async function geoFetch(url) {
   return res.json()
 }
 
-// Search-as-you-type. Restricted to Qatar (country=qa) and biased toward Doha so
+// One readable line out of Photon's address parts, deduplicated in order.
+const placeName = (p = {}) => {
+  const parts = [p.name, [p.housenumber, p.street].filter(Boolean).join(' '), p.district, p.city, p.state, p.country]
+  return parts.filter(Boolean).filter((v, i, a) => a.indexOf(v) === i).join(', ')
+}
+
+// Search-as-you-type. Bounded to the Qatar box and biased toward Doha so
 // "West Bay" finds West Bay, Doha — not West Bay, New Zealand.
 export async function forwardGeocode(query) {
-  if (!MAPBOX_TOKEN || !query.trim()) return []
+  if (!query.trim()) return []
   const data = await geoFetch(
-    `${GEO}/${encodeURIComponent(query.trim())}.json` +
-    `?access_token=${MAPBOX_TOKEN}&country=qa&proximity=51.53,25.29&limit=6&language=en`)
-  return (data.features || []).map(f => ({
-    id: f.id,
-    name: f.place_name,
-    lng: f.center[0],
-    lat: f.center[1],
-  }))
+    `${PHOTON}/api/?q=${encodeURIComponent(query.trim())}` +
+    `&limit=6&lang=en&lat=25.29&lon=51.53&bbox=50.35,24.25,52.35,26.45`)
+  return (data.features || [])
+    .filter(f => Array.isArray(f.geometry?.coordinates))
+    .map((f, i) => ({
+      id: `${f.properties?.osm_id ?? 'p'}-${i}`,
+      name: placeName(f.properties) || `${f.geometry.coordinates[1].toFixed(4)}, ${f.geometry.coordinates[0].toFixed(4)}`,
+      lng: f.geometry.coordinates[0],
+      lat: f.geometry.coordinates[1],
+    }))
 }
 
 // Point → address parts, shaped for the backend Location model.
-// Mapbox context ids are prefixed by kind: country / region / place / locality /
-// neighborhood / address — that prefix is the lookup key.
 export async function reverseGeocode(lng, lat) {
-  if (!MAPBOX_TOKEN) return null
-  const data = await geoFetch(
-    `${GEO}/${lng},${lat}.json?access_token=${MAPBOX_TOKEN}&limit=1&language=en`)
-  const f = data.features?.[0]
-  if (!f) return { country: 'Qatar', city: '', street: '', state: '', description: '' }
+  const data = await geoFetch(`${PHOTON}/reverse?lon=${lng}&lat=${lat}&lang=en`)
+  const p = data.features?.[0]?.properties
+  if (!p) return { country: 'Qatar', city: '', street: '', state: '', description: '' }
 
-  const ring = [f, ...(f.context || [])]
-  const find = (prefix) => ring.find(c => c.id?.startsWith(prefix))?.text || ''
-
-  const street = f.place_type?.includes('address')
-    ? [f.address, f.text].filter(Boolean).join(' ')
-    : find('address') || find('neighborhood') || find('locality')
+  const street = [p.housenumber, p.street].filter(Boolean).join(' ')
+    || (p.type === 'house' || p.type === 'street' ? p.name : '')
 
   return {
-    country: find('country') || 'Qatar',
-    city: find('place') || find('locality') || 'Doha',
-    street,
-    state: find('region') || find('district') || find('place') || '',
-    description: f.place_name || '',
+    country: p.country || 'Qatar',
+    city: p.city || p.district || p.county || 'Doha',
+    street: street || p.name || '',
+    state: p.state || p.district || p.city || '',
+    description: placeName(p),
   }
 }
 

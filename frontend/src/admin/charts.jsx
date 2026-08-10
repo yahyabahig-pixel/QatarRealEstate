@@ -1,4 +1,5 @@
 import { useId, useMemo, useState } from 'react'
+import { useI18n } from '../i18n/I18nContext'
 
 // ---------------------------------------------------------------------------------------
 //  Dashboard chart primitives — hand-rolled SVG, no chart library, no new dependency.
@@ -18,10 +19,10 @@ export const BRAND = '#EF233C'          // single-series accent (3.4:1 on #23243
 
 // Fixed slot order — see the note above before reordering.
 export const SERIES = {
-  published: { key: 'published', label: 'Published', color: '#199e70' },
-  rented:    { key: 'rented',    label: 'Rented',    color: '#3987e5' },
-  sold:      { key: 'sold',      label: 'Sold',      color: '#EF233C' },
-  archived:  { key: 'archived',  label: 'Archived',  color: '#9085e9' },
+  published: { key: 'published', label: 'Published', labelKey: 'admin.status.Published', color: '#199e70' },
+  rented:    { key: 'rented',    label: 'Rented',    labelKey: 'admin.status.Rented',    color: '#3987e5' },
+  sold:      { key: 'sold',      label: 'Sold',      labelKey: 'admin.status.Sold',      color: '#EF233C' },
+  archived:  { key: 'archived',  label: 'Archived',  labelKey: 'admin.status.Archived',  color: '#9085e9' },
 }
 
 const INK_MUTED = '#8D99AE'
@@ -60,8 +61,13 @@ const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'S
 //                this size hide the small series).
 // ---------------------------------------------------------------------------------------
 export function WaveChart({ months, series, height = 150, valueSuffix = '' }) {
+  const { t } = useI18n()
   const uid = useId().replace(/:/g, '')
   const [hover, setHover] = useState(null)
+  // Series may carry a labelKey (dictionary) or a plain label from the caller.
+  const lbl = (s) => (s.labelKey ? t(s.labelKey) : s.label)
+  const monthShort = (i) => t(`months.short.${i}`)
+  const monthLong = (m) => t(`months.long.${(m.month ?? 1) - 1}`)
   const single = series.length === 1
 
   const W = 480, H = height, padL = 30, padR = 16, padT = 14, padB = 20
@@ -88,11 +94,11 @@ export function WaveChart({ months, series, height = 150, valueSuffix = '' }) {
   }, [months, series, single])
 
   return (
-    <div className="relative">
+    <div className="relative" dir="ltr">
       {/* Uniform scaling on purpose: `preserveAspectRatio="none"` would stretch the axis
           text horizontally and clip the December label at wide breakpoints. */}
       <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto"
-        role="img" aria-label={`${series.map(s => s.label).join(', ')} per month`}>
+        role="img" aria-label={`${series.map(lbl).join(', ')} — ${t('admin.charts.perMonth')}`}>
         <defs>
           {paths.map(s => (
             <linearGradient key={s.key} id={`g-${uid}-${s.key}`} x1="0" y1="0" x2="0" y2="1">
@@ -143,7 +149,7 @@ export function WaveChart({ months, series, height = 150, valueSuffix = '' }) {
         {months.map((m, i) => (
           <g key={m.month}>
             {(i % 2 === 0 || single) && (
-              <text x={xFor(i)} y={H - 5} textAnchor="middle" fontSize="9" fill={INK_MUTED}>{MONTHS_SHORT[i]}</text>
+              <text x={xFor(i)} y={H - 5} textAnchor="middle" fontSize="9" fill={INK_MUTED}>{monthShort(i)}</text>
             )}
             {/* hit target is the whole month column — much larger than the mark */}
             <rect x={xFor(i) - step / 2} y={0} width={step} height={H} fill="transparent"
@@ -155,12 +161,12 @@ export function WaveChart({ months, series, height = 150, valueSuffix = '' }) {
       {hover != null && (
         <div className="absolute top-0 z-10 pointer-events-none rounded-lg border border-white/12 bg-[#171826] px-2.5 py-1.5 text-[11px] shadow-xl shadow-black/50 whitespace-nowrap"
           style={{ left: `${(xFor(hover) / W) * 100}%`, transform: `translateX(${hover > 7 ? '-100%' : hover < 3 ? '0' : '-50%'})` }}>
-          <div className="text-neutral-400 mb-0.5">{months[hover].monthName}</div>
+          <div className="text-neutral-400 mb-0.5">{monthLong(months[hover])}</div>
           {series.map(s => (
             <div key={s.key} className="flex items-center gap-1.5 text-neutral-200">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
-              <span className="text-neutral-400">{s.label}</span>
-              <span className="font-semibold ml-auto pl-3">{fmt(months[hover][s.key] ?? 0)}{valueSuffix}</span>
+              <span className="text-neutral-400">{lbl(s)}</span>
+              <span className="font-semibold ms-auto ps-3">{fmt(months[hover][s.key] ?? 0)}{valueSuffix}</span>
             </div>
           ))}
         </div>
@@ -170,7 +176,7 @@ export function WaveChart({ months, series, height = 150, valueSuffix = '' }) {
         <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 mt-2">
           {series.map(s => (
             <span key={s.key} className="inline-flex items-center gap-1.5 text-[10.5px] text-neutral-400">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />{s.label}
+              <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} />{lbl(s)}
             </span>
           ))}
         </div>
@@ -181,11 +187,11 @@ export function WaveChart({ months, series, height = 150, valueSuffix = '' }) {
           its content regardless of a 1px width clamp, which pushes the page sideways. */}
       <div className="sr-only">
         <table>
-          <caption>{series.map(s => s.label).join(', ')} per month</caption>
-          <thead><tr><th>Month</th>{series.map(s => <th key={s.key}>{s.label}</th>)}</tr></thead>
+          <caption>{series.map(lbl).join(', ')} — {t('admin.charts.perMonth')}</caption>
+          <thead><tr><th>{t('admin.charts.month')}</th>{series.map(s => <th key={s.key}>{lbl(s)}</th>)}</tr></thead>
           <tbody>
             {months.map(m => (
-              <tr key={m.month}><th scope="row">{m.monthName}</th>
+              <tr key={m.month}><th scope="row">{monthLong(m)}</th>
                 {series.map(s => <td key={s.key}>{m[s.key] ?? 0}</td>)}</tr>
             ))}
           </tbody>
@@ -224,6 +230,7 @@ export function Sparkline({ values, color = BRAND, width = 62, height = 26 }) {
 //  exists in the data; there is no placeholder percentage.
 // ---------------------------------------------------------------------------------------
 export function StatTile({ label, value, icon, trend, spark, sparkColor, hint }) {
+  const { t } = useI18n()
   return (
     <div className="panel-dark p-3.5 sm:p-4 flex flex-col justify-between min-h-[104px] min-w-0">
       <div className="flex items-start justify-between gap-2">
@@ -240,7 +247,7 @@ export function StatTile({ label, value, icon, trend, spark, sparkColor, hint })
                   <span aria-hidden="true">{trend > 0 ? '▲' : trend < 0 ? '▼' : '–'}</span>
                   {trend === 0 ? ' 0' : ` ${Math.abs(trend)}`}
                 </span>
-                <span className="text-[10px] text-neutral-600">vs last mo.</span>
+                <span className="text-[10px] text-neutral-600">{t('admin.charts.vsLastMo')}</span>
               </div>
             )
             : hint && <div className="mt-1.5 text-[10.5px] text-neutral-600 truncate">{hint}</div>}
@@ -290,7 +297,7 @@ export function Donut({ slices, total, centerLabel, size = 128 }) {
             <li key={s.label} className="flex items-center gap-2 text-[11.5px]">
               <span className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
               <span className="text-neutral-400 truncate">{s.label}</span>
-              <span className="ml-auto font-semibold text-neutral-200 tabular-nums">{fmt(s.value)}</span>
+              <span className="ms-auto font-semibold text-neutral-200 tabular-nums">{fmt(s.value)}</span>
             </li>
           ))}
         </ul>
@@ -303,9 +310,10 @@ export function Donut({ slices, total, centerLabel, size = 128 }) {
 //  BarList — ranked distribution (types, cities, agents, lead stages). Magnitude is the
 //  bar length; the exact count sits beside it, so the bar is a scan aid, not the datum.
 // ---------------------------------------------------------------------------------------
-export function BarList({ rows, color = BRAND, emptyMessage = 'No data yet.' }) {
+export function BarList({ rows, color = BRAND, emptyMessage }) {
+  const { t } = useI18n()
   const max = Math.max(1, ...rows.map(r => r.value))
-  if (!rows.length) return <p className="text-xs text-neutral-500 py-3">{emptyMessage}</p>
+  if (!rows.length) return <p className="text-xs text-neutral-500 py-3">{emptyMessage || t('admin.charts.noData')}</p>
   return (
     <ul className="space-y-2">
       {rows.map(r => (

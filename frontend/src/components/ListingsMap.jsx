@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { loadMapbox, MAPBOX_TOKEN, MAP_STYLE } from '../lib/mapbox'
 import { forwardGeocode } from '../lib/geo'
-import { compactPrice } from './ui'
+import { useI18n } from '../i18n/I18nContext'
+import { compactPrice, displayCurrency, priceLabels } from './ui'
 import { IconMap, IconSearch, IconX } from './icons'
 
 // Doha. The very first render has no bounds to fit yet -- fitBounds only fires once the
@@ -24,15 +25,17 @@ const SVG = {
 
 // Pin label: compact, prefixed with the currency ("QAR 2.6M"). Space on a pin is ~80px,
 // so "Price on Request" becomes "On Request" here and the full phrase lives in the popup.
+// Labels come from the priceLabels registry (kept in sync with the active language by
+// PriceLabelSync) because these run inside Mapbox marker/popup code, not React renders.
 const pinLabel = (it, purpose) =>
   it.price == null
-    ? 'On Request'
-    : `${it.currency || 'QAR'} ${compactPrice(it.price)}${purpose === 'rent' ? '/mo' : ''}`
+    ? (priceLabels.ar ? 'عند الطلب' : 'On Request')
+    : `${displayCurrency(it.currency || 'QAR')} ${compactPrice(it.price)}${purpose === 'rent' ? (priceLabels.ar ? '/شهر' : '/mo') : ''}`
 
 const fullPrice = (it, purpose) =>
   it.price == null
-    ? 'Price on Request'
-    : `${it.currency || 'QAR'} ${Number(it.price).toLocaleString('en-US')}${purpose === 'rent' ? ' /mo' : ''}`
+    ? priceLabels.onRequest
+    : `${displayCurrency(it.currency || 'QAR')} ${Number(it.price).toLocaleString('en-US')}${purpose === 'rent' ? priceLabels.perMonth : ''}`
 
 /**
  * The right-hand pane of the split view.
@@ -53,6 +56,7 @@ export default function ListingsMap({
   resizeSignal = 0,
   purpose = 'buy',
 }) {
+  const { t } = useI18n()
   const containerRef = useRef(null)
   const mapRef = useRef(null)
   const markersRef = useRef(new Map())     // key → mapboxgl.Marker ("p<id>" | "c<clusterId>")
@@ -74,11 +78,11 @@ export default function ListingsMap({
   // ---- popup ------------------------------------------------------------
   const popupHtml = (it) => {
     const badges =
-      (it.isExclusive ? '<span class="qre-badge qre-badge-brand">Exclusive</span>' : '') +
-      (it.isOffPlan ? '<span class="qre-badge qre-badge-ink">Off-Plan</span>' : '')
+      (it.isExclusive ? `<span class="qre-badge qre-badge-brand">${priceLabels.ar ? 'حصري' : 'Exclusive'}</span>` : '') +
+      (it.isOffPlan ? `<span class="qre-badge qre-badge-ink">${priceLabels.ar ? 'على الخارطة' : 'Off-Plan'}</span>` : '')
     const specs = [
       it.type ? `<span class="qre-popup-type">${esc(it.type)}</span>` : '',
-      `<span>${SVG.bed}${it.beds === 0 ? 'Studio' : it.beds}</span>`,
+      `<span>${SVG.bed}${it.beds === 0 ? (priceLabels.ar ? 'استوديو' : 'Studio') : it.beds}</span>`,
       it.bathrooms > 0 ? `<span>${SVG.bath}${it.bathrooms}</span>` : '',
       `<span>${SVG.area}${(Number(it.sizeM2) || 0).toLocaleString()} m²</span>`,
     ].filter(Boolean).join('')
@@ -92,7 +96,7 @@ export default function ListingsMap({
       `<div class="qre-popup-title">${esc(it.title)}</div>` +
       (it.area ? `<div class="qre-popup-loc">${SVG.pin}${esc(it.area)}</div>` : '') +
       `<div class="qre-popup-specs">${specs}</div>` +
-      `<a class="qre-popup-btn" href="/property/${esc(purposeRef.current)}/${esc(it.id)}">View Property</a>` +
+      `<a class="qre-popup-btn" href="/property/${esc(purposeRef.current)}/${esc(it.id)}">${priceLabels.ar ? 'عرض العقار' : 'View Property'}</a>` +
       '</div></div>'
     )
   }
@@ -130,7 +134,7 @@ export default function ListingsMap({
         el.type = 'button'
         el.className = 'pin pin-cluster'
         el.textContent = props.point_count_abbreviated
-        el.setAttribute('aria-label', `${props.point_count} properties — zoom in`)
+        el.setAttribute('aria-label', priceLabels.ar ? `${props.point_count} عقارات — قرّب للعرض` : `${props.point_count} properties — zoom in`)
         const clusterId = props.cluster_id
         const center = f.geometry.coordinates
         el.addEventListener('click', (ev) => {
@@ -197,7 +201,7 @@ export default function ListingsMap({
             ? 'Mapbox rejected the token (401 — invalid or rotated). Check VITE_MAPBOX_TOKEN and restart the dev server.'
             : status === 403
               ? "Mapbox refused this origin (403). The token's URL restrictions don't allow this site — allow localhost in the Mapbox dashboard."
-              : 'The map style failed to load — check the connection and the Mapbox token, then reload.')
+              : t('map.styleFailed'))
           setFailed(true)
         })
 
@@ -368,7 +372,7 @@ export default function ListingsMap({
           <p className="text-sm text-neutral-600 max-w-sm mx-auto">
             {MAPBOX_TOKEN
               ? (failReason || 'The map could not be loaded. Check your connection and try again.')
-              : 'Map unavailable — VITE_MAPBOX_TOKEN is not set in this build. Add it to frontend/.env.local and RESTART the dev server (Vite only reads env files at startup).'}
+              : t('map.noToken')}
           </p>
         </div>
       </div>
@@ -393,14 +397,14 @@ export default function ListingsMap({
         <input
           type="text"
           value={query}
-          placeholder="Search location…"
-          aria-label="Search location on the map"
+          placeholder={t('map.searchPlaceholder')}
+          aria-label={t('map.searchAria')}
           onChange={(e) => setQuery(e.target.value)}
           onFocus={() => places.length > 0 && setPlacesOpen(true)}
           onKeyDown={(e) => { if (e.key === 'Escape') setPlacesOpen(false) }}
         />
         {query && (
-          <button type="button" className="qre-map-search-clear" aria-label="Clear search"
+          <button type="button" className="qre-map-search-clear" aria-label={t('map.clearSearch')}
             onClick={() => { setQuery(''); setPlaces([]); setPlacesOpen(false) }}>
             <IconX className="w-3.5 h-3.5" />
           </button>
@@ -418,7 +422,7 @@ export default function ListingsMap({
 
       {moved && (
         <button type="button" onClick={searchHere} disabled={searching} className="qre-search-area">
-          {searching ? 'Searching…' : 'Search this area'}
+          {searching ? t('map.searching') : t('map.searchThisArea')}
         </button>
       )}
     </div>

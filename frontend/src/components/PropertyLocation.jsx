@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useI18n } from '../i18n/I18nContext'
 import { loadMapbox, MAPBOX_TOKEN, MAP_STYLE } from '../lib/mapbox'
 
 // ---------------------------------------------------------------------------------------
@@ -10,6 +11,7 @@ import { loadMapbox, MAPBOX_TOKEN, MAP_STYLE } from '../lib/mapbox'
 // where this property is, and guessing is worse than staying quiet.
 // ---------------------------------------------------------------------------------------
 export default function PropertyLocation({ lat, lng, areaLabel, title, approx = false }) {
+  const { t } = useI18n()
   const containerRef = useRef(null)
   const [failed, setFailed] = useState(false)
 
@@ -62,7 +64,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
 
   return (
     <>
-      <h2 className="eyebrow mb-3 mt-6">Location</h2>
+      <h2 className="eyebrow mb-3 mt-6">{t('property.location')}</h2>
 
       {areaLabel && (
         <div className="flex items-center gap-1.5 mb-3 text-sm" style={{ color: 'var(--muted)' }}>
@@ -75,7 +77,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
 
       {approx && (
         <p className="text-xs mb-3 -mt-1" style={{ color: 'var(--muted)' }}>
-          Approximate area shown — an exact location has not been set for this listing yet.
+          {t('property.approxLocation')}
         </p>
       )}
 
@@ -84,9 +86,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
         : (
           <div className="qre-detail-map flex items-center justify-center text-sm"
                style={{ background: '#f5f5f4', color: 'var(--muted)' }}>
-            {MAPBOX_TOKEN
-              ? 'The map could not be loaded right now.'
-              : 'Map unavailable — VITE_MAPBOX_TOKEN is not set for this build.'}
+            {MAPBOX_TOKEN ? t('property.mapNotLoaded') : t('property.mapNoToken')}
           </div>
         )}
 
@@ -94,7 +94,7 @@ export default function PropertyLocation({ lat, lng, areaLabel, title, approx = 
         <a href={'https://maps.google.com/?q=' + latitude + ',' + longitude}
            target="_blank" rel="noreferrer"
            className="brand-link text-primary text-sm inline-block mt-3 mb-10">
-          View on Google Maps ↗
+          {t('property.googleMaps')}
         </a>
       )}
     </>

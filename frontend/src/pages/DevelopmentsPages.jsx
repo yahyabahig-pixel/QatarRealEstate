@@ -1,5 +1,6 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, EmptyState } from '../components/ui'
 import { InquiryForm } from '../components/misc'
@@ -8,6 +9,7 @@ import { fallbackQatarCoord } from '../lib/geo'
 
 export function DevelopmentsIndex() {
   const { developments } = useData()
+  const { t } = useI18n()
   const [params, setParams] = useSearchParams()
   const areasList = [...new Set(developments.map(d => d.area))]
 
@@ -33,16 +35,16 @@ export function DevelopmentsIndex() {
 
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
-      <div className="eyebrow mb-2">Off-plan & new launches</div>
-      <h1 className="h-serif text-4xl mb-8">New Developments in Qatar</h1>
+      <div className="eyebrow mb-2">{t('developments.eyebrow')}</div>
+      <h1 className="h-serif text-4xl mb-8">{t('developments.title')}</h1>
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-8">
-        <button onClick={() => selectArea('')} className={`chip ${!areaFilter ? 'chip-active' : ''}`}>All areas</button>
+        <button onClick={() => selectArea('')} className={`chip ${!areaFilter ? 'chip-active' : ''}`}>{t('developments.allAreas')}</button>
         {areasList.map(a => (
           <button key={a} onClick={() => selectArea(a)}
             className={`chip ${areaFilter === a ? 'chip-active' : ''}`}>{a}</button>
         ))}
       </div>
-      {items.length === 0 ? <EmptyState message="No developments in this area yet." /> : (
+      {items.length === 0 ? <EmptyState message={t('developments.empty')} /> : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map(d => (
             <Link key={d.id} to={`/development/${d.slug}`} className="group relative h-96 overflow-hidden rounded-xl lift">
@@ -53,9 +55,9 @@ export function DevelopmentsIndex() {
                     scrim: warm white at 75% reads premium and stays legible, where red
                     shouted and competed with the project name right beneath it. Red stays
                     reserved for actions and the "Explore project" hover cue. */}
-                <div className="text-white/75 text-xs uppercase tracking-wider mb-1">Available from {d.deliveryYear}</div>
+                <div className="text-white/75 text-xs uppercase tracking-wider mb-1">{t('home.availableFrom', { year: d.deliveryYear })}</div>
                 <h3 className="h-serif text-2xl">{d.name}</h3>
-                <p className="text-sm text-neutral-300">{d.area} · by {d.developer}</p>
+                <p className="text-sm text-neutral-300">{d.area} · {t('developments.by', { developer: d.developer })}</p>
               </div>
             </Link>
           ))}
@@ -68,8 +70,9 @@ export function DevelopmentsIndex() {
 export function DevelopmentDetail() {
   const { slug } = useParams()
   const { developments, properties } = useData()
+  const { t } = useI18n()
   const d = developments.find(x => x.slug === slug)
-  if (!d) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">Development not found</h1></div>
+  if (!d) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('developments.notFound')}</h1></div>
 
   // d.area is now a Location-derived label ("The Pearl, Doha"); property areas are
   // catalog names ("The Pearl"), so match by containment rather than strict equality.
@@ -82,9 +85,9 @@ export function DevelopmentDetail() {
         <img src={d.coverImage} alt={d.name} className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 to-black/20" />
         <div className="relative max-w-7xl mx-auto px-4 pb-12 text-white w-full">
-          <div className="text-white/75 text-xs uppercase tracking-[0.25em] mb-2">Delivery {d.deliveryYear} · {d.area}</div>
+          <div className="text-white/75 text-xs uppercase tracking-[0.25em] mb-2">{t('developments.delivery', { year: d.deliveryYear, area: d.area })}</div>
           <h1 className="h-serif text-4xl md:text-5xl">{d.name}</h1>
-          <p className="text-neutral-300 mt-1">by {d.developer}</p>
+          <p className="text-neutral-300 mt-1">{t('developments.by', { developer: d.developer })}</p>
         </div>
       </section>
 
@@ -92,7 +95,7 @@ export function DevelopmentDetail() {
         <div>
           <p className="text-neutral-700 leading-relaxed text-lg mb-10">{d.description}</p>
           <div className="grid sm:grid-cols-3 gap-4 mb-12">
-            {[['Units', d.unitsCount], ['Payment plan', d.paymentPlan], ['Starting price', d.startingPrice ? `${d.startingPrice.toLocaleString()} QAR` : '—']].map(([k, v]) => (
+            {[[t('developments.units'), d.unitsCount], [t('developments.paymentPlan'), d.paymentPlan], [t('developments.startingPrice'), d.startingPrice ? `${d.startingPrice.toLocaleString()} QAR` : '—']].map(([k, v]) => (
               <div key={k} className="card p-5 text-center">
                 <div className="eyebrow !text-[10px] mb-1">{k}</div>
                 <div className="h-serif text-xl">{v}</div>
@@ -117,13 +120,13 @@ export function DevelopmentDetail() {
             )
           })()}
 
-          <SectionHeading eyebrow="Inventory" title="Available Units" />
+          <SectionHeading eyebrow={t('developments.inventory')} title={t('developments.availableUnits')} />
           {units.length === 0
-            ? <EmptyState message="Units for this project are released in phases — register interest for the next release." />
+            ? <EmptyState message={t('developments.unitsEmpty')} />
             : <div className="grid md:grid-cols-2 gap-6">{units.map(p => <PropertyCard key={p.id} p={p} />)}</div>}
         </div>
         <aside className="lg:sticky lg:top-24 h-fit card p-6">
-          <h3 className="h-serif text-xl mb-4">Register your interest</h3>
+          <h3 className="h-serif text-xl mb-4">{t('developments.register')}</h3>
           <InquiryForm compact source={`Development: ${d.name}`} />
         </aside>
       </div>

@@ -489,3 +489,12 @@ frontend/dist/
 build.log
 _to_delete/
 *.tgz
+
+# ---------------------------------------------------------------------------
+# Local Cowork session tooling (run/rebuild/test scripts, logs, archives).
+# Machine-local only — never commit.
+# ---------------------------------------------------------------------------
+.cowork-local/
+
+# FUSE mount artifacts (Cowork device bridge) — never commit
+.fuse_hidden*

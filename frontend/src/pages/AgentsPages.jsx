@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, Star, WhatsAppIcon } from '../components/ui'
 import { IconMail, IconPhone } from '../components/icons'
@@ -7,10 +8,11 @@ import { InquiryForm } from '../components/misc'
 
 export function AgentsIndex() {
   const { agents } = useData()
+  const { t } = useI18n()
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
-      <div className="eyebrow mb-2">Our people</div>
-      <h1 className="h-serif text-4xl mb-10">Work with Qatar's greatest real estate agents</h1>
+      <div className="eyebrow mb-2">{t('agents.eyebrow')}</div>
+      <h1 className="h-serif text-4xl mb-10">{t('agents.title')}</h1>
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {agents.filter(a => a.active).map(a => (
           <div key={a.id} className="card lift overflow-hidden group">
@@ -23,8 +25,8 @@ export function AgentsIndex() {
                 <span className="text-primary text-sm flex items-center gap-1"><Star />{a.rating > 0 ? `${a.rating.toFixed(1)} /5` : ''}</span>
               </div>
               <p className="text-sm text-neutral-500">{a.title}</p>
-              <p className="text-xs text-neutral-400 mb-3">Doha, Qatar</p>
-              <Link to={`/find-agent/${a.slug}`} className="brand-link text-primary text-sm">Start working with {a.name.split(' ')[0]}</Link>
+              <p className="text-xs text-neutral-400 mb-3">{t('agents.location')}</p>
+              <Link to={`/find-agent/${a.slug}`} className="brand-link text-primary text-sm">{t('agents.startWorking', { name: a.name.split(' ')[0] })}</Link>
             </div>
           </div>
         ))}
@@ -36,8 +38,9 @@ export function AgentsIndex() {
 export function AgentProfile() {
   const { slug } = useParams()
   const { agents, properties } = useData()
+  const { t } = useI18n()
   const a = agents.find(x => x.slug === slug)
-  if (!a) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">Agent not found</h1></div>
+  if (!a) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('agents.notFound')}</h1></div>
 
   const listings = properties.filter(p => p.agentId === a.id && p.status === 'available')
 
@@ -48,23 +51,23 @@ export function AgentProfile() {
         <div>
           <h1 className="h-serif text-4xl mb-1">{a.name}</h1>
           <p className="text-neutral-500 mb-2">{a.title}</p>
-          {a.rating > 0 && <div className="text-primary flex items-center gap-1 mb-4"><Star /> {a.rating.toFixed(1)} /5 · verified reviews</div>}
+          {a.rating > 0 && <div className="text-primary flex items-center gap-1 mb-4"><Star /> {a.rating.toFixed(1)} /5 · {t('property.verifiedReviews')}</div>}
           <p className="text-neutral-700 leading-relaxed max-w-xl mb-6">{a.bio}</p>
           <div className="flex flex-wrap gap-3">
-            <a href={`tel:${a.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> Call</a>
-            <a href={`https://wa.me/${a.whatsapp}`} target="_blank" rel="noreferrer" className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> WhatsApp</a>
-            <a href={`mailto:${a.email}`} className="btn-outline"><IconMail className="w-4 h-4" /> Email</a>
+            <a href={`tel:${a.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
+            <a href={`https://wa.me/${a.whatsapp}`} target="_blank" rel="noreferrer" className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
+            <a href={`mailto:${a.email}`} className="btn-outline"><IconMail className="w-4 h-4" /> {t('common.email')}</a>
           </div>
         </div>
       </div>
 
-      <SectionHeading eyebrow="Portfolio" title={`Listings by ${a.name.split(' ')[0]}`} />
+      <SectionHeading eyebrow={t('agents.portfolio')} title={t('agents.listingsBy', { name: a.name.split(' ')[0] })} />
       {listings.length === 0
-        ? <p className="text-neutral-500 mb-10">No live listings right now — inquire below for off-market options.</p>
+        ? <p className="text-neutral-500 mb-10">{t('agents.noListings')}</p>
         : <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-14">{listings.map(p => <PropertyCard key={p.id} p={p} />)}</div>}
 
       <div className="max-w-lg">
-        <h2 className="h-serif text-2xl mb-4">Message {a.name.split(' ')[0]}</h2>
+        <h2 className="h-serif text-2xl mb-4">{t('agents.message', { name: a.name.split(' ')[0] })}</h2>
         <InquiryForm agentId={a.id} source="Agent contact" />
       </div>
     </div>

@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useAuth } from '../store/AuthContext'
+import { useI18n } from '../i18n/I18nContext'
 import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconEye, IconPencil, IconTrash, IconX } from '../components/icons'
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
-import { MOCK_MODE } from '../api/client'
+import { MOCK_MODE, describeApiError } from '../api/client'
 import { NAMED_FEATURES, imagesAdminApi, imageUrl, mapAdminPropertyRow, propertiesAdminApi } from '../api/realEstateApi'
 import LocationPicker from '../components/LocationPicker'
 import { resolveFeatureIcon } from '../lib/featureIcons'
@@ -55,11 +56,12 @@ const matchAreaName = (areas, patch) => {
 export default function PropertiesAdmin() {
   const { properties, agents, areas, features, propertyTypes, propertyActions, apiError, clearApiError, reloadProperties } = useData()
   const { hasPermission } = useAuth()
+  const { t } = useI18n()
   const toast = useToast()
   const [confirm, confirmDialog] = useConfirm()
   const [editing, setEditing] = useState(null)     // null | {} | { id, loading? }
   const [form, setForm] = useState(EMPTY)
-  const [filters, setFilters] = useState({ q: '', purpose: '', type: '', status: '', agentId: '' })
+  const [filters, setFilters] = useState({ q: '', purpose: '', type: '', status: '', agentId: '', featured: '' })
   const [uploading, setUploading] = useState([])   // file names currently in flight
   const [saving, setSaving] = useState(false)
   const [notice, setNotice] = useState(null)       // { kind: 'success'|'error', message }
@@ -85,17 +87,17 @@ export default function PropertiesAdmin() {
   // Status changes ride the EXISTING publication/archive commands — the backend's domain
   // rules decide whether a transition is legal (e.g. only Published can become Sold) and
   // an illegal one surfaces as the real error, with nothing changed locally.
-  const STATUS_OPTIONS = [['available', 'Published'], ['draft', 'Draft'], ['archived', 'Archived'], ['sold', 'Sold'], ['rented', 'Rented']]
+  const STATUS_OPTIONS = [['available', t('admin.status.Published')], ['draft', t('admin.status.Draft')], ['archived', t('admin.status.Archived')], ['sold', t('admin.status.Sold')], ['rented', t('admin.status.Rented')]]
   const applyStatus = async (p, status) => {
     setStatusMenuFor(null)
-    if (MOCK_MODE) { propertyActions.update(p.id, { status }); toast('Status updated.'); return }
+    if (MOCK_MODE) { propertyActions.update(p.id, { status }); toast(t('admin.props.statusUpdated')); return }
     try {
       if (status === 'archived') await propertiesAdminApi.archive(p.id)
       else await propertiesAdminApi.publication(p.id, { available: 'Publish', draft: 'Unpublish', sold: 'MarkSold', rented: 'MarkRented' }[status])
-      toast('Status updated.')
+      toast(t('admin.props.statusUpdated'))
       await reloadProperties()
     } catch (err) {
-      setNotice({ kind: 'error', message: err?.problem?.title || err.message })
+      setNotice({ kind: 'error', message: describeApiError(err) })
     }
   }
 
@@ -104,7 +106,7 @@ export default function PropertiesAdmin() {
   const featureOptions = useMemo(
     () => features.filter(f => f.active !== false && f.name !== BALCONY_FEATURE && f.name !== FURNISHING_FEATURE),
     [features])
-  const typeNames = useMemo(() => propertyTypes.map(t => t.name), [propertyTypes])
+  const typeNames = useMemo(() => propertyTypes.map(pt => pt.name), [propertyTypes])
 
   // Initial data-load failures (not save errors — those come back on the action result).
   useEffect(() => {
@@ -118,7 +120,8 @@ export default function PropertiesAdmin() {
       (!filters.purpose || p.purpose === filters.purpose) &&
       (!filters.type || p.type === filters.type) &&
       (!filters.status || p.status === filters.status) &&
-      (!filters.agentId || p.agentId === filters.agentId))
+      (!filters.agentId || p.agentId === filters.agentId) &&
+      (!filters.featured || (filters.featured === 'yes' ? !!p.exclusive : !p.exclusive)))
     if (!viewSort) return filtered
     return [...filtered].sort((a, b) => viewSort === 'desc'
       ? viewsOf(b) - viewsOf(a)
@@ -190,7 +193,7 @@ export default function PropertiesAdmin() {
       setForm({ ...EMPTY, ...full, furnishing: full.furnishing || 'N/A', ...withCoords(full) })
     } catch (err) {
       setEditing(null)
-      setNotice({ kind: 'error', message: `Could not load this listing for editing.\n${err?.problem?.title || err.message}` })
+      setNotice({ kind: 'error', message: `${t('admin.props.loadEditFailed')}\n${describeApiError(err)}` })
     }
   }
 
@@ -202,9 +205,9 @@ export default function PropertiesAdmin() {
   const save = async (e) => {
     e.preventDefault()
     if (saving) return                                     // no duplicate submissions
-    if (form.images.length === 0) { setNotice({ kind: 'error', message: 'Add at least one photo before saving.' }); return }
-    if (!form.x || !form.y) { setNotice({ kind: 'error', message: 'Select the property location on the map before saving.\nSearch for the area or click the map in the Location section.' }); return }
-    if (!MOCK_MODE && !form.type) { setNotice({ kind: 'error', message: 'Pick a property type.' }); return }
+    if (form.images.length === 0) { setNotice({ kind: 'error', message: t('admin.props.needPhoto') }); return }
+    if (!form.x || !form.y) { setNotice({ kind: 'error', message: t('admin.props.needLocation') }); return }
+    if (!MOCK_MODE && !form.type) { setNotice({ kind: 'error', message: t('admin.props.needType') }); return }
 
     setSaving(true)
     const isEdit = !!editing?.id
@@ -220,7 +223,7 @@ export default function PropertiesAdmin() {
     }
     // Only after the backend confirmed:
     setEditing(null)
-    showSuccess(isEdit ? 'Property updated successfully.' : 'Property created successfully.')
+    showSuccess(isEdit ? t('admin.props.updatedOk') : t('admin.props.createdOk'))
   }
 
   // ---- device photo upload ------------------------------------------------------------
@@ -245,7 +248,7 @@ export default function PropertiesAdmin() {
           setForm(f => ({ ...f, images: [...f.images, imageUrl(id)] }))
         }
       } catch (err) {
-        setNotice({ kind: 'error', message: `Upload failed — ${file.name}\n${err?.problem?.title || err.message}` })
+        setNotice({ kind: 'error', message: `${t('admin.props.uploadFailedFile', { file: file.name })}\n${describeApiError(err)}` })
       } finally {
         setUploading(u => { const i = u.indexOf(file.name); return u.filter((_, j) => j !== i) })
       }
@@ -267,54 +270,59 @@ export default function PropertiesAdmin() {
   const removeProperty = async (p) => {
     const res = await Promise.resolve(propertyActions.remove(p.id))
     if (res && res.ok === false) setNotice({ kind: 'error', message: res.error })
-    else toast('Property deleted.', 'error')
+    else toast(t('admin.props.propertyDeleted'), 'error')
   }
 
   return (
     <div>
-      <PageTitle title="Properties"
-        action={hasPermission('Property.Create') && <button className="btn-primary !py-2" onClick={() => open(null)}>+ Add Property</button>} />
+      <PageTitle title={t('admin.props.title')}
+        action={hasPermission('Property.Create') && <button className="btn-primary !py-2" onClick={() => open(null)}>{t('admin.props.addProperty')}</button>} />
 
       {/* filters */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-5">
-        <input placeholder="Search title…" className="field-dark" value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} />
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-3 mb-5">
+        <input placeholder={t('admin.props.searchTitle')} className="field-dark" value={filters.q} onChange={e => setFilters({ ...filters, q: e.target.value })} />
         <select className="field-dark" value={filters.purpose} onChange={e => setFilters({ ...filters, purpose: e.target.value })}>
-          <option value="">Purpose (all)</option><option value="rent">Rent</option><option value="buy">Buy</option>
+          <option value="">{t('admin.props.purposeAll')}</option><option value="rent">{t('admin.props.rent')}</option><option value="buy">{t('admin.props.buy')}</option>
         </select>
         <select className="field-dark" value={filters.type} onChange={e => setFilters({ ...filters, type: e.target.value })}>
-          <option value="">Type (all)</option>{typeNames.map(t => <option key={t}>{t}</option>)}
+          <option value="">{t('admin.props.typeAll')}</option>{typeNames.map(pt => <option key={pt}>{pt}</option>)}
         </select>
         <select className="field-dark" value={filters.status} onChange={e => setFilters({ ...filters, status: e.target.value })}>
-          <option value="">Status (all)</option><option>available</option><option>draft</option><option>sold</option><option>rented</option><option>archived</option>
+          <option value="">{t('admin.props.statusAll')}</option>{['available', 'draft', 'sold', 'rented', 'archived'].map(v => <option key={v} value={v}>{t(`admin.status.${v}`)}</option>)}
         </select>
         <select className="field-dark" value={filters.agentId} onChange={e => setFilters({ ...filters, agentId: e.target.value })}>
-          <option value="">Agent (all)</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+          <option value="">{t('admin.props.agentAll')}</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+        </select>
+        <select className="field-dark" value={filters.featured} onChange={e => setFilters({ ...filters, featured: e.target.value })}>
+          <option value="">{t('admin.props.featuredAll')}</option>
+          <option value="yes">{t('admin.props.featuredOnly')}</option>
+          <option value="no">{t('admin.props.notFeatured')}</option>
         </select>
       </div>
 
       <div className="overflow-x-auto panel-dark !rounded-xl">
         <table className="w-full text-sm">
-          <thead className="bg-white/4 text-neutral-400 text-left text-xs uppercase tracking-wider">
-            <tr>{['', 'Title', 'Type', 'Purpose', 'Location', 'Price', 'Status', 'Viewers', 'Agent', 'Actions'].map(h => h === 'Viewers' ? (
-              <th key={h} className="px-3 py-3 whitespace-nowrap">
+          <thead className="bg-white/4 text-neutral-400 text-start text-xs uppercase tracking-wider">
+            <tr>{['', t('admin.props.thTitle'), t('admin.props.thType'), t('admin.props.thPurpose'), t('admin.props.thLocation'), t('admin.props.thPrice'), t('admin.props.thStatus'), '__VIEWERS__', t('admin.props.thAgent'), t('admin.props.thActions')].map((h, hi) => h === '__VIEWERS__' ? (
+              <th key={hi} className="px-3 py-3 whitespace-nowrap">
                 <button type="button" className="inline-flex items-center gap-1 uppercase tracking-wider hover:text-primary transition-colors"
-                  title="Sort by views"
+                  title={t('admin.props.sortByViews')}
                   onClick={() => setViewSort(s => s === null ? 'desc' : s === 'desc' ? 'asc' : null)}>
-                  Viewers
+                  {t('admin.props.thViewers')}
                   {viewSort && <IconChevronDown className={`w-3 h-3 transition-transform ${viewSort === 'asc' ? 'rotate-180' : ''}`} />}
                 </button>
               </th>
-            ) : <th key={h} className="px-3 py-3 whitespace-nowrap">{h}</th>)}</tr>
+            ) : <th key={hi} className="px-3 py-3 whitespace-nowrap">{h}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-white/6">
             {rows.map(p => (
               <tr key={p.id} className="hover:bg-white/4 transition-colors">
                 <td className="px-3 py-2"><img src={p.images[0]} alt="" className="w-16 h-11 object-cover" /></td>
-                <td className="px-3 py-2 max-w-[220px]"><div className="truncate text-white">{p.title}</div><div className="text-[11px] text-neutral-500">{p.referenceNo}</div></td>
+                <td className="px-3 py-2 max-w-[220px]"><div className="truncate text-white">{p.exclusive && <span className="text-primary me-1.5" title={t('admin.props.featuredBadge')} aria-label={t('admin.props.featuredBadge')}>★</span>}{p.title}</div><div className="text-[11px] text-neutral-500">{p.referenceNo}</div></td>
                 <td className="px-3 py-2">{p.type}</td>
                 <td className="px-3 py-2 capitalize">{p.purpose}</td>
                 <td className="px-3 py-2 text-neutral-400">{p.area || p.city}</td>
-                <td className="px-3 py-2 text-primary whitespace-nowrap">{p.priceOnRequest ? 'On request' : `${p.price.toLocaleString()} ${p.currency}`}</td>
+                <td className="px-3 py-2 text-primary whitespace-nowrap">{p.priceOnRequest ? t('admin.props.onRequest') : `${p.price.toLocaleString()} ${p.currency}`}</td>
                 <td className="px-3 py-2"><StatusBadge value={p.status} /></td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   <span className="inline-flex items-center gap-1.5 text-neutral-300">
@@ -327,7 +335,7 @@ export default function PropertiesAdmin() {
                     {/* Row 1 — current status, changeable in place */}
                     {hasPermission('Property.Publish') && (
                       <span className="relative block">
-                        <button type="button" title="Change status"
+                        <button type="button" title={t('admin.props.changeStatus')}
                           className="w-full flex items-center justify-between gap-2 border border-white/12 rounded-lg px-2.5 py-1.5 hover:border-primary transition-colors"
                           aria-haspopup="menu" aria-expanded={statusMenuFor === p.id}
                           onClick={() => setStatusMenuFor(id => id === p.id ? null : p.id)}>
@@ -337,13 +345,13 @@ export default function PropertiesAdmin() {
                         {statusMenuFor === p.id && (
                           <>
                             <div className="fixed inset-0 z-20" onClick={() => setStatusMenuFor(null)} />
-                            <div className="absolute right-0 top-9 z-30 panel-dark !rounded-lg shadow-2xl shadow-black/50 py-1 w-44" role="menu">
-                              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-neutral-500">Change status</div>
+                            <div className="absolute end-0 top-9 z-30 panel-dark !rounded-lg shadow-2xl shadow-black/50 py-1 w-44" role="menu">
+                              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-neutral-500">{t('admin.props.changeStatus')}</div>
                               {STATUS_OPTIONS.map(([v, label]) => (
                                 <button key={v} role="menuitem" disabled={v === p.status}
-                                  className={`w-full text-left px-3 py-1.5 text-sm flex items-center justify-between gap-2 transition-colors ${v === p.status ? 'text-neutral-500 cursor-default' : 'text-neutral-200 hover:bg-white/8 hover:text-primary'}`}
+                                  className={`w-full text-start px-3 py-1.5 text-sm flex items-center justify-between gap-2 transition-colors ${v === p.status ? 'text-neutral-500 cursor-default' : 'text-neutral-200 hover:bg-white/8 hover:text-primary'}`}
                                   onClick={() => applyStatus(p, v)}>
-                                  {p.status === 'archived' && v === 'available' ? 'Restore (Publish)' : label}
+                                  {p.status === 'archived' && v === 'available' ? t('admin.props.restore') : label}
                                   {v === p.status && <IconCheck className="w-3.5 h-3.5 text-primary" />}
                                 </button>
                               ))}
@@ -355,17 +363,17 @@ export default function PropertiesAdmin() {
                     {/* Row 2 — edit / delete */}
                     <div className="flex gap-1.5">
                       {hasPermission('Property.Update') && (
-                        <button type="button" title="Edit property"
+                        <button type="button" title={t('admin.props.editProperty')}
                           className="flex-1 inline-flex items-center justify-center gap-1.5 border border-white/12 rounded-lg px-2 py-1.5 text-xs font-medium text-neutral-200 hover:border-primary hover:text-primary transition-colors"
                           onClick={() => open(p)}>
-                          <IconPencil className="w-3.5 h-3.5" /> Edit
+                          <IconPencil className="w-3.5 h-3.5" /> {t('admin.crud.edit')}
                         </button>
                       )}
                       {hasPermission('Property.Delete') && (
-                        <button type="button" title="Delete property permanently"
+                        <button type="button" title={t('admin.props.deleteProperty')}
                           className="flex-1 inline-flex items-center justify-center gap-1.5 border border-white/12 rounded-lg px-2 py-1.5 text-xs font-medium text-red-400 hover:border-red-400/60 hover:bg-red-400/10 transition-colors"
-                          onClick={() => confirm(`Delete "${p.title}"? This action cannot be undone.`, () => removeProperty(p))}>
-                          <IconTrash className="w-3.5 h-3.5" /> Delete
+                          onClick={() => confirm(t('admin.props.deletePropertyConfirm', { title: p.title }), () => removeProperty(p))}>
+                          <IconTrash className="w-3.5 h-3.5" /> {t('admin.crud.delete')}
                         </button>
                       )}
                     </div>
@@ -378,26 +386,26 @@ export default function PropertiesAdmin() {
       </div>
 
       {editing !== null && (
-        <Modal title={editing.loading ? 'Loading…' : (editing.id ? `Edit — ${editing.referenceNo || form.title}` : 'Add Property')}
+        <Modal title={editing.loading ? t('admin.crud.loading') : (editing.id ? t('admin.props.editTitle', { ref: editing.referenceNo || form.title }) : t('admin.props.addTitle'))}
           onClose={() => !saving && setEditing(null)} wide>
           {editing.loading ? (
-            <div className="py-16 text-center text-neutral-400"><Spinner /> <span className="ml-2">Loading the full listing…</span></div>
+            <div className="py-16 text-center text-neutral-400"><Spinner /> <span className="ms-2">{t('admin.props.loadingFull')}</span></div>
           ) : (
           <form onSubmit={save} className="grid md:grid-cols-2 gap-4">
-            <div className="md:col-span-2"><Field label="Title"><input required className="field-dark" value={form.title} onChange={set('title')} /></Field></div>
-            <div className="md:col-span-2"><Field label="Description"><textarea rows="4" required className="field-dark" value={form.description} onChange={set('description')} /></Field></div>
-            <Field label="Purpose"><select className="field-dark" value={form.purpose} onChange={set('purpose')}><option value="buy">Buy</option><option value="rent">Rent</option></select></Field>
-            <Field label="Property type">
+            <div className="md:col-span-2"><Field label={t('admin.props.fTitle')}><input required className="field-dark" value={form.title} onChange={set('title')} /></Field></div>
+            <div className="md:col-span-2"><Field label={t('admin.props.fDescription')}><textarea rows="4" required className="field-dark" value={form.description} onChange={set('description')} /></Field></div>
+            <Field label={t('admin.props.fPurpose')}><select className="field-dark" value={form.purpose} onChange={set('purpose')}><option value="buy">{t('admin.props.buy')}</option><option value="rent">{t('admin.props.rent')}</option></select></Field>
+            <Field label={t('admin.props.fType')}>
               <select required className="field-dark" value={form.type} onChange={set('type')}>
-                <option value="" disabled>Select a type…</option>
-                {typeNames.map(t => <option key={t}>{t}</option>)}
+                <option value="" disabled>{t('admin.props.selectType')}</option>
+                {typeNames.map(pt => <option key={pt}>{pt}</option>)}
               </select>
             </Field>
             {/* LOCATION — the map comes first and everything below it is what the map just
                 said. Pin the property, then read (and correct) the address underneath:
                 1. City   2. Area   3. Street. */}
             <div className="md:col-span-2">
-              <Field label="Location (search or click the map — the address below fills in automatically)">
+              <Field label={t('admin.props.fLocation')}>
                 <LocationPicker
                   value={{ x: form.x, y: form.y, country: form.locCountry, city: form.city, street: form.district, state: form.locState, description: form.locDescription }}
                   onChange={applyLocation}
@@ -405,43 +413,43 @@ export default function PropertiesAdmin() {
               </Field>
             </div>
             <div className="md:col-span-2 grid md:grid-cols-3 gap-4">
-              <Field label="City (auto-filled from the map)"><input required readOnly title="Set by the Location picker above" className="field-dark opacity-70 cursor-default" value={form.city} /></Field>
-              <Field label="Area (from the Areas catalog)">
+              <Field label={t('admin.props.fCity')}><input required readOnly title={t('admin.props.setByPicker')} className="field-dark opacity-70 cursor-default" value={form.city} /></Field>
+              <Field label={t('admin.props.fArea')}>
                 {/* Only defined Areas are selectable — the value submitted is the Area's id,
                     resolved in DataContext. Free-typed area names are gone on purpose.
                     The map pre-selects this when the geocoded address names a known Area. */}
                 <select className="field-dark" value={form.area} onChange={set('area')}>
-                  <option value="">No area</option>
+                  <option value="">{t('admin.props.noArea')}</option>
                   {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
                 </select>
-                {areas.length === 0 && <p className="text-[11px] text-neutral-500 mt-1">No areas defined yet — add them under Areas first.</p>}
+                {areas.length === 0 && <p className="text-[11px] text-neutral-500 mt-1">{t('admin.props.noAreasYet')}</p>}
               </Field>
-              <Field label="Street (auto-filled from the map)"><input readOnly title="Set by the Location picker above" className="field-dark opacity-70 cursor-default" value={form.district} /></Field>
+              <Field label={t('admin.props.fStreet')}><input readOnly title={t('admin.props.setByPicker')} className="field-dark opacity-70 cursor-default" value={form.district} /></Field>
             </div>
             {/* Agents come from the Agents catalog, never a hardcoded list. The blank option
                 mirrors "No area": the backend accepts a null AgentId, and without an option
                 for it an unassigned listing would display someone else's name. */}
-            <Field label="Assigned agent"><select className="field-dark" value={form.agentId} onChange={set('agentId')}><option value="">No agent assigned</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
-            <Field label="Bedrooms (number of beds)"><input type="number" min="0" className="field-dark" value={form.bedrooms} onChange={set('bedrooms')} /></Field>
-            <Field label="Bathrooms"><input type="number" min="0" className="field-dark" value={form.bathrooms} onChange={set('bathrooms')} /></Field>
-            <Field label="Size (m²)"><input type="number" min="0" step="0.01" className="field-dark" value={form.sizeSqm} onChange={set('sizeSqm')} /></Field>
+            <Field label={t('admin.props.fAgent')}><select className="field-dark" value={form.agentId} onChange={set('agentId')}><option value="">{t('admin.props.noAgent')}</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+            <Field label={t('admin.props.fBedrooms')}><input type="number" min="0" className="field-dark" value={form.bedrooms} onChange={set('bedrooms')} /></Field>
+            <Field label={t('admin.props.fBathrooms')}><input type="number" min="0" className="field-dark" value={form.bathrooms} onChange={set('bathrooms')} /></Field>
+            <Field label={t('admin.props.fSize')}><input type="number" min="0" step="0.01" className="field-dark" value={form.sizeSqm} onChange={set('sizeSqm')} /></Field>
             {/* Editable even when "Price on request" is on: the listing still records a real
                 figure internally, the flag only decides whether the site shows it. */}
-            <Field label="Price"><input type="number" min="0" step="0.01" className="field-dark" value={form.price} onChange={set('price')} /></Field>
-            <Field label="Currency"><select className="field-dark" value={form.currency} onChange={set('currency')}><option>QAR</option><option>USD</option></select></Field>
-            <Field label="Status">
+            <Field label={t('admin.props.fPrice')}><input type="number" min="0" step="0.01" className="field-dark" value={form.price} onChange={set('price')} /></Field>
+            <Field label={t('admin.props.fCurrency')}><select className="field-dark" value={form.currency} onChange={set('currency')}><option>QAR</option><option>USD</option></select></Field>
+            <Field label={t('admin.props.fStatus')}>
               <select className="field-dark" value={form.status} onChange={set('status')}>
-                <option value="draft">Draft (hidden)</option>
-                <option value="available">Available (published)</option>
-                <option value="sold">Sold</option>
-                <option value="rented">Rented</option>
+                <option value="draft">{t('admin.props.sDraft')}</option>
+                <option value="available">{t('admin.props.sAvailable')}</option>
+                <option value="sold">{t('admin.props.sSold')}</option>
+                <option value="rented">{t('admin.props.sRented')}</option>
               </select>
             </Field>
-            <Field label="Furnishing"><select className="field-dark" value={form.furnishing} onChange={set('furnishing')}>{['Unfurnished', 'Semi-furnished', 'Furnished', 'Fitted', 'N/A'].map(x => <option key={x}>{x}</option>)}</select></Field>
+            <Field label={t('admin.props.fFurnishing')}><select className="field-dark" value={form.furnishing} onChange={set('furnishing')}>{[['Unfurnished', t('listings.unfurnished')], ['Semi-furnished', t('listings.semiFurnished')], ['Furnished', t('listings.furnished')], ['Fitted', t('listings.fitted')], ['N/A', 'N/A']].map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}</select></Field>
             <div className="flex flex-wrap gap-5 md:col-span-2 py-1">
-              <Toggle checked={form.priceOnRequest} onChange={v => setV('priceOnRequest', v)} label="Price on request" />
-              <Toggle checked={form.exclusive} onChange={v => setV('exclusive', v)} label="Exclusive" />
-              <Toggle checked={form.offPlan} onChange={v => setV('offPlan', v)} label="Off-Plan" />
+              <Toggle checked={form.priceOnRequest} onChange={v => setV('priceOnRequest', v)} label={t('admin.props.tPriceOnRequest')} />
+              <Toggle checked={form.exclusive} onChange={v => setV('exclusive', v)} label={t('admin.props.tExclusive')} />
+              <Toggle checked={form.offPlan} onChange={v => setV('offPlan', v)} label={t('admin.props.tOffPlan')} />
               {/* Stored as the catalog's "Balconies" feature. `balcony` is kept in step so
                   anything already reading it (the details page, mock mode) still works. */}
               <Toggle checked={form.amenities.includes(BALCONY_FEATURE)}
@@ -451,12 +459,12 @@ export default function PropertiesAdmin() {
                     ? [...new Set([...f.amenities, BALCONY_FEATURE])]
                     : f.amenities.filter(x => x !== BALCONY_FEATURE),
                 }))}
-                label="Balcony" />
+                label={t('admin.props.tBalcony')} />
             </div>
             <div className="md:col-span-2">
-              <Field label="Property features (managed under Features)">
+              <Field label={t('admin.props.fFeatures')}>
                 {featureOptions.length === 0
-                  ? <p className="text-xs text-neutral-500">No features defined yet — create them in the Features section first.</p>
+                  ? <p className="text-xs text-neutral-500">{t('admin.props.noFeatures')}</p>
                   : (
                     <div className="flex flex-wrap gap-2">
                       {featureOptions.map(f => (
@@ -472,38 +480,38 @@ export default function PropertiesAdmin() {
               </Field>
             </div>
             <div className="md:col-span-2">
-              <Field label="Photos (uploaded from your device — first one is the cover)">
+              <Field label={t('admin.props.fPhotos')}>
                 <input ref={fileInput} type="file" accept="image/*" multiple className="hidden" onChange={onFiles} />
                 <div className="flex items-center gap-3 mb-2">
                   <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary"
-                    onClick={() => fileInput.current?.click()}>Choose photos…</button>
+                    onClick={() => fileInput.current?.click()}>{t('admin.props.choosePhotos')}</button>
                   {uploading.length > 0 && (
-                    <span className="text-xs text-primary flex items-center gap-2"><Spinner /> Uploading {uploading.join(', ')}…</span>
+                    <span className="text-xs text-primary flex items-center gap-2"><Spinner /> {t('admin.props.uploadingFiles', { files: uploading.join(', ') })}</span>
                   )}
                 </div>
                 <div className="flex flex-wrap gap-3">
                   {form.images.map((src, i) => (
                     <div key={i} className="relative group">
                       <img src={src} alt="" className="w-24 h-16 object-cover rounded-lg border border-white/10" />
-                      {i === 0 && <span className="absolute top-1 left-1 bg-primary text-white font-bold text-[9px] px-1.5 py-0.5 rounded">COVER</span>}
+                      {i === 0 && <span className="absolute top-1 start-1 bg-primary text-white font-bold text-[9px] px-1.5 py-0.5 rounded">{t('admin.props.cover')}</span>}
                       <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center gap-1 text-xs transition-opacity">
-                        <button type="button" aria-label="Move left" className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, -1)}><IconChevronLeft className="w-3.5 h-3.5" /></button>
-                        <button type="button" aria-label="Remove photo" className="w-6 h-6 rounded flex items-center justify-center text-red-400 hover:bg-white/20" onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}><IconX className="w-3.5 h-3.5" /></button>
-                        <button type="button" aria-label="Move right" className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, 1)}><IconChevronRight className="w-3.5 h-3.5" /></button>
+                        <button type="button" aria-label={t('admin.props.moveLeft')} className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, -1)}><IconChevronLeft className="w-3.5 h-3.5" /></button>
+                        <button type="button" aria-label={t('admin.props.removePhoto')} className="w-6 h-6 rounded flex items-center justify-center text-red-400 hover:bg-white/20" onClick={() => setForm(f => ({ ...f, images: f.images.filter((_, j) => j !== i) }))}><IconX className="w-3.5 h-3.5" /></button>
+                        <button type="button" aria-label={t('admin.props.movePhotoRight')} className="w-6 h-6 rounded flex items-center justify-center hover:bg-white/20" onClick={() => moveImg(i, 1)}><IconChevronRight className="w-3.5 h-3.5" /></button>
                       </div>
                     </div>
                   ))}
                   {form.images.length === 0 && uploading.length === 0 && (
-                    <p className="text-xs text-neutral-500">No photos yet.</p>
+                    <p className="text-xs text-neutral-500">{t('admin.props.noPhotos')}</p>
                   )}
                 </div>
               </Field>
             </div>
             <div className="md:col-span-2 flex justify-end gap-3 pt-2">
-              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>Cancel</button>
+              <button type="button" className="btn-outline !bg-transparent !border-white/15 !text-neutral-300 hover:!border-primary hover:!text-primary" disabled={saving} onClick={() => setEditing(null)}>{t('admin.crud.cancel')}</button>
               <button className="btn-primary flex items-center gap-2" disabled={saving || uploading.length > 0}>
                 {saving && <Spinner />}
-                {saving ? 'Saving property…' : uploading.length > 0 ? 'Waiting for uploads…' : 'Save Property'}
+                {saving ? t('admin.props.savingProperty') : uploading.length > 0 ? t('admin.props.waitingUploads') : t('admin.props.saveProperty')}
               </button>
             </div>
           </form>

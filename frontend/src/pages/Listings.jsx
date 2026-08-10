@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import MapListingCard from '../components/MapListingCard'
 import ListingsMap from '../components/ListingsMap'
@@ -11,16 +12,8 @@ import { PROPERTY_TYPES, AMENITIES } from '../data/mockData'
 import { MOCK_MODE } from '../api/client'
 import { publicApi } from '../api/realEstateApi'
 
-const FAQ = [
-  ['Can foreigners buy property in Qatar?', 'Yes — freehold ownership is open to all nationalities in designated zones including The Pearl, Lusail Marina District, West Bay Lagoon and Qetaifan Island. A 99-year renewable leasehold applies in many additional areas.'],
-  ['Does buying property grant residency?', 'Property valued above QAR 730,000 qualifies the owner for renewable residency; above QAR 3.65 million qualifies for the long-term golden residency tier, both extendable to family members.'],
-  ['What fees should buyers budget for?', 'Registration at the Ministry of Justice is roughly 1.25% of the sale value in freehold zones, plus agency fees per market norms.'],
-  ['Are rental prices negotiable?', 'Often, especially on annual contracts paid with fewer cheques. Your agent will advise on realistic negotiation room per building.'],
-  ['What documents do I need to rent?', 'A QID (or passport for new arrivals), and typically one month deposit. Corporate leases need trade licence copies.'],
-  ['How fast can a purchase complete?', 'A cash purchase in a freehold zone can complete in under two weeks once documents are ready.'],
-  ['Is off-plan safe in Qatar?', 'Off-plan projects by escrow-backed developers offer staged payment security; we list only vetted developers.'],
-  ['Can I get a mortgage as a non-resident?', 'Several Qatari banks lend to non-residents on freehold property, typically up to 70% loan-to-value.'],
-]
+// FAQ copy lives in the dictionaries (listings.faq.q1/a1 … q8/a8).
+const FAQ_KEYS = [1, 2, 3, 4, 5, 6, 7, 8]
 
 // The /api/properties/map endpoint REQUIRES a viewport, but the very first fetch happens
 // before the map exists and therefore before there are real bounds to send. Qatar's national
@@ -29,6 +22,7 @@ const QATAR_BOUNDS = { minLat: 24.4, maxLat: 26.25, minLng: 50.65, maxLng: 51.75
 
 export default function Listings({ purpose, offMarket = false }) {
   const { properties, propertyTypes } = useData()
+  const { t, typeLabel } = useI18n()
   const [params, setParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
   const [sort, setSort] = useState('newest')
@@ -75,7 +69,7 @@ export default function Listings({ purpose, offMarket = false }) {
   const typeCounts = useMemo(() => {
     const counts = {}
     pool.forEach(p => { counts[p.type] = (counts[p.type] || 0) + 1 })
-    return PROPERTY_TYPES.map(t => [t, counts[t] || 0]).filter(([, c]) => c > 0)
+    return PROPERTY_TYPES.map(pt => [pt, counts[pt] || 0]).filter(([, c]) => c > 0)
   }, [pool])
 
   const results = useMemo(() => {
@@ -101,7 +95,7 @@ export default function Listings({ purpose, offMarket = false }) {
   // catalog itself, so the lookup happens here rather than adding a second export.
   const propertyTypeId = useMemo(() => {
     if (!f.type) return undefined
-    const hit = (propertyTypes || []).find(t => t.name === f.type)
+    const hit = (propertyTypes || []).find(pt => pt.name === f.type)
     return hit?.id
   }, [f.type, propertyTypes])
 
@@ -132,7 +126,7 @@ export default function Listings({ purpose, offMarket = false }) {
         if (cancelled) return
         // Deliberately NOT clearing remoteItems: a failed refresh must not wipe the pins
         // the user is currently looking at. Last good result stays, error shows alongside.
-        setMapError(err?.message || 'Could not load map results.')
+        setMapError(err?.message || t('listings.mapLoadError'))
       })
       .finally(() => { if (!cancelled) setMapLoading(false) })
     return () => { cancelled = true }
@@ -201,11 +195,10 @@ export default function Listings({ purpose, offMarket = false }) {
 
   const pageItems = results.slice((page - 1) * perPage, page * perPage)
   const pages = Math.max(1, Math.ceil(results.length / perPage))
-  const label = purpose === 'rent' ? 'rent' : 'sale'
   const shownCount = showMap ? mapItems.length : results.length
   const title = offMarket
-    ? `Off-market opportunities — ${results.length} listings`
-    : `Properties for ${label} in Qatar — ${shownCount.toLocaleString()} listings`
+    ? t('listings.titleOffMarket', { n: results.length })
+    : t(purpose === 'rent' ? 'listings.titleRentCount' : 'listings.titleSaleCount', { n: shownCount.toLocaleString() })
 
   return (
     <div className="pt-16">
@@ -218,15 +211,15 @@ export default function Listings({ purpose, offMarket = false }) {
               className={`btn-outline !py-1.5 ${showMap ? '!border-primary !text-primary' : ''}`}
               aria-pressed={showMap}
               onClick={() => { setShowMap(s => !s); setPane('list'); setActiveId(null) }}>
-              {showMap ? <><IconList className="w-4 h-4" /> List</> : <><IconMap className="w-4 h-4" /> Map</>}
+              {showMap ? <><IconList className="w-4 h-4" /> {t('listings.list')}</> : <><IconMap className="w-4 h-4" /> {t('listings.map')}</>}
             </button>
           )}
-          <button className={`btn-outline !py-1.5 ${filtersOpen ? '!border-primary !text-primary' : ''}`} onClick={() => setFiltersOpen(o => !o)}><IconSliders className="w-4 h-4" /> Filters</button>
-          <button className="btn-outline !py-1.5 hidden md:inline-flex"><IconHeart className="w-4 h-4" /> Save search</button>
-          <select value={sort} onChange={e => setSort(e.target.value)} className="ml-auto field !w-auto !py-1.5">
-            <option value="newest">Newest first</option>
-            <option value="priceAsc">Price: low to high</option>
-            <option value="priceDesc">Price: high to low</option>
+          <button className={`btn-outline !py-1.5 ${filtersOpen ? '!border-primary !text-primary' : ''}`} onClick={() => setFiltersOpen(o => !o)}><IconSliders className="w-4 h-4" /> {t('listings.filters')}</button>
+          <button className="btn-outline !py-1.5 hidden md:inline-flex"><IconHeart className="w-4 h-4" /> {t('listings.saveSearch')}</button>
+          <select value={sort} onChange={e => setSort(e.target.value)} className="ms-auto field !w-auto !py-1.5">
+            <option value="newest">{t('listings.sortNewest')}</option>
+            <option value="priceAsc">{t('listings.sortPriceAsc')}</option>
+            <option value="priceDesc">{t('listings.sortPriceDesc')}</option>
           </select>
         </div>
       </div>
@@ -235,21 +228,22 @@ export default function Listings({ purpose, offMarket = false }) {
       {filtersOpen && (
         <div className="max-w-7xl mx-auto px-4 pt-4">
           <div className="card !rounded-2xl !bg-white p-5 grid md:grid-cols-4 gap-4 text-sm">
-            <input placeholder="Keyword or area" className="field" value={f.q} onChange={e => setF('q', e.target.value)} />
+            <input placeholder={t('listings.keywordOrArea')} className="field" value={f.q} onChange={e => setF('q', e.target.value)} />
             <select className="field" value={f.beds} onChange={e => setF('beds', e.target.value)}>
-              <option value="">Bedrooms (any)</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}+</option>)}
+              <option value="">{t('listings.bedroomsAny')}</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}+</option>)}
             </select>
             <select className="field" value={f.baths} onChange={e => setF('baths', e.target.value)}>
-              <option value="">Bathrooms (any)</option>{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}+</option>)}
+              <option value="">{t('listings.bathroomsAny')}</option>{[1, 2, 3, 4].map(n => <option key={n} value={n}>{n}+</option>)}
             </select>
             <select className="field" value={f.furnishing} onChange={e => setF('furnishing', e.target.value)}>
-              <option value="">Furnishing (any)</option>
-              {['Furnished', 'Semi-furnished', 'Unfurnished', 'Fitted'].map(x => <option key={x}>{x}</option>)}
+              <option value="">{t('listings.furnishingAny')}</option>
+              {/* values stay English (they match stored data); only the visible label localizes */}
+              {[['Furnished', t('listings.furnished')], ['Semi-furnished', t('listings.semiFurnished')], ['Unfurnished', t('listings.unfurnished')], ['Fitted', t('listings.fitted')]].map(([v, lbl]) => <option key={v} value={v}>{lbl}</option>)}
             </select>
-            <input placeholder="Min price" type="number" className="field" value={f.minPrice} onChange={e => setF('minPrice', e.target.value)} />
-            <input placeholder="Max price" type="number" className="field" value={f.maxPrice} onChange={e => setF('maxPrice', e.target.value)} />
-            <input placeholder="Min size m²" type="number" className="field" value={f.minSize} onChange={e => setF('minSize', e.target.value)} />
-            <input placeholder="Max size m²" type="number" className="field" value={f.maxSize} onChange={e => setF('maxSize', e.target.value)} />
+            <input placeholder={t('listings.minPrice')} type="number" className="field" value={f.minPrice} onChange={e => setF('minPrice', e.target.value)} />
+            <input placeholder={t('listings.maxPrice')} type="number" className="field" value={f.maxPrice} onChange={e => setF('maxPrice', e.target.value)} />
+            <input placeholder={t('listings.minSize')} type="number" className="field" value={f.minSize} onChange={e => setF('minSize', e.target.value)} />
+            <input placeholder={t('listings.maxSize')} type="number" className="field" value={f.maxSize} onChange={e => setF('maxSize', e.target.value)} />
             <div className="md:col-span-4 flex flex-wrap gap-2 pt-1">
               {AMENITIES.slice(0, 12).map(a => (
                 <label key={a} className={`cursor-pointer rounded-full border px-3 py-1 text-xs ${f.amenities.includes(a) ? 'bg-primary text-white border-primary' : 'border-neutral-300'}`}>
@@ -269,7 +263,7 @@ export default function Listings({ purpose, offMarket = false }) {
               {['list', 'map'].map(k => (
                 <button key={k} onClick={() => togglePane(k)}
                   className={`chip flex-1 text-center justify-center inline-flex items-center gap-1.5 ${pane === k ? 'chip-active' : ''}`}>
-                  {k === 'list' ? <><IconList className="w-4 h-4" /> List ({mapItems.length})</> : <><IconMap className="w-4 h-4" /> Map</>}
+                  {k === 'list' ? <><IconList className="w-4 h-4" /> {t('listings.listCount', { n: mapItems.length })}</> : <><IconMap className="w-4 h-4" /> {t('listings.map')}</>}
                 </button>
               ))}
             </div>
@@ -280,19 +274,19 @@ export default function Listings({ purpose, offMarket = false }) {
               <div className="p-4">
                 {/* Compact results header: title + real backend count, no wasted height. */}
                 <h1 className="h-serif text-lg leading-tight">
-                  Properties for {label} in Qatar
+                  {t(purpose === 'rent' ? 'listings.titleRent' : 'listings.titleSale')}
                 </h1>
                 <p className="text-[13px] text-neutral-500 mt-0.5 mb-3.5">
-                  {mapItems.length.toLocaleString()} {mapItems.length === 1 ? 'property' : 'properties'} found
+                  {mapItems.length === 1 ? t('listings.foundOne') : t('listings.foundMany', { n: mapItems.length.toLocaleString() })}
                 </p>
                 {mapError && (
-                  <p className="text-xs text-red-600 mb-3">{mapError} Showing the last results loaded.</p>
+                  <p className="text-xs text-red-600 mb-3">{mapError} {t('listings.mapErrorSuffix')}</p>
                 )}
-                {mapLoading && <p className="text-xs text-neutral-500 mb-3">Loading listings…</p>}
+                {mapLoading && <p className="text-xs text-neutral-500 mb-3">{t('listings.loadingListings')}</p>}
                 {mapItems.length === 0 && !mapLoading
-                  ? <EmptyState message="No properties in this area. Pan the map or widen your filters." />
+                  ? <EmptyState message={t('listings.mapEmpty')} />
                   : (
-                    <div className="qre-grid">
+                    <div className="qre-grid stagger-fade">
                       {mapItems.map(it => (
                         <MapListingCard
                           key={it.id}
@@ -324,13 +318,12 @@ export default function Listings({ purpose, offMarket = false }) {
       ) : (
         <>
           <div className="max-w-7xl mx-auto px-4 py-8">
-            <Breadcrumb items={[{ label: 'Home', to: '/' }, { label: purpose === 'rent' ? 'Rent' : 'Buy', to: `/${purpose}` }, { label: 'Qatar' }]} />
+            <Breadcrumb items={[{ label: t('common.home'), to: '/' }, { label: purpose === 'rent' ? t('common.rent') : t('common.buy'), to: `/${purpose}` }, { label: t('common.qatar') }]} />
             <h1 className="h-serif text-3xl md:text-4xl mt-3 mb-6">{title}</h1>
 
             {offMarket && (
               <p className="max-w-2xl text-neutral-600 mb-6 text-sm">
-                A private selection our sellers prefer to keep off the open market. Prices are shared
-                on request — submit an inquiry and a senior consultant will grant access.
+                {t('listings.offMarketIntro')}
               </p>
             )}
 
@@ -338,24 +331,24 @@ export default function Listings({ purpose, offMarket = false }) {
             <div className="flex gap-2 overflow-x-auto no-scrollbar pb-4 mb-6">
               <button onClick={() => setF('type', '')}
                 className={`chip ${!f.type ? 'chip-active' : ''}`}>
-                View All
+                {t('listings.viewAllChip')}
               </button>
-              {typeCounts.map(([t, c]) => (
-                <button key={t} onClick={() => setF('type', f.type === t ? '' : t)}
-                  className={`chip ${f.type === t ? 'chip-active' : ''}`}>
-                  {t} ({c})
+              {typeCounts.map(([pt, c]) => (
+                <button key={pt} onClick={() => setF('type', f.type === pt ? '' : pt)}
+                  className={`chip ${f.type === pt ? 'chip-active' : ''}`}>
+                  {typeLabel(pt)} ({c})
                 </button>
               ))}
             </div>
 
             {/* results */}
             {pageItems.length === 0
-              ? <EmptyState message="No properties match these filters yet. Try widening your search." />
-              : <div className="space-y-6">{pageItems.map(p => <PropertyCard key={p.id} p={p} wide blurPrice={offMarket} />)}</div>}
+              ? <EmptyState message={t('listings.emptyFiltered')} />
+              : <div className="space-y-6 stagger-fade">{pageItems.map(p => <PropertyCard key={p.id} p={p} wide blurPrice={offMarket} />)}</div>}
 
             {/* pagination */}
             <div className="flex items-center justify-between mt-8 text-sm text-neutral-600">
-              <span>Showing {results.length === 0 ? 0 : (page - 1) * perPage + 1}–{Math.min(page * perPage, results.length)} of {results.length} results</span>
+              <span>{t('listings.showingResults', { from: results.length === 0 ? 0 : (page - 1) * perPage + 1, to: Math.min(page * perPage, results.length), n: results.length })}</span>
               <div className="flex gap-1">
                 {Array.from({ length: pages }, (_, i) => (
                   <button key={i} onClick={() => setPage(i + 1)}
@@ -368,31 +361,31 @@ export default function Listings({ purpose, offMarket = false }) {
             {!offMarket && (
               <div className="mt-16 max-w-3xl space-y-10 text-sm leading-relaxed text-neutral-700">
                 <div>
-                  <h2 className="h-serif text-2xl mb-3">Why {purpose === 'rent' ? 'rent' : 'buy'} in Qatar?</h2>
-                  <p>Qatar pairs tax-free income with world-class infrastructure. The freehold market has matured around The Pearl and Lusail, while rentals span the full spectrum from Msheireb studios to beachfront estates.</p>
-                  <ul className="list-disc pl-5 mt-3 space-y-1">
-                    <li>Freehold zones open to all nationalities — The Pearl, Lusail Marina, West Bay Lagoon, Qetaifan Island</li>
-                    <li>99-year renewable leasehold available across many additional districts</li>
-                    <li>Residency benefits from QAR 730,000; golden-tier residency from QAR 3.65M</li>
+                  <h2 className="h-serif text-2xl mb-3">{t(purpose === 'rent' ? 'listings.whyRent' : 'listings.whyBuy')}</h2>
+                  <p>{t('listings.whyBody')}</p>
+                  <ul className="list-disc ps-5 mt-3 space-y-1">
+                    <li>{t('listings.whyPoint1')}</li>
+                    <li>{t('listings.whyPoint2')}</li>
+                    <li>{t('listings.whyPoint3')}</li>
                   </ul>
                 </div>
                 <div>
-                  <h2 className="h-serif text-2xl mb-3">Financing</h2>
-                  <p>Local banks finance freehold purchases up to 70–80% for residents and up to 70% for non-residents. Developer payment plans on off-plan units routinely spread 60–90% of the price past handover.</p>
+                  <h2 className="h-serif text-2xl mb-3">{t('listings.financing')}</h2>
+                  <p>{t('listings.financingBody')}</p>
                 </div>
                 <div>
-                  <h2 className="h-serif text-2xl mb-4">Frequently asked questions</h2>
+                  <h2 className="h-serif text-2xl mb-4">{t('listings.faqTitle')}</h2>
                   <div className="divide-y divide-neutral-200 border border-neutral-200 rounded-2xl overflow-hidden bg-white">
-                    {FAQ.map(([q, a]) => (
-                      <details key={q} className="group p-4">
-                        <summary className="cursor-pointer font-medium list-none flex justify-between items-center">{q}<span className="text-primary group-open:rotate-45 transition-transform">+</span></summary>
-                        <p className="mt-2 text-neutral-600">{a}</p>
+                    {FAQ_KEYS.map(i => (
+                      <details key={i} className="group p-4">
+                        <summary className="cursor-pointer font-medium list-none flex justify-between items-center">{t(`listings.faq.q${i}`)}<span className="text-primary group-open:rotate-45 transition-transform">+</span></summary>
+                        <p className="mt-2 text-neutral-600">{t(`listings.faq.a${i}`)}</p>
                       </details>
                     ))}
                   </div>
                 </div>
                 <div>
-                  <h2 className="h-serif text-2xl mb-3">Search by {purpose === 'rent' ? 'bedrooms' : 'property type'}</h2>
+                  <h2 className="h-serif text-2xl mb-3">{t(purpose === 'rent' ? 'listings.searchByBedrooms' : 'listings.searchByType')}</h2>
                   <div className="flex flex-wrap gap-x-6 gap-y-2">
                     {/* These were <span>s: styled and cursor-pointer'd like links, but not
                         links at all, and the counts were hardcoded (1, 2, 2, 1, 1) rather
@@ -406,13 +399,13 @@ export default function Listings({ purpose, offMarket = false }) {
                         "Studio" actually lives. */}
                     {(purpose === 'rent'
                       ? [
-                          ['Studio rentals', '?q=Studio', pool.filter(p => p.bedrooms === 0).length],
-                          ['1+ bedroom rentals', '?beds=1', pool.filter(p => p.bedrooms >= 1).length],
-                          ['2+ bedroom rentals', '?beds=2', pool.filter(p => p.bedrooms >= 2).length],
-                          ['3+ bedroom rentals', '?beds=3', pool.filter(p => p.bedrooms >= 3).length],
-                          ['4+ bedroom rentals', '?beds=4', pool.filter(p => p.bedrooms >= 4).length],
+                          [t('listings.studioRentals'), '?q=Studio', pool.filter(p => p.bedrooms === 0).length],
+                          [t('listings.nPlusBedroomRentals', { n: 1 }), '?beds=1', pool.filter(p => p.bedrooms >= 1).length],
+                          [t('listings.nPlusBedroomRentals', { n: 2 }), '?beds=2', pool.filter(p => p.bedrooms >= 2).length],
+                          [t('listings.nPlusBedroomRentals', { n: 3 }), '?beds=3', pool.filter(p => p.bedrooms >= 3).length],
+                          [t('listings.nPlusBedroomRentals', { n: 4 }), '?beds=4', pool.filter(p => p.bedrooms >= 4).length],
                         ]
-                      : typeCounts.map(([t, c]) => [`${t}s for sale`, `?type=${encodeURIComponent(t)}`, c])
+                      : typeCounts.map(([pt, c]) => [t('listings.typesForSale', { type: typeLabel(pt) }), `?type=${encodeURIComponent(pt)}`, c])
                     ).filter(([, , c]) => c > 0)
                      .map(([lbl, qs, c]) => (
                        <Link key={lbl} to={`/${purpose}${qs}`} className="brand-link text-primary">{lbl} ({c})</Link>

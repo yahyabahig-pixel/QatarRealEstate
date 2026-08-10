@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { brandParts } from '../config/company'
+import { useI18n } from '../i18n/I18nContext'
 import { IconAward } from './icons'
 
 // ---------------------------------------------------------------------------------------
@@ -19,44 +19,47 @@ import { IconAward } from './icons'
 //   area-scoped `q` is the one filter that returns the right listings in BOTH mock mode
 //   and live mode. Adding `type` back here would need PropertyType on the list DTO,
 //   which is a backend change.
+//
+// I18N NOTE: the visible labels translate (footer.seo.*), but the `q` VALUES stay
+// English — they are matched against listing titles stored in English in the database.
 // ---------------------------------------------------------------------------------------
 const search = (purpose, q) => `/${purpose}?q=${encodeURIComponent(q)}`
 
 const SEO_COLUMNS = [
   {
-    title: 'Rent in The Pearl',
+    titleKey: 'footer.seo.rentPearl',
     links: [
-      ['Apartments for rent in The Pearl', search('rent', 'The Pearl')],
-      ['Apartments for rent in Porto Arabia', search('rent', 'Porto Arabia')],
-      ['Studios for rent in Viva Bahriya', search('rent', 'Viva Bahriya')],
-      ['Penthouses for rent in The Pearl', search('rent', 'Pearl')],
+      ['footer.seo.rentPearlApts', search('rent', 'The Pearl')],
+      ['footer.seo.rentPortoApts', search('rent', 'Porto Arabia')],
+      ['footer.seo.rentVivaStudios', search('rent', 'Viva Bahriya')],
+      ['footer.seo.rentPearlPenthouses', search('rent', 'Pearl')],
     ],
   },
   {
-    title: 'Buy in Lusail',
+    titleKey: 'footer.seo.buyLusail',
     links: [
-      ['Apartments for sale in Lusail Marina', search('buy', 'Lusail Marina')],
-      ['Apartments for sale in Fox Hills', search('buy', 'Fox Hills')],
-      ['Land for sale in Qetaifan Island', search('buy', 'Qetaifan')],
-      ['Townhouses for sale in Fox Hills', search('buy', 'Fox Hills')],
+      ['footer.seo.buyMarinaApts', search('buy', 'Lusail Marina')],
+      ['footer.seo.buyFoxApts', search('buy', 'Fox Hills')],
+      ['footer.seo.buyQetaifanLand', search('buy', 'Qetaifan')],
+      ['footer.seo.buyFoxTownhouses', search('buy', 'Fox Hills')],
     ],
   },
   {
-    title: 'Rent in West Bay',
+    titleKey: 'footer.seo.rentWestBay',
     links: [
-      ['Apartments for rent in West Bay', search('rent', 'West Bay')],
-      ['Offices for rent in West Bay', search('rent', 'West Bay')],
-      ['Furnished rentals in West Bay', search('rent', 'West Bay')],
-      ['Penthouses for rent in West Bay', search('rent', 'West Bay')],
+      ['footer.seo.rentWestBayApts', search('rent', 'West Bay')],
+      ['footer.seo.rentWestBayOffices', search('rent', 'West Bay')],
+      ['footer.seo.rentWestBayFurnished', search('rent', 'West Bay')],
+      ['footer.seo.rentWestBayPenthouses', search('rent', 'West Bay')],
     ],
   },
   {
-    title: 'Buy Villas',
+    titleKey: 'footer.seo.buyVillas',
     links: [
-      ['Villas for sale in Al Waab', search('buy', 'Al Waab')],
-      ['Villas for sale in West Bay Lagoon', search('buy', 'West Bay Lagoon')],
-      ['Beachfront villas in Simaisma', search('buy', 'Simaisma')],
-      ['Compound villas in Al Rayyan', search('buy', 'Al Rayyan')],
+      ['footer.seo.buyAlWaabVillas', search('buy', 'Al Waab')],
+      ['footer.seo.buyLagoonVillas', search('buy', 'West Bay Lagoon')],
+      ['footer.seo.buySimaismaVillas', search('buy', 'Simaisma')],
+      ['footer.seo.buyRayyanVillas', search('buy', 'Al Rayyan')],
     ],
   },
 ]
@@ -64,31 +67,31 @@ const SEO_COLUMNS = [
 // Navigation columns. Every target is a route registered in App.jsx — no placeholders.
 const NAV_COLUMNS = [
   {
-    title: 'Discover',
+    titleKey: 'footer.discover',
     links: [
-      ['For Rent', '/rent'],
-      ['For Sale', '/buy'],
-      ['New Developments', '/developments'],
-      ['Areas', '/areas'],
-      ['Off-Market', '/off-market-opportunities'],
+      ['footer.forRent', '/rent'],
+      ['footer.forSale', '/buy'],
+      ['footer.newDevelopments', '/developments'],
+      ['footer.areas', '/areas'],
+      ['footer.offMarket', '/off-market-opportunities'],
     ],
   },
   {
-    title: 'Company',
+    titleKey: 'footer.company',
     links: [
-      ['About Us', '/about-us'],
-      ['Find an Agent', '/find-agent'],
-      ['Careers', '/careers'],
-      ['Contact', '/contact-us'],
+      ['footer.aboutUs', '/about-us'],
+      ['footer.findAgent', '/find-agent'],
+      ['footer.careers', '/careers'],
+      ['footer.contact', '/contact-us'],
     ],
   },
   {
-    title: 'Resources',
+    titleKey: 'footer.resources',
     links: [
-      ['List Your Property', '/list-property'],
-      ['New Developments', '/developments'],
-      ['Area Guides', '/areas'],
-      ['Careers', '/careers'],
+      ['footer.listYourProperty', '/list-property'],
+      ['footer.newDevelopments', '/developments'],
+      ['footer.areaGuides', '/areas'],
+      ['footer.careers', '/careers'],
     ],
   },
 ]
@@ -100,7 +103,7 @@ const isRealUrl = (v) => typeof v === 'string' && /^https?:\/\//i.test(v.trim())
 
 export default function Footer() {
   const { settings } = useData()
-  const [brandFirst, brandRest] = brandParts(settings.siteName)
+  const { t, isRTL } = useI18n()
 
   const socials = [
     ['Instagram', settings.instagram],
@@ -114,11 +117,11 @@ export default function Footer() {
       {/* SEO links — each one runs a real filtered search on /rent or /buy */}
       <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 border-b border-white/8 text-sm">
         {SEO_COLUMNS.map(col => (
-          <div key={col.title}>
-            <h4 className="text-white font-medium mb-3">{col.title}</h4>
+          <div key={col.titleKey}>
+            <h4 className="text-white font-medium mb-3">{t(col.titleKey)}</h4>
             <ul className="space-y-2">
-              {col.links.map(([label, to]) => (
-                <li key={label}><Link to={to} className="hover:text-primary text-neutral-400 transition-colors">{label}</Link></li>
+              {col.links.map(([labelKey, to], i) => (
+                <li key={labelKey + i}><Link to={to} className="hover:text-primary text-neutral-400 transition-colors">{t(labelKey)}</Link></li>
               ))}
             </ul>
           </div>
@@ -128,20 +131,21 @@ export default function Footer() {
       {/* main footer */}
       <div className="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
         <div className="md:col-span-1">
-          <div className="h-serif text-xl text-white mb-4">{brandFirst} <span className="text-primary">{brandRest}</span></div>
+          {/* Full logo lockup (with the Arabic line) — knockout variant for the dark footer. */}
+          <img src="/brand/logo-footer.png" alt={settings.siteName} className="h-28 w-auto mb-4" />
           <p className="text-sm text-neutral-400 leading-relaxed mb-4">{settings.footerAbout}</p>
           {/* Arabic licence line. dir/lang let the browser shape and align the script correctly
-              regardless of the page's left-to-right direction. */}
+              regardless of the page's direction; in the Arabic UI it simply flows in place. */}
           {settings.footerAboutAr && (
-            <p dir="rtl" lang="ar" className="text-sm text-neutral-400 leading-relaxed mb-4 text-right">{settings.footerAboutAr}</p>
+            <p dir="rtl" lang="ar" className={`text-sm text-neutral-400 leading-relaxed mb-4 ${isRTL ? '' : 'text-right'}`}>{settings.footerAboutAr}</p>
           )}
-          <div className="inline-flex items-center gap-2 border border-primary/40 rounded-full px-3.5 py-1.5 text-xs text-primary"><IconAward className="w-3.5 h-3.5" /> Qatar Luxury Brokerage of the Year</div>
+          <div className="inline-flex items-center gap-2 border border-primary/40 rounded-full px-3.5 py-1.5 text-xs text-primary"><IconAward className="w-3.5 h-3.5" /> {t('footer.award')}</div>
         </div>
         {NAV_COLUMNS.map(col => (
-          <div key={col.title}>
-            <h4 className="text-white font-semibold text-sm mb-4">{col.title}</h4>
+          <div key={col.titleKey}>
+            <h4 className="text-white font-semibold text-sm mb-4">{t(col.titleKey)}</h4>
             <ul className="space-y-2 text-sm">
-              {col.links.map(([label, to]) => <li key={label}><Link to={to} className="hover:text-primary text-neutral-400 brand-link">{label}</Link></li>)}
+              {col.links.map(([labelKey, to], i) => <li key={labelKey + i}><Link to={to} className="hover:text-primary text-neutral-400 brand-link">{t(labelKey)}</Link></li>)}
             </ul>
           </div>
         ))}
@@ -157,9 +161,9 @@ export default function Footer() {
               ))}
             </div>
           )}
-          <div className="text-center md:text-left">
-            <div>© {new Date().getFullYear()} {settings.siteName}. All rights reserved.</div>
-            {settings.taxNumber && <div className="mt-1">Tax Number: {settings.taxNumber}</div>}
+          <div className="text-center md:text-start">
+            <div>© {new Date().getFullYear()} {settings.siteName}. {t('footer.rights')}</div>
+            {settings.taxNumber && <div className="mt-1">{t('footer.taxNumber', { n: settings.taxNumber })}</div>}
           </div>
           {/* Privacy / Terms / Cookies deliberately absent: no such routes exist in App.jsx,
               and a link to nowhere is worse than no link. Add the routes, then add them here. */}

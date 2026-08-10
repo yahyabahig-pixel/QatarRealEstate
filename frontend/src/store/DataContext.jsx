@@ -1,3 +1,4 @@
+import { uiText } from '../i18n/uiText'
 import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
 import {
   seedProperties, seedDevelopments, seedAreas, seedAgents, seedJobs,
@@ -105,7 +106,7 @@ export function DataProvider({ children }) {
       const failed = results.filter(r => r.status === 'rejected')
       if (failed.length) {
         console.error('API load failed:', failed.map(f => f.reason))
-        setApiError('Some data could not be loaded from the API. Is the backend running?')
+        setApiError(uiText.apiLoadError)
       }
       setLoading(false)
     })()
@@ -161,11 +162,11 @@ export function DataProvider({ children }) {
   // (ProblemDetails title + validation details). It never throws — pages await the
   // result, keep their form open on failure, and only announce success on ok: true.
   const describeError = (err) => {
-    const parts = [err?.problem?.title || err?.message || 'The API rejected the request.']
+    const parts = [err?.problem?.title || err?.message || uiText.apiRejected]
     const errs = err?.errors
     if (Array.isArray(errs)) parts.push(errs.map(e => e.description || e.code).join(' '))
     else if (errs && typeof errs === 'object') parts.push(Object.values(errs).flat().join(' '))
-    if (err?.status === 404) parts.push('(The endpoint was not found — is the backend running the latest build?)')
+    if (err?.status === 404) parts.push(uiText.endpointMissing)
     return parts.filter(Boolean).join('\n')
   }
 

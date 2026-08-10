@@ -1,10 +1,27 @@
 import { useCallback, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useI18n } from '../i18n/I18nContext'
 import { IconChevronRight } from './icons'
 
+// Price labels ("Price on request", "/mo") follow the active language. The formatter is
+// used in non-component code paths too, so it reads the labels from a tiny module-level
+// registry the I18nProvider keeps in sync (see PriceLabelSync below) instead of a hook.
+export const priceLabels = { onRequest: 'Price on request', perMonth: ' /mo', ar: false }
+// Currency codes read naturally in Arabic as their customary short forms (QAR -> ر.ق).
+export const displayCurrency = (c) => priceLabels.ar ? ({ QAR: 'ر.ق', USD: 'دولار', EUR: 'يورو' }[c] || c) : c
 export const fmtPrice = (p) =>
-  p.priceOnRequest ? 'Price on request'
-    : `${p.price.toLocaleString('en-US')} ${p.currency}${p.purpose === 'rent' ? ' /mo' : ''}`
+  p.priceOnRequest ? priceLabels.onRequest
+    : `${p.price.toLocaleString('en-US')} ${displayCurrency(p.currency)}${p.purpose === 'rent' ? priceLabels.perMonth : ''}`
+
+// Rendered once inside the app tree: mirrors the current dictionary into priceLabels so
+// fmtPrice/compactPrice stay plain functions usable outside React contexts.
+export function PriceLabelSync() {
+  const { t, isRTL } = useI18n()
+  priceLabels.onRequest = t('common.priceOnRequest')
+  priceLabels.perMonth = t('common.perMonth')
+  priceLabels.ar = isRTL
+  return null
+}
 
 // Map pins have ~70px of room. "12,500,000 QAR" does not fit; "12.5M" does.
 // Deliberately unit-less -- the currency lives on the card, not on the pin.
@@ -21,10 +38,14 @@ export const compactPrice = (amount) => {
 // No backend endpoint exists for favourites, so nothing here pretends to sync anywhere.
 // ---------------------------------------------------------------------------------------
 const FAV_KEY = 'qre.favourites'
+// Fired on every heart toggle so the Favourites page can refresh instantly.
+export const FAVS_CHANGED_EVENT = 'qre:favourites-changed'
 const readFavs = () => {
   try { return new Set(JSON.parse(localStorage.getItem(FAV_KEY) || '[]')) }
   catch { return new Set() }
 }
+// Public reader for the Favourites page — same key, same parsing, one source of truth.
+export const readFavouriteIds = () => readFavs()
 export function useFavourite(id) {
   const [fav, setFav] = useState(() => readFavs().has(id))
   const toggle = useCallback((e) => {
@@ -33,11 +54,13 @@ export function useFavourite(id) {
     favs.has(id) ? favs.delete(id) : favs.add(id)
     try { localStorage.setItem(FAV_KEY, JSON.stringify([...favs])) } catch { /* private mode */ }
     setFav(favs.has(id))
+    window.dispatchEvent(new Event(FAVS_CHANGED_EVENT))
   }, [id])
   return [fav, toggle]
 }
 
 export function SectionHeading({ eyebrow, title, subtitle, link, linkLabel, dark }) {
+  const { t } = useI18n()
   return (
     <div className="flex items-end justify-between mb-10 gap-4">
       <div className="max-w-2xl">
@@ -47,7 +70,7 @@ export function SectionHeading({ eyebrow, title, subtitle, link, linkLabel, dark
       </div>
       {link && (
         <Link to={link} className="brand-link text-primary text-sm font-semibold whitespace-nowrap inline-flex items-center gap-1">
-          {linkLabel || 'View all'} <IconChevronRight className="w-3.5 h-3.5" />
+          {linkLabel || t('common.viewAll')} <IconChevronRight className="w-3.5 h-3.5 rtl:-scale-x-100" />
         </Link>
       )}
     </div>
@@ -59,7 +82,7 @@ export function Breadcrumb({ items }) {
     <nav className="text-xs text-neutral-500 flex flex-wrap gap-1.5 items-center">
       {items.map((it, i) => (
         <span key={i} className="flex items-center gap-1.5">
-          {i > 0 && <IconChevronRight className="w-3 h-3 text-neutral-400" />}
+          {i > 0 && <IconChevronRight className="w-3 h-3 text-neutral-400 rtl:-scale-x-100" />}
           {it.to ? <Link to={it.to} className="hover:text-primary transition-colors">{it.label}</Link> : <span className="text-neutral-700 font-medium">{it.label}</span>}
         </span>
       ))}

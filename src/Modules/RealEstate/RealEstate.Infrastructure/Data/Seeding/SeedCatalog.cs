@@ -110,6 +110,7 @@ internal static class SeedCatalog
         new() { Name = "Penthouse", Description = "The top-floor unit of a tower, usually with a private terrace." },
         new() { Name = "Studio",    Description = "A compact single-room unit with an open living and sleeping area." },
         new() { Name = "Office",    Description = "Commercial space intended for business use." },
+        new() { Name = "Commercial Shop", Description = "A street-level retail unit intended for shops and showrooms." },
     ];
 
     // -----------------------------------------------------------------------------------------
