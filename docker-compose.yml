@@ -108,6 +108,7 @@ services:
       args:
         VITE_API_URL: ${PUBLIC_ORIGIN}
         VITE_MAPBOX_TOKEN: ${VITE_MAPBOX_TOKEN}
+        VITE_SITE_URL: ${PUBLIC_ORIGIN}
     image: qre-frontend:latest
     container_name: qre-frontend
 

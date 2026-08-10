@@ -1,0 +1,9 @@
+# AL-Madenah Real Estate — crawler policy
+# Public site: fully crawlable. Admin console: kept out of search results.
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /admin/
+
+# When the production domain goes live, add its sitemap here, e.g.:
+# Sitemap: https://www.example.com/sitemap.xml

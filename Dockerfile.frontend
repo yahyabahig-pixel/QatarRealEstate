@@ -28,8 +28,12 @@ COPY frontend/ ./
 # config for a static site. These arrive as --build-arg values so nothing is hardcoded.
 ARG VITE_API_URL
 ARG VITE_MAPBOX_TOKEN
+# Absolute-URL base for SEO/OG tags in index.html (canonical, og:url, og:image).
+# Fed from PUBLIC_ORIGIN by docker-compose; swap the domain there and rebuild.
+ARG VITE_SITE_URL
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
+ENV VITE_SITE_URL=$VITE_SITE_URL
 
 # Produces /app/dist: index.html plus fingerprinted JS/CSS. Nothing else is needed.
 RUN npm run build

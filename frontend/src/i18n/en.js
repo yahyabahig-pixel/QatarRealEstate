@@ -7,6 +7,7 @@
 export default {
   meta: {
     title: "AL-Madenah RealEstate — Qatar's Most Exclusive Real Estate Portal",
+    description: "AL-Madenah Real Estate — buy and rent apartments, villas, penthouses, offices and shops across The Pearl, Lusail, West Bay and Doha, Qatar.",
   },
 
   common: {

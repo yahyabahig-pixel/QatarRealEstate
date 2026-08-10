@@ -60,12 +60,15 @@ export function I18nProvider({ children }) {
     return text
   }, [lang])
 
-  // The provider is the single writer of <html lang dir> and the document title.
+  // The provider is the single writer of <html lang dir>, the document title and the
+  // SEO description meta — Google renders JS, so Arabic visitors get the Arabic snippet.
+  // (The static values in index.html stay as the crawler/scraper fallback.)
   useEffect(() => {
     const root = document.documentElement
     root.lang = lang
     root.dir = lang === 'ar' ? 'rtl' : 'ltr'
     document.title = t('meta.title')
+    document.querySelector('meta[name="description"]')?.setAttribute('content', t('meta.description'))
   }, [lang, t])
 
   // Display-only translation for catalog names (property types). The RAW name stays the

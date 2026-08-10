@@ -3,15 +3,79 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>AL-Madenah RealEstate — Qatar's Most Exclusive Real Estate Portal</title>
-    <meta name="description" content="AL-Madenah RealEstate — buy and rent apartments, villas, penthouses and offices across The Pearl, Lusail, West Bay and Al Waab." />
-    <meta property="og:site_name" content="AL-Madenah RealEstate" />
-    <meta property="og:title" content="AL-Madenah RealEstate — Qatar's Most Exclusive Real Estate Portal" />
-    <!-- Icons. Files live in frontend/public/, which Vite copies to the site root at
-         build time, so every path below is absolute and needs no import.
-         Order is deliberate: .ico first for old browsers that only look for it, then the
-         SVG, which modern browsers prefer because it stays crisp at any size and in dark
-         mode. The 16/32 PNGs are the fallback for browsers with no SVG favicon support. -->
+
+    <!-- ================= SEO ================================================
+         Title and description are the STATIC fallbacks crawlers and link
+         scrapers read; the running app localizes them per language at runtime
+         (I18nContext owns document.title + the description meta).
+         %VITE_SITE_URL% is replaced by Vite AT BUILD TIME from the compose env
+         (PUBLIC_ORIGIN) — when the real domain arrives, changing that ONE env
+         value fixes every absolute URL below in the next build. -->
+    <title>AL-Madenah Real Estate — Qatar's Premier Property Portal | المدينة للعقارات</title>
+    <meta name="description" content="AL-Madenah Real Estate — buy and rent apartments, villas, penthouses, offices and shops across The Pearl, Lusail, West Bay and Doha. المدينة للعقارات — تملّك واستأجر الشقق والفلل والمكاتب في أرقى مناطق قطر." />
+    <meta name="keywords" content="real estate qatar, qatar properties, doha real estate, apartments for rent doha, villas for sale qatar, lusail properties, the pearl qatar, west bay offices, عقارات قطر, عقارات الدوحة, شقق للإيجار قطر, شقق للبيع الدوحة, فلل للبيع قطر, مكاتب للإيجار الدوحة, لوسيل, اللؤلؤة, الخليج الغربي, المدينة للعقارات" />
+    <meta name="author" content="AL-Madenah Real Estate W.L.L" />
+    <meta name="robots" content="index, follow" />
+    <link rel="canonical" href="%VITE_SITE_URL%/" />
+
+    <!-- ================= Link preview (WhatsApp / social / iMessage) ========
+         One branded card wherever the link is shared: company logo cover,
+         proper title, respectful description. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AL-Madenah Real Estate" />
+    <meta property="og:title" content="AL-Madenah Real Estate — Qatar's Premier Property Portal" />
+    <meta property="og:description" content="تملّك واستأجر الشقق والفلل والبنتهاوس والمكاتب في أرقى عناوين قطر — اللؤلؤة، لوسيل، الخليج الغربي. Buy & rent Qatar's finest properties." />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:image" content="%VITE_SITE_URL%/brand/og-cover.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AL-Madenah Real Estate — المدينة للعقارات" />
+    <meta property="og:locale" content="ar_QA" />
+    <meta property="og:locale:alternate" content="en_US" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="AL-Madenah Real Estate — Qatar's Premier Property Portal" />
+    <meta name="twitter:description" content="تملّك واستأجر أرقى عقارات قطر — Buy & rent Qatar's finest properties." />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/brand/og-cover.png" />
+
+    <!-- ================= Structured data (Google rich results) ==============
+         RealEstateAgent tells Google WHAT this site is; WebSite + SearchAction
+         lets it wire the sitelinks search box straight into our /buy?q= search. -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "RealEstateAgent",
+          "@id": "%VITE_SITE_URL%/#organization",
+          "name": "AL-Madenah Real Estate",
+          "alternateName": "المدينة للعقارات",
+          "url": "%VITE_SITE_URL%/",
+          "logo": "%VITE_SITE_URL%/brand/logo-full.png",
+          "image": "%VITE_SITE_URL%/brand/og-cover.png",
+          "description": "Buy and rent apartments, villas, penthouses, offices and shops across Qatar — The Pearl, Lusail, West Bay and Doha.",
+          "areaServed": { "@type": "Country", "name": "Qatar" },
+          "address": { "@type": "PostalAddress", "addressLocality": "Doha", "addressCountry": "QA" }
+        },
+        {
+          "@type": "WebSite",
+          "@id": "%VITE_SITE_URL%/#website",
+          "url": "%VITE_SITE_URL%/",
+          "name": "AL-Madenah Real Estate",
+          "publisher": { "@id": "%VITE_SITE_URL%/#organization" },
+          "potentialAction": {
+            "@type": "SearchAction",
+            "target": { "@type": "EntryPoint", "urlTemplate": "%VITE_SITE_URL%/buy?q={search_term_string}" },
+            "query-input": "required name=search_term_string"
+          }
+        }
+      ]
+    }
+    </script>
+
+    <!-- ================= Icons ==============================================
+         All generated from the company logo: the red roof mark on a brand-red
+         badge for tab-size favicons, the full logo for app/home-screen icons.
+         Files live in frontend/public/, copied to the site root at build time. -->
     <link rel="icon" href="/favicon.ico" sizes="32x32" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
@@ -22,7 +86,6 @@
          manifest's theme_color and the site's --color-ink. -->
     <meta name="theme-color" content="#2B2D42" />
     <meta name="apple-mobile-web-app-title" content="AL-Madenah" />
-    <meta property="og:image" content="/icon-512.png" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
