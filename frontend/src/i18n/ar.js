@@ -92,6 +92,7 @@ export default {
     heroTitle2: 'الأكثر تميّزًا',
     heroSubtitle: 'تملّك واستأجر الشقق والفلل والبنتهاوس والمكاتب في أرقى عناوين قطر.',
     searchPlaceholder: 'الموقع أو المنطقة أو كلمة مفتاحية…',
+    allAreas: 'كل المناطق',
     propertyType: 'نوع العقار',
     maxPrice: 'أقصى سعر',
     search: 'بحث',

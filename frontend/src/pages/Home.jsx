@@ -109,7 +109,13 @@ export default function Home() {
               ))}
             </div>
             <form onSubmit={search} className="p-4 grid md:grid-cols-[1fr_auto_auto_auto] gap-3">
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder={t('home.searchPlaceholder')} className="field" />
+              {/* Area DROPDOWN (was a free-text box): visitors pick from the areas that
+                  actually exist in the catalogue — no typos, no guessing. The selected
+                  name rides the same ?q= param the listings page already filters by. */}
+              <select value={q} onChange={e => setQ(e.target.value)} className="field">
+                <option value="">{t('home.allAreas')}</option>
+                {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+              </select>
               <select value={type} onChange={e => setType(e.target.value)} className="field md:w-44">
                 <option value="">{t('home.propertyType')}</option>
                 {propertyTypes.map(pt => <option key={pt.id} value={pt.name}>{typeLabel(pt.name)}</option>)}

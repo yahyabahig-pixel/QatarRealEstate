@@ -93,6 +93,7 @@ export default {
     heroTitle2: 'Real Estate Portal',
     heroSubtitle: "Buy and rent apartments, villas, penthouses and offices across Qatar's finest addresses.",
     searchPlaceholder: 'Location, area, or keyword…',
+    allAreas: 'All areas',
     propertyType: 'Property type',
     maxPrice: 'Max price',
     search: 'Search',

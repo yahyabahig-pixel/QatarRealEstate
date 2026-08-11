@@ -3,67 +3,6 @@ import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
 import { IconAward } from './icons'
 
-// ---------------------------------------------------------------------------------------
-// SEO footer columns.
-//
-// Every entry is a REAL search, not a label. `to` is built from the existing /rent and
-// /buy routes plus the query parameters Listings.jsx already reads from the URL
-// (see the `f` object there: q, type, beds, baths, minPrice, maxPrice, minSize, maxSize).
-//
-// WHY ONLY `q` AND NOT `type`
-//   The backend's search DTO (PropertyListItem in PropertySearchCriteria.cs) returns no
-//   PropertyType and no Area — by design, one SQL row per card. mapPropertyListItem
-//   therefore sets `type: ''` and `area: ''` on every live card, so a `?type=Villa` link
-//   matches nothing at all once the API is connected. `q` is matched against
-//   `title + area + district + city`, and the titles carry the district name, so an
-//   area-scoped `q` is the one filter that returns the right listings in BOTH mock mode
-//   and live mode. Adding `type` back here would need PropertyType on the list DTO,
-//   which is a backend change.
-//
-// I18N NOTE: the visible labels translate (footer.seo.*), but the `q` VALUES stay
-// English — they are matched against listing titles stored in English in the database.
-// ---------------------------------------------------------------------------------------
-const search = (purpose, q) => `/${purpose}?q=${encodeURIComponent(q)}`
-
-const SEO_COLUMNS = [
-  {
-    titleKey: 'footer.seo.rentPearl',
-    links: [
-      ['footer.seo.rentPearlApts', search('rent', 'The Pearl')],
-      ['footer.seo.rentPortoApts', search('rent', 'Porto Arabia')],
-      ['footer.seo.rentVivaStudios', search('rent', 'Viva Bahriya')],
-      ['footer.seo.rentPearlPenthouses', search('rent', 'Pearl')],
-    ],
-  },
-  {
-    titleKey: 'footer.seo.buyLusail',
-    links: [
-      ['footer.seo.buyMarinaApts', search('buy', 'Lusail Marina')],
-      ['footer.seo.buyFoxApts', search('buy', 'Fox Hills')],
-      ['footer.seo.buyQetaifanLand', search('buy', 'Qetaifan')],
-      ['footer.seo.buyFoxTownhouses', search('buy', 'Fox Hills')],
-    ],
-  },
-  {
-    titleKey: 'footer.seo.rentWestBay',
-    links: [
-      ['footer.seo.rentWestBayApts', search('rent', 'West Bay')],
-      ['footer.seo.rentWestBayOffices', search('rent', 'West Bay')],
-      ['footer.seo.rentWestBayFurnished', search('rent', 'West Bay')],
-      ['footer.seo.rentWestBayPenthouses', search('rent', 'West Bay')],
-    ],
-  },
-  {
-    titleKey: 'footer.seo.buyVillas',
-    links: [
-      ['footer.seo.buyAlWaabVillas', search('buy', 'Al Waab')],
-      ['footer.seo.buyLagoonVillas', search('buy', 'West Bay Lagoon')],
-      ['footer.seo.buySimaismaVillas', search('buy', 'Simaisma')],
-      ['footer.seo.buyRayyanVillas', search('buy', 'Al Rayyan')],
-    ],
-  },
-]
-
 // Navigation columns. Every target is a route registered in App.jsx — no placeholders.
 const NAV_COLUMNS = [
   {
@@ -114,20 +53,6 @@ export default function Footer() {
 
   return (
     <footer className="bg-ink text-neutral-300">
-      {/* SEO links — each one runs a real filtered search on /rent or /buy */}
-      <div className="max-w-7xl mx-auto px-4 py-12 grid grid-cols-2 md:grid-cols-4 gap-8 border-b border-white/8 text-sm">
-        {SEO_COLUMNS.map(col => (
-          <div key={col.titleKey}>
-            <h4 className="text-white font-medium mb-3">{t(col.titleKey)}</h4>
-            <ul className="space-y-2">
-              {col.links.map(([labelKey, to], i) => (
-                <li key={labelKey + i}><Link to={to} className="hover:text-primary text-neutral-400 transition-colors">{t(labelKey)}</Link></li>
-              ))}
-            </ul>
-          </div>
-        ))}
-      </div>
-
       {/* main footer */}
       <div className="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
         <div className="md:col-span-1">

@@ -21,7 +21,7 @@ const FAQ_KEYS = [1, 2, 3, 4, 5, 6, 7, 8]
 const QATAR_BOUNDS = { minLat: 24.4, maxLat: 26.25, minLng: 50.65, maxLng: 51.75 }
 
 export default function Listings({ purpose, offMarket = false }) {
-  const { properties, propertyTypes } = useData()
+  const { properties, propertyTypes, areas } = useData()
   const { t, typeLabel } = useI18n()
   const [params, setParams] = useSearchParams()
   const [filtersOpen, setFiltersOpen] = useState(false)
@@ -228,7 +228,12 @@ export default function Listings({ purpose, offMarket = false }) {
       {filtersOpen && (
         <div className="max-w-7xl mx-auto px-4 pt-4">
           <div className="card !rounded-2xl !bg-white p-5 grid md:grid-cols-4 gap-4 text-sm">
-            <input placeholder={t('listings.keywordOrArea')} className="field" value={f.q} onChange={e => setF('q', e.target.value)} />
+            {/* Area dropdown (was free text) — same real-areas list as the home search;
+                the picked name rides the same ?q= URL param the results already filter by. */}
+            <select className="field" value={f.q} onChange={e => setF('q', e.target.value)}>
+              <option value="">{t('home.allAreas')}</option>
+              {areas.map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
+            </select>
             <select className="field" value={f.beds} onChange={e => setF('beds', e.target.value)}>
               <option value="">{t('listings.bedroomsAny')}</option>{[1, 2, 3, 4, 5].map(n => <option key={n} value={n}>{n}+</option>)}
             </select>
