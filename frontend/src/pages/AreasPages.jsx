@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { usePropertySearch } from '../lib/usePropertySearch'
 import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, EmptyState } from '../components/ui'
@@ -29,12 +30,28 @@ export function AreasIndex() {
 
 export function AreaDetail() {
   const { slug } = useParams()
-  const { areas, properties } = useData()
+  const { areas, properties, loading: storeLoading } = useData()
   const { t } = useI18n()
   const a = areas.find(x => x.slug === slug)
-  if (!a) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('areas.notFound')}</h1></div>
 
-  const all = properties.filter(p => p.area === a.name && p.status === 'available')
+  // The listings come from the SERVER, filtered by this area's id. They used to be filtered
+  // in the browser by `p.area === a.name` against a list whose rows all carried area: '' —
+  // so this page showed "0 TOTAL PROPERTIES" while the header above it said six.
+  const { items: all } = usePropertySearch(
+    { areaId: a?.id },
+    {
+      enabled: !!a?.id,
+      mockFallback: properties.filter(p => p.area === a?.name && p.status === 'available'),
+    })
+
+  // Distinguish "still loading" from "genuinely none": the page used to render its
+  // not-found state during the first paint, before the areas had arrived.
+  if (!a) {
+    return storeLoading
+      ? <div className="pt-32 text-center pb-20 text-neutral-500">{t('common.loading')}</div>
+      : <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('areas.notFound')}</h1></div>
+  }
+
   const forRent = all.filter(p => p.purpose === 'rent')
   const forSale = all.filter(p => p.purpose === 'buy')
 

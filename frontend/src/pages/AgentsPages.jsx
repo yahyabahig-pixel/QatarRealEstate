@@ -1,5 +1,7 @@
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { usePropertySearch } from '../lib/usePropertySearch'
+import { telHref, whatsAppHref, mailHref } from '../lib/contact'
 import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, Star, WhatsAppIcon } from '../components/ui'
@@ -37,12 +39,25 @@ export function AgentsIndex() {
 
 export function AgentProfile() {
   const { slug } = useParams()
-  const { agents, properties } = useData()
+  const { agents, properties, loading: storeLoading } = useData()
   const { t } = useI18n()
   const a = agents.find(x => x.slug === slug)
-  if (!a) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('agents.notFound')}</h1></div>
 
-  const listings = properties.filter(p => p.agentId === a.id && p.status === 'available')
+  // Server-side, by agent id. The old client-side filter compared against `p.agentId`, which
+  // the search DTO did not carry — every card claimed to have no agent, so every consultant's
+  // profile read "no live listings".
+  const { items: listings } = usePropertySearch(
+    { agentId: a?.id },
+    {
+      enabled: !!a?.id,
+      mockFallback: properties.filter(p => p.agentId === a?.id && p.status === 'available'),
+    })
+
+  if (!a) {
+    return storeLoading
+      ? <div className="pt-32 text-center pb-20 text-neutral-500">{t('common.loading')}</div>
+      : <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('agents.notFound')}</h1></div>
+  }
 
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
@@ -53,10 +68,20 @@ export function AgentProfile() {
           <p className="text-neutral-500 mb-2">{a.title}</p>
           {a.rating > 0 && <div className="text-primary flex items-center gap-1 mb-4"><Star /> {a.rating.toFixed(1)} /5 · {t('property.verifiedReviews')}</div>}
           <p className="text-neutral-700 leading-relaxed max-w-xl mb-6">{a.bio}</p>
+          {/* One button per channel the consultant ACTUALLY has. These three used to
+              interpolate the raw field into the href, so an agent saved without a WhatsApp
+              number still got a live green button pointing at "wa.me/null" — and the dial
+              link passed the number through unchanged, spaces and all. */}
           <div className="flex flex-wrap gap-3">
-            <a href={`tel:${a.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
-            <a href={`https://wa.me/${a.whatsapp}`} target="_blank" rel="noreferrer" className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
-            <a href={`mailto:${a.email}`} className="btn-outline"><IconMail className="w-4 h-4" /> {t('common.email')}</a>
+            {telHref(a.phone) && (
+              <a href={telHref(a.phone)} className="btn-dark"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
+            )}
+            {whatsAppHref(a.whatsapp || a.phone) && (
+              <a href={whatsAppHref(a.whatsapp || a.phone)} target="_blank" rel="noreferrer" className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
+            )}
+            {mailHref(a.email) && (
+              <a href={mailHref(a.email)} className="btn-outline"><IconMail className="w-4 h-4" /> {t('common.email')}</a>
+            )}
           </div>
         </div>
       </div>

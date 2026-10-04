@@ -38,6 +38,12 @@ public sealed class UpdatePropertyHandler : ICommandHandler<UpdatePropertyComman
         var canModify = _ownership.CanModify(property);
         if (canModify.IsError) return canModify.TopError;
 
+        // Create checks this and Update did not, so editing a listing onto a property type
+        // that no longer exists reached the database as a broken foreign key and came back as
+        // a 500. The same check, and the same 404, as on the way in.
+        if (!await _properties.PropertyTypeExistsAsync(request.PropertyTypeId, cancellationToken))
+            return Error.NotFound("PropertyType.NotFound", "The specified property type does not exist.");
+
         var location = Location.Create(
             request.Location.Country, request.Location.City, request.Location.Street,
             request.Location.PostalCode, request.Location.State,

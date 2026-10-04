@@ -1,6 +1,8 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
+import { mailHref } from '../lib/contact'
 import { EmptyState } from '../components/ui'
 
 const TEAM = 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1800&q=80'
@@ -47,7 +49,12 @@ export default function Careers() {
                   <h3 className="h-serif text-xl mb-1">{j.title}</h3>
                   <p className="text-xs text-neutral-400 mb-2">{j.location}</p>
                   <p className="text-sm text-neutral-600 mb-4 line-clamp-2">{j.description}</p>
-                  <a href={`mailto:${settings.email}?subject=${encodeURIComponent(t('careers.applySubject', { title: j.title }))}`} className="btn-primary">{t('careers.apply')}</a>
+                  {/* No configured inbox means the mailto would open an empty draft to
+                      nowhere, so the applicant is sent to the contact form instead — that
+                      one reaches the business. */}
+                  {mailHref(settings.email)
+                    ? <a href={`${mailHref(settings.email)}?subject=${encodeURIComponent(t('careers.applySubject', { title: j.title }))}`} className="btn-primary">{t('careers.apply')}</a>
+                    : <Link to="/contact-us" className="btn-primary">{t('careers.apply')}</Link>}
                 </div>
               ))}
             </div>
@@ -56,7 +63,9 @@ export default function Careers() {
         <div className="text-center mt-16 bg-ink text-white py-14 px-4 rounded-2xl">
           <h2 className="h-serif text-3xl mb-3">{t('careers.noRoleTitle')}</h2>
           <p className="text-neutral-400 mb-6">{t('careers.noRoleBody')}</p>
-          <a href={`mailto:${settings.email}?subject=${encodeURIComponent(t('careers.openApplication'))}`} className="btn-primary">{t('careers.sendCv')}</a>
+          {mailHref(settings.email)
+            ? <a href={`${mailHref(settings.email)}?subject=${encodeURIComponent(t('careers.openApplication'))}`} className="btn-primary">{t('careers.sendCv')}</a>
+            : <Link to="/contact-us" className="btn-primary">{t('careers.sendCv')}</Link>}
         </div>
       </div>
     </div>

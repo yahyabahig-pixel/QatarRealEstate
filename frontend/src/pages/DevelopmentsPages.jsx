@@ -8,7 +8,7 @@ import PropertyLocation from '../components/PropertyLocation'
 import { fallbackQatarCoord } from '../lib/geo'
 
 export function DevelopmentsIndex() {
-  const { developments } = useData()
+  const { developments, loading } = useData()
   const { t } = useI18n()
   const [params, setParams] = useSearchParams()
   const areasList = [...new Set(developments.map(d => d.area))]
@@ -32,6 +32,9 @@ export function DevelopmentsIndex() {
   }
 
   const items = areaFilter ? developments.filter(d => d.area === areaFilter) : developments
+  // Same distinction as the detail page: an empty array during the first fetch is not
+  // "there are no projects".
+  const stillLoading = loading && developments.length === 0
 
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
@@ -44,7 +47,9 @@ export function DevelopmentsIndex() {
             className={`chip ${areaFilter === a ? 'chip-active' : ''}`}>{a}</button>
         ))}
       </div>
-      {items.length === 0 ? <EmptyState message={t('developments.empty')} /> : (
+      {stillLoading
+        ? <div className="text-center py-16 text-neutral-500">{t('common.loading')}</div>
+        : items.length === 0 ? <EmptyState message={t('developments.empty')} /> : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {items.map(d => (
             <Link key={d.id} to={`/development/${d.slug}`} className="group relative h-96 overflow-hidden rounded-xl lift">
@@ -69,10 +74,17 @@ export function DevelopmentsIndex() {
 
 export function DevelopmentDetail() {
   const { slug } = useParams()
-  const { developments, properties } = useData()
+  const { developments, properties, loading } = useData()
   const { t } = useI18n()
   const d = developments.find(x => x.slug === slug)
-  if (!d) return <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('developments.notFound')}</h1></div>
+  // "Not found" and "not loaded yet" are different answers. The store fetches its slices
+  // after the first paint, so this page used to flash "Project not found" on every visit —
+  // and a visitor who arrived on a slow connection saw nothing else.
+  if (!d) {
+    return loading
+      ? <div className="pt-32 text-center pb-20 text-neutral-500">{t('common.loading')}</div>
+      : <div className="pt-32 text-center pb-20"><h1 className="h-serif text-3xl">{t('developments.notFound')}</h1></div>
+  }
 
   // d.area is now a Location-derived label ("The Pearl, Doha"); property areas are
   // catalog names ("The Pearl"), so match by containment rather than strict equality.

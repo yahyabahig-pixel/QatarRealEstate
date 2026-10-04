@@ -9,10 +9,10 @@ namespace RealEstate.Application.Leads.User.Command.CreateInquiryLead;
 public sealed class CreateInquiryLeadHandler : ICommandHandler<CreateInquiryLeadCommand, Guid>
 {
     private readonly ILeadRepository _leads;
-    private readonly IPropertyRepository _properties;
+    private readonly IPropertyQueries _properties;
     private readonly IUnitOfWork _unitOfWork;
 
-    public CreateInquiryLeadHandler(ILeadRepository leads, IPropertyRepository properties, IUnitOfWork unitOfWork)
+    public CreateInquiryLeadHandler(ILeadRepository leads, IPropertyQueries properties, IUnitOfWork unitOfWork)
     {
         _leads = leads;
         _properties = properties;
@@ -21,10 +21,12 @@ public sealed class CreateInquiryLeadHandler : ICommandHandler<CreateInquiryLead
 
     public async Task<Result<Guid>> Handle(CreateInquiryLeadCommand request, CancellationToken cancellationToken)
     {
-        // A PropertyInquiry must point at a listing that actually exists — the one domain
-        // rule the aggregate cannot check by itself.
+        // A PropertyInquiry must point at a listing the VISITOR can actually see — the one
+        // domain rule the aggregate cannot check by itself. "Exists" was the old test, and it
+        // let an anonymous request attach an enquiry to a draft or an archived listing, which
+        // is a way to confirm that a given id is real.
         if (request.PropertyId.HasValue &&
-            await _properties.GetByIdAsync(request.PropertyId.Value, cancellationToken) is null)
+            !await _properties.IsPubliclyVisibleAsync(request.PropertyId.Value, cancellationToken))
             return LeadErrors.PropertyNotFound;
 
         var lead = Lead.CreateInquiry(

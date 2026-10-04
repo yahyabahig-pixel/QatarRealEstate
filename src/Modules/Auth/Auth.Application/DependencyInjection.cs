@@ -1,4 +1,3 @@
-using Auth.Application.Behaviors;
 using FluentValidation;
 using MediatR;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +12,9 @@ public static class DependencyInjection
 
         services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(assembly));
         services.AddValidatorsFromAssembly(assembly, includeInternalTypes: true);
-        services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+
+        // NOTE: ValidationBehavior is NOT registered here — see the same note in the RealEstate
+        // module. One open-generic registration in the Host covers every request in both.
 
         return services;
     }

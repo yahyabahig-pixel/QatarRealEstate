@@ -3,6 +3,7 @@ using BuildingBlocks.Domain.Common.Results.Errors;
 using RealEstate.Application.Abstractions.Messaging;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.policies;
+using RealEstate.Domain.Entities;
 
 namespace RealEstate.Application.Properties.Admin.ChangePropertyPublicationStatus;
 
@@ -30,6 +31,9 @@ public sealed class ChangePropertyPublicationStatusHandler
         var canModify = _ownership.CanModify(property);
         if (canModify.IsError) return canModify.TopError;
 
+        // Read BEFORE the transition, or the trail records the new status as the old one.
+        var oldStatus = property.Status;
+
         var transition = request.Action switch
         {
             PublicationAction.Publish => property.Publish(),
@@ -41,7 +45,12 @@ public sealed class ChangePropertyPublicationStatusHandler
 
         if (transition.IsError) return transition.TopError;
 
-        // A status-history/audit trail can be recorded here if needed.
+        // The audit trail. This is what the dashboard's "published / sold / rented / archived
+        // per month" figures are computed from, and what GET {id}/history returns — both read
+        // zero and empty while nothing wrote here. It is queued on the same unit of work as the
+        // status change, so the two commit together or not at all.
+        _properties.RecordStatusChange(
+            PropertyStatusHistory.Record(property.Id, oldStatus, property.Status, request.Reason));
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Updated;

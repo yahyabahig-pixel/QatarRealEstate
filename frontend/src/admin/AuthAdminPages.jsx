@@ -21,6 +21,7 @@ export function AdminsAdmin() {
   const [positions, setPositions] = useState([])
   const [creating, setCreating] = useState(false)
   const [form, setForm] = useState({ email: '', password: '', fullName: '', positionId: '' })
+  const [saving, setSaving] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
 
   const reload = () => Promise.all([adminsApi.list(), positionsApi.list()])
@@ -28,7 +29,15 @@ export function AdminsAdmin() {
     .catch(e => toast(errText(e), 'error'))
   useEffect(() => { reload() }, [])
 
-  const run = (fn, ok) => fn().then(() => { toast(ok); reload() }).catch(e => toast(errText(e), 'error'))
+  // Returns whether the call SUCCEEDED. It used to return nothing, and every caller that
+  // opened a modal closed it on the next line — synchronously, before the server had
+  // answered. A rejected password or a duplicate position name showed "Validation failed"
+  // over an already-closed, already-cleared form, so everything typed was lost and had to
+  // be typed again blind. Callers now await this and keep the form open on false.
+  const run = async (fn, ok) => {
+    try { await fn(); toast(ok); await reload(); return true }
+    catch (e) { toast(errText(e), 'error'); return false }
+  }
 
   if (!rows) return <p className="text-neutral-500">{t('admin.auth.loading')}</p>
 
@@ -74,9 +83,15 @@ export function AdminsAdmin() {
       {creating && (
         <Modal title={t('admin.auth.createAdminTitle')} onClose={() => setCreating(false)}>
           {/* No role field, no Main-Admin field — a created admin is ALWAYS a regular admin. */}
-          <form className="space-y-4" onSubmit={e => {
+          <form className="space-y-4" onSubmit={async e => {
             e.preventDefault()
-            run(() => adminsApi.create({ ...form, positionId: form.positionId || null }), t('admin.auth.createdOk'))
+            if (saving) return
+            setSaving(true)
+            const ok = await run(() => adminsApi.create({ ...form, positionId: form.positionId || null }), t('admin.auth.createdOk'))
+            setSaving(false)
+            // Failed? Leave the modal open with everything still in it, so the admin can
+            // fix the one field the backend complained about.
+            if (!ok) return
             setCreating(false); setForm({ email: '', password: '', fullName: '', positionId: '' })
           }}>
             <Field label={t('admin.auth.fFullName')}><input required className="field-dark" value={form.fullName} onChange={e => setForm({ ...form, fullName: e.target.value })} /></Field>
@@ -88,7 +103,7 @@ export function AdminsAdmin() {
                 {positions.filter(p => p.isActive).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
-            <button className="btn-primary w-full">{t('admin.auth.createAdminBtn')}</button>
+            <button className="btn-primary w-full" disabled={saving}>{saving ? t('common.loading') : t('admin.auth.createAdminBtn')}</button>
           </form>
         </Modal>
       )}
@@ -113,7 +128,15 @@ export function AdminDetail() {
   useEffect(() => { reload() }, [id])
 
   if (!admin) return <p className="text-neutral-500">{t('admin.auth.loading')}</p>
-  const run = (fn, ok) => fn().then(() => { toast(ok); reload() }).catch(e => toast(errText(e), 'error'))
+  // Returns whether the call SUCCEEDED. It used to return nothing, and every caller that
+  // opened a modal closed it on the next line — synchronously, before the server had
+  // answered. A rejected password or a duplicate position name showed "Validation failed"
+  // over an already-closed, already-cleared form, so everything typed was lost and had to
+  // be typed again blind. Callers now await this and keep the form open on false.
+  const run = async (fn, ok) => {
+    try { await fn(); toast(ok); await reload(); return true }
+    catch (e) { toast(errText(e), 'error'); return false }
+  }
 
   return (
     <div className="max-w-2xl">
@@ -168,11 +191,20 @@ export function PositionsAdmin() {
   const [rows, setRows] = useState(null)
   const [editing, setEditing] = useState(null)
   const [form, setForm] = useState({ name: '', description: '' })
+  const [saving, setSaving] = useState(false)
   const [confirm, confirmDialog] = useConfirm()
 
   const reload = () => positionsApi.list().then(setRows).catch(e => toast(errText(e), 'error'))
   useEffect(() => { reload() }, [])
-  const run = (fn, ok) => fn().then(() => { toast(ok); reload() }).catch(e => toast(errText(e), 'error'))
+  // Returns whether the call SUCCEEDED. It used to return nothing, and every caller that
+  // opened a modal closed it on the next line — synchronously, before the server had
+  // answered. A rejected password or a duplicate position name showed "Validation failed"
+  // over an already-closed, already-cleared form, so everything typed was lost and had to
+  // be typed again blind. Callers now await this and keep the form open on false.
+  const run = async (fn, ok) => {
+    try { await fn(); toast(ok); await reload(); return true }
+    catch (e) { toast(errText(e), 'error'); return false }
+  }
 
   if (!rows) return <p className="text-neutral-500">{t('admin.auth.loading')}</p>
 
@@ -205,15 +237,19 @@ export function PositionsAdmin() {
 
       {editing !== null && (
         <Modal title={editing.id ? t('admin.auth.editPositionTitle') : t('admin.auth.createPositionTitle')} onClose={() => setEditing(null)}>
-          <form className="space-y-4" onSubmit={e => {
+          <form className="space-y-4" onSubmit={async e => {
             e.preventDefault()
-            run(() => editing.id ? positionsApi.update(editing.id, form) : positionsApi.create(form),
+            if (saving) return
+            setSaving(true)
+            const ok = await run(() => editing.id ? positionsApi.update(editing.id, form) : positionsApi.create(form),
               editing.id ? t('admin.auth.positionUpdated') : t('admin.auth.positionCreated'))
+            setSaving(false)
+            if (!ok) return   // duplicate name, empty description… keep what was typed
             setEditing(null)
           }}>
             <Field label={t('admin.auth.fName')}><input required className="field-dark" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} /></Field>
             <Field label={t('admin.auth.fDescription')}><textarea rows="3" className="field-dark" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} /></Field>
-            <button className="btn-primary w-full">{t('admin.auth.saveBtn')}</button>
+            <button className="btn-primary w-full" disabled={saving}>{saving ? t('common.loading') : t('admin.auth.saveBtn')}</button>
           </form>
         </Modal>
       )}
@@ -234,7 +270,15 @@ export function PositionDetail() {
     .then(([p, c]) => { setPosition(p); setCatalog(c) })
     .catch(e => toast(errText(e), 'error'))
   useEffect(() => { reload() }, [id])
-  const run = (fn, ok) => fn().then(() => { toast(ok); reload() }).catch(e => toast(errText(e), 'error'))
+  // Returns whether the call SUCCEEDED. It used to return nothing, and every caller that
+  // opened a modal closed it on the next line — synchronously, before the server had
+  // answered. A rejected password or a duplicate position name showed "Validation failed"
+  // over an already-closed, already-cleared form, so everything typed was lost and had to
+  // be typed again blind. Callers now await this and keep the form open on false.
+  const run = async (fn, ok) => {
+    try { await fn(); toast(ok); await reload(); return true }
+    catch (e) { toast(errText(e), 'error'); return false }
+  }
 
   if (!position) return <p className="text-neutral-500">{t('admin.auth.loading')}</p>
   const canAssign = hasPermission('Permission.Assign')

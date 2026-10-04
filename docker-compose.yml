@@ -62,7 +62,18 @@ services:
       # .NET turns a double underscore into a config-section separator, so this environment
       # variable overrides ConnectionStrings:RealEstateDb from appsettings.json. "sqlserver"
       # is the service name above - Docker's DNS resolves it to that container.
-      ConnectionStrings__RealEstateDb: "Server=sqlserver,1433;Database=QatarRealEstate;User Id=sa;Password=${SA_PASSWORD};TrustServerCertificate=True;"
+      # The application connects as DB_USER, NOT as sa.
+      #
+      # sa is the SQL Server superuser: it can read and drop every database on the instance,
+      # change server configuration, add logins, and enable features that run operating-system
+      # commands. The application needs full rights on its own database and nothing else, so a
+      # leaked connection string should cost one database, not the instance.
+      #
+      # ./scripts/create-db-user.sh creates that login and prints the two lines to add to
+      # .env. Until it has been run, DB_USER/DB_PASSWORD are unset and this falls back to sa
+      # so an existing deployment keeps working — the fallback is a migration path, not the
+      # intended state.
+      ConnectionStrings__RealEstateDb: "Server=sqlserver,1433;Database=QatarRealEstate;User Id=${DB_USER:-sa};Password=${DB_PASSWORD:-${SA_PASSWORD}};TrustServerCertificate=True;"
 
       Jwt__Secret: ${JWT_SECRET}
 
@@ -75,8 +86,29 @@ services:
       Cors__AllowedOrigins__0: ${PUBLIC_ORIGIN}
 
       Startup__ApplyMigrations: "true"
-      Startup__SeedData: ${SEED_DATA}
       Startup__UseHttpsRedirection: "false"
+
+      # ---- Seeding -------------------------------------------------------------------
+      # These two are the BOOTSTRAP: the roles, the Main Admin, the default positions and
+      # the reference catalogs (property types, feature list). They are safe to leave on
+      # forever — each batch is recorded in a SeedHistory table and runs exactly once, so a
+      # restart never re-inserts anything, and anything you delete stays deleted.
+      Startup__SeedIdentity: "true"
+      Startup__SeedReferenceData: "true"
+      #
+      # DEMO CONTENT IS NOT HERE, ON PURPOSE. The old single SEED_DATA flag did both jobs:
+      # it created the Main Admin (mandatory for a first deploy) AND inserted 49 invented
+      # listings with invented consultants and invented phone numbers. You had to turn it
+      # on — and leaving it on is what put the demo listings back every time the container
+      # restarted, which is the bug behind "I deleted the demo data and it came back".
+      #
+      # Demo content is now an explicit command, and it refuses to run in Production:
+      #     docker compose run --rm backend seed --demo
+      #
+      # SEED_DATA in .env is no longer passed to the app at all. The application still
+      # understands it (Startup:SeedData) so an older deployment keeps working, but it now
+      # means only "bootstrap this deployment" and logs a deprecation warning. You can delete
+      # the line from .env.
 
       # Where Identity's key ring is written. Without this the keys land in the container's
       # writable layer and are destroyed on every rebuild, which invalidates every
@@ -152,9 +184,13 @@ services:
   #     - "443:443/udp"  # HTTP/3 (QUIC). Harmless if your firewall drops UDP.
   #
   #   environment:
-  #     # Both come from .env. See docker/caddy/Caddyfile for what they accept.
+  #     # All three come from .env. See docker/caddy/Caddyfile for what they accept.
   #     SITE_ADDRESS: ${SITE_ADDRESS:-:443}
   #     CADDY_TLS: ${CADDY_TLS:-internal}
+  #     # max-age=0 = no HSTS in force, and it also CLEARS a policy a browser cached
+  #     # earlier. The right default until a REAL certificate is being served; read the
+  #     # warning in the Caddyfile before raising it.
+  #     CADDY_HSTS: ${CADDY_HSTS:-max-age=0}
   #
   #   volumes:
   #     - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
@@ -184,3 +220,19 @@ volumes:
   caddy_data:
   caddy_config:
   dpkeys:
+
+# -----------------------------------------------------------------------------------------
+# BACKUPS
+#
+# mssql-data above is the ONLY copy of every listing, every photo (photos are varbinary
+# columns, not files) and every lead. A Docker volume is not a backup: it does not survive
+# `docker compose down -v`, a mistyped `docker volume rm`, or the disk it sits on.
+#
+#     ./scripts/backup-db.sh          → ./backups/QatarRealEstate-<date>.bak
+#     ./scripts/restore-db.sh <file>  → restores into a scratch database, live untouched
+#
+# Put the backup on a cron job and copy ./backups off this machine:
+#     30 2 * * *  cd /opt/qre && ./scripts/backup-db.sh >> /var/log/qre-backup.log 2>&1
+#
+# Then run the restore rehearsal at least once. An untested backup is a guess.
+# -----------------------------------------------------------------------------------------

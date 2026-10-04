@@ -36,6 +36,13 @@ public sealed class Property : AuditableEntity
 
     public PropertyStatus Status { get; private set; } = PropertyStatus.Draft;
 
+    // Where Archive() was called from, so Publish() can refuse to bring a CLOSED deal back
+    // (Sold -> Archive -> Publish). Mapped as a nullable column; null means "archived from
+    // Draft or Published", or a row written before this column existed, and both are
+    // publishable. See Publish().
+    private PropertyStatus? _statusBeforeArchive;
+    public PropertyStatus? StatusBeforeArchive => _statusBeforeArchive;
+
     public bool IsAvailable => Status == PropertyStatus.Published;
     public PropertySpecs PropertySpecs { get; private set; } = null!;
     public Money? Offer { get; private set; }
@@ -91,11 +98,23 @@ public sealed class Property : AuditableEntity
         PropertyTypeId = typeId;
         SetLocation(location);
         ListingKind = kind;
-        SaleTerms = sale;
-        RentTerms = rent;
         Status = PropertyStatus.Draft;
         PropertySpecs = specs ?? new PropertySpecs();
+
+        // Update() already dropped the terms of the other kind; the constructor did not, so a
+        // command that sent both blocks created a listing carrying a sale price AND a rent
+        // price. Only one of them is ever the truth, and the queries pick whichever they find
+        // first — so the card could show a price no one had set for this listing's kind.
+        SaleTerms = kind == ListingKind.Sale ? sale : null;
+        RentTerms = kind == ListingKind.Rent ? rent : null;
+
+        // Same test Update() and UpdateListingKind() apply. An offer has to beat the price it
+        // discounts, and the price it discounts is the one for THIS kind — so an offer handed
+        // in alongside terms of the wrong kind is not an offer at all. Assigned after the
+        // terms above, because OfferStillValid() reads them.
         Offer = offer;
+        if (Offer is not null && !OfferStillValid())
+            Offer = null;
     }
 
     // ---- creation & editing -------------------------------------------------
@@ -123,8 +142,26 @@ public sealed class Property : AuditableEntity
         SaleTerms = kind == ListingKind.Sale ? sale : null;
         RentTerms = kind == ListingKind.Rent ? rent : null;
 
+        // An accepted offer belongs to the terms it was accepted against. Lower the asking
+        // price below it, or turn the listing from a sale into a rental, and the stored offer
+        // becomes a figure the domain would refuse to accept today — SetOffer enforces
+        // "offer <= asking price" on the way in, and nothing re-checked it afterwards. The
+        // card then showed an offer HIGHER than the price, and search ranked the listing by it.
+        if (Offer is not null && !OfferStillValid())
+            Offer = null;
+
         return Result.Updated;
     }
+
+    /// <summary>
+    /// Whether the stored offer is still consistent with the current terms. Same rule as
+    /// SetOffer, in one place so the two cannot drift.
+    /// </summary>
+    private bool OfferStillValid() =>
+        Offer is not null
+        && SaleTerms is not null
+        && string.Equals(Offer.Currency, SaleTerms.Price.Currency, StringComparison.OrdinalIgnoreCase)
+        && Offer.Amount <= SaleTerms.Price.Amount;
 
     /// <summary>Files this listing under a catalog Area (or clears it with null). Existence
     /// of the area is the application layer's job — the aggregate cannot see other tables.</summary>
@@ -246,6 +283,39 @@ public sealed class Property : AuditableEntity
         return Result.Updated;
     }
 
+    /// <summary>
+    /// Puts the gallery in the given order and makes the first item the cover.
+    ///
+    /// The ids must be exactly the ones this property already has — no more, no fewer. A
+    /// partial list would silently leave the rest of the gallery in an order nobody chose,
+    /// and an id from another listing is a caller mistake worth reporting, not absorbing.
+    /// </summary>
+    public Result<Updated> ReorderMedia(IReadOnlyList<Guid> orderedMediaIds)
+    {
+        if (orderedMediaIds is null || orderedMediaIds.Count == 0)
+            return PropertyErrors.MediaRequired;
+
+        if (orderedMediaIds.Distinct().Count() != orderedMediaIds.Count)
+            return PropertyErrors.MediaOrderInvalid;
+
+        if (orderedMediaIds.Count != _media.Count)
+            return PropertyErrors.MediaOrderInvalid;
+
+        var byId = _media.ToDictionary(m => m.Id);
+        if (orderedMediaIds.Any(id => !byId.ContainsKey(id)))
+            return PropertyErrors.MediaNotFound;
+
+        for (var i = 0; i < orderedMediaIds.Count; i++)
+        {
+            var media = byId[orderedMediaIds[i]];
+            // Position AND cover in one pass: "first in the gallery" and "the primary image"
+            // are the same idea, and keeping them as two facts is how they drift apart.
+            media.SetPosition(i, isPrimary: i == 0);
+        }
+
+        return Result.Updated;
+    }
+
     // ---- features (encapsulated exactly like media) -------------------------
 
     // Identity for a feature link is the CATALOG FeatureId, never object identity.
@@ -356,10 +426,19 @@ public sealed class Property : AuditableEntity
         // decision, not a status flip. ARCHIVED is different — the admin console offers
         // "Restore (Publish)" on archived listings, so the domain must allow it; without
         // this an archived listing was permanently stuck (no transition out at all).
+        //
+        // But archiving must not LAUNDER a closed deal. Sold -> Archive -> Publish was two
+        // legal steps that together did what the rule above forbids, and put a sold property
+        // back on the market. _statusBeforeArchive remembers where it came from.
         if (Status == PropertyStatus.Sold || Status == PropertyStatus.Rented)
             return PropertyErrors.NotPublishable;
 
+        if (Status == PropertyStatus.Archived &&
+            _statusBeforeArchive is PropertyStatus.Sold or PropertyStatus.Rented)
+            return PropertyErrors.ClosedDealNotPublishable;
+
         Status = PropertyStatus.Published;
+        _statusBeforeArchive = null;
         return Result.Updated;
     }
 
@@ -369,6 +448,11 @@ public sealed class Property : AuditableEntity
             return PropertyErrors.NotPublished;
 
         Status = PropertyStatus.Draft;
+
+        // Only a published listing may be featured (see Feature()), so unpublishing has to
+        // drop the flag as well — otherwise the invariant holds on the way in and not on the
+        // way out, and a draft sits in the database marked as an "Exclusive".
+        IsFeatured = false;
         return Result.Updated;
     }
 
@@ -377,7 +461,13 @@ public sealed class Property : AuditableEntity
         if (Status == PropertyStatus.Archived)
             return PropertyErrors.AlreadyArchived;
 
+        _statusBeforeArchive = Status;
         Status = PropertyStatus.Archived;
+
+        // An archived listing is off the site, so it cannot also be one of the site's
+        // highlights. Leaving IsFeatured set meant an unpublished listing kept its star in the
+        // admin grid and came back promoted the moment it was restored.
+        IsFeatured = false;
         return Result.Updated;
     }
 
@@ -386,7 +476,14 @@ public sealed class Property : AuditableEntity
         if (Status != PropertyStatus.Published)
             return PropertyErrors.NotPublished;
 
+        // A rental is not sold and a sale is not rented. The two outcomes were interchangeable
+        // before, so a rental could be closed as "Sold" — which is then what the dashboard
+        // counts and what the card says.
+        if (ListingKind != ListingKind.Sale)
+            return PropertyErrors.OutcomeDoesNotMatchListingKind;
+
         Status = PropertyStatus.Sold;
+        IsFeatured = false;
         return Result.Updated;
     }
 
@@ -395,7 +492,11 @@ public sealed class Property : AuditableEntity
         if (Status != PropertyStatus.Published)
             return PropertyErrors.NotPublished;
 
+        if (ListingKind != ListingKind.Rent)
+            return PropertyErrors.OutcomeDoesNotMatchListingKind;
+
         Status = PropertyStatus.Rented;
+        IsFeatured = false;
         return Result.Updated;
     }
 
@@ -419,6 +520,9 @@ public sealed class Property : AuditableEntity
         ListingKind = kind;
         SaleTerms = kind == ListingKind.Sale ? sale : null;   // clear stale terms of the other kind
         RentTerms = kind == ListingKind.Rent ? rent : null;
+
+        if (Offer is not null && !OfferStillValid())
+            Offer = null;
 
         return Result.Updated;
     }
@@ -533,21 +637,16 @@ public sealed class Property : AuditableEntity
 
         // Location.Create already refuses unparseable coordinates, but the private EF
         // constructor bypasses the factory and rows written before this column existed can
-        // carry anything. So parse defensively, and invariant-culture: "25.37" must not
-        // become 2537 on a machine whose locale uses a comma for the decimal separator.
-        var hasLng = double.TryParse(location.XCoordinate, NumberStyles.Float,
-                                     CultureInfo.InvariantCulture, out var lng);
-        var hasLat = double.TryParse(location.YCoordinate, NumberStyles.Float,
-                                     CultureInfo.InvariantCulture, out var lat);
+        // carry anything. So parse defensively — through the SAME helper the factory
+        // validates with, which is what stops the two from ever disagreeing again.
+        var hasLng = Location.TryParseCoordinate(location.XCoordinate, -180, 180, out var lng);
+        var hasLat = Location.TryParseCoordinate(location.YCoordinate, -90, 90, out var lat);
 
         // Half a position is not a position, and 0,0 is the placeholder the admin form used
         // to send rather than a real address in the Gulf of Guinea. Both cases resolve to
         // "unknown", which is what makes the frontend hide the map instead of pointing at
         // the wrong continent.
-        var usable = hasLat && hasLng
-                     && lat is >= -90 and <= 90
-                     && lng is >= -180 and <= 180
-                     && !(lat == 0d && lng == 0d);
+        var usable = hasLat && hasLng && !(lat == 0d && lng == 0d);
 
         Latitude  = usable ? lat : null;
         Longitude = usable ? lng : null;

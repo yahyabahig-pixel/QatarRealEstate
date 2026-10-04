@@ -23,4 +23,8 @@
     <Project Path="src/Modules/Auth/Auth.Domain/Auth.Domain.csproj" />
     <Project Path="src/Modules/Auth/Auth.Infrastructure/Auth.Infrastructure.csproj" />
   </Folder>
+
+  <Folder Name="/tests/">
+    <Project Path="tests/RealEstate.Domain.Tests/RealEstate.Domain.Tests.csproj" />
+  </Folder>
 </Solution>

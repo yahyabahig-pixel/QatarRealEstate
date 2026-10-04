@@ -23,6 +23,16 @@ public sealed class PropertyConfiguration : IEntityTypeConfiguration<Property>
         builder.Property(p => p.ListingKind).HasConversion<int>();
         builder.Property(p => p.Status).HasConversion<int>();
 
+        // Where Archive() was called from, so Publish() can refuse to resurrect a SOLD or
+        // RENTED listing through the archive. Read-only on the aggregate and written only by
+        // Archive()/Publish(), so EF goes through the backing field. NULL for every row that
+        // predates the column, which reads as "archived from Draft or Published" — publishable,
+        // i.e. the behaviour those rows already had.
+        builder.Property(p => p.StatusBeforeArchive)
+               .HasField("_statusBeforeArchive")
+               .UsePropertyAccessMode(PropertyAccessMode.Field)
+               .HasConversion<int?>();
+
         builder.Property(p => p.IsActive).HasDefaultValue(true);
         builder.Property(p => p.IsFeatured).HasDefaultValue(false);
         builder.Property(p => p.ViewsCount).HasDefaultValue(0);

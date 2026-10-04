@@ -46,7 +46,12 @@ RUN npm run build
 FROM nginx:1.27-alpine AS final
 
 # Replace nginx's default site with ours (static files + /api proxy + SPA fallback).
+# security-headers.conf is `include`d from three places inside default.conf — nginx will
+# refuse to start if it is missing, so the two files always ship together. It goes in
+# snippets/, NOT conf.d/: everything in conf.d/*.conf is auto-loaded at http level by the
+# base image, which would apply every header a second time.
 COPY docker/nginx/default.conf /etc/nginx/conf.d/default.conf
+COPY docker/nginx/security-headers.conf /etc/nginx/snippets/security-headers.conf
 
 # Copy the compiled output from stage 1 into nginx's web root.
 COPY --from=build /app/dist /usr/share/nginx/html

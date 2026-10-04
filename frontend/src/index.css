@@ -236,8 +236,14 @@ html[lang="ar"] .tracking-wider { letter-spacing: .04em !important; }
 
 /* Map mode is a screen-contained app view — the page itself must not scroll the map
    away. Listings sets body[data-map-view] while the split view is on screen; the global
-   footer and CTA band are hidden for exactly that duration. */
-body[data-map-view] footer,
+   footer and CTA band are hidden for exactly that duration.
+
+   This used to read `body[data-map-view] footer`, which hid EVERY footer element on the
+   page. The search assistant's composer is a footer inside its own panel, so on /buy and
+   /rent — where map mode is the default — the assistant opened with its text box collapsed
+   to zero height: the visitor could read the greeting and press the canned buttons but
+   could not type. The rule now names the site footer specifically. */
+body[data-map-view] .qre-site-footer,
 body[data-map-view] .qre-cta-band { display: none; }
 
 /* Card grid for the split view: columns follow the available LIST width.

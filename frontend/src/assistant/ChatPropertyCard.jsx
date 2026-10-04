@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
+import { whatsAppHref } from '../lib/contact'
 import { fmtPrice, WhatsAppIcon } from '../components/ui'
 import { IconArea, IconBath, IconBed, IconPin } from '../components/icons'
 
@@ -14,8 +15,7 @@ export default function ChatPropertyCard({ p }) {
   const { settings } = useData()
   const { t } = useI18n()
   const to = `/property/${p.purpose}/${p.id}`
-  const waText = encodeURIComponent(`${t('assistant.waIntro')} ${p.title} (${p.referenceNo || p.id})`)
-  const wa = `https://wa.me/${settings.whatsapp}?text=${waText}`
+  const wa = whatsAppHref(settings.whatsapp, `${t('assistant.waIntro')} ${p.title} (${p.referenceNo || p.id})`)
 
   return (
     <div className="qre-bubble-in flex gap-2.5 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm hover:border-primary/40 hover:shadow-md transition-all">

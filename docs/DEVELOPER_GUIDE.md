@@ -28,8 +28,8 @@
 ## Running the stack
 
 ```bash
-git clone https://github.com/ahmedgndy/QatarRealEstateAPI.git
-cd QatarRealEstateAPI
+git clone https://github.com/yahyabahig-pixel/QatarRealEstate.git
+cd QatarRealEstate
 cp .env.example .env
 ```
 
@@ -41,7 +41,7 @@ Fill in `.env`. The minimum set that must be non-empty:
 | `JWT_SECRET` | **32 characters minimum** — the app throws at startup otherwise. `openssl rand -base64 48` |
 | `MAIN_ADMIN_EMAIL`, `MAIN_ADMIN_PASSWORD` | Blank makes `AuthSeeder` throw and the backend crash-loop. That is deliberate |
 | `PUBLIC_ORIGIN` | The URL browsers use. **Baked into the JS bundle at build time** |
-| `SEED_DATA` | `true` for the first run, then `false` |
+| ~~`SEED_DATA`~~ | Gone. The bootstrap runs once automatically; demo listings come from `docker compose run --rm backend seed --demo` (development only) |
 
 Then:
 
@@ -359,8 +359,8 @@ These exist in the codebase today. Do not "fix" them casually — some are load-
 
 | Oddity | Where |
 |---|---|
-| A **directory** named `Configurations.cs` | `RealEstate.Infrastructure/Data/` |
-| A directory named `Dtos ` — **with a trailing space** | `…/GetPropertyDetails/` — breaks tools that round-trip paths through a shell or a zip |
+| ~~A **directory** named `Configurations.cs`~~ — renamed to `Configurations` | `RealEstate.Infrastructure/Data/` |
+| ~~A directory named `Dtos ` **with a trailing space**~~ — renamed to `Dtos` | `…/GetPropertyDetails/` |
 | `ListingKind.CS` — uppercase extension | `RealEstate.Domain/Enums/` |
 | `Propertytype.cs` — lowercase `t` | `RealEstate.Domain/Entities/` |
 | `namespace RealEstate.Domain.DomainErros` — typo, consistent across all 15 files | `DomainErrors/` |

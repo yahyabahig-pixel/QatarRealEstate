@@ -15,7 +15,7 @@ Every file here right now is a **generated placeholder**. Overwrite it with a re
 | `03-property-details.png` | Property detail — gallery, specs, features, agent card, location map | `/property/buy/{id}` |
 | `04-map-search.png` | Map view — price bubbles in a viewport, a card popover open | listings map toggle |
 | `05-admin-dashboard.png` | Admin dashboard — monthly statistics, most-viewed | `/admin` |
-| `06-admin-properties.png` | Admin properties — the table, or the create/edit form with media | `/admin/properties` |
+| `06-admin-properties.png` | Admin properties — the table, or the create/edit form with media | `/admin/properties` — **still to be taken**; nothing references it, so adding the file is all that is needed |
 | `07-admin-permissions.png` | Positions and permissions — the grant matrix | `/admin/positions/{id}` |
 | `08-mobile.png` | Mobile — a narrow viewport of the homepage or a listing | any, at 390 px wide |
 
@@ -53,7 +53,7 @@ Cmd + Shift + 4
 # Mobile — DevTools device toolbar, iPhone 14 Pro (390 × 844)
 ```
 
-For the admin screens, log in with the `MAIN_ADMIN_EMAIL` from your local `.env` and use the seeded data — `SEED_DATA=true` produces 49 listings, 12 agents, 15 areas and 14 developments, which photographs well.
+For the admin screens, log in with the `MAIN_ADMIN_EMAIL` from your local `.env` and use the demo data — `docker compose run --rm backend seed --demo` (development only) produces 49 listings, 12 agents, 15 areas and 14 developments, which photographs well.
 
 ---
 

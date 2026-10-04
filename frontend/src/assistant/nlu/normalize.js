@@ -34,7 +34,7 @@ export function normalize(s) {
     .replace(/[چ]/g, 'ج')
     .replace(/[ڤڥ]/g, 'ف')
     // punctuation → space (keeps decimal points inside numbers: 1.5m)
-    .replace(/[؟?!،,;:"'()\[\]{}<>|/\\_@#%^&*+=~`]/g, ' ')
+    .replace(/[؟?!،,;:"'()[\]{}<>|/\\_@#%^&*+=~`]/g, ' ')
     .replace(/(\d)\.(\D)/g, '$1 $2')   // "2." before a word is punctuation, not a decimal
     .replace(/-/g, ' - ')              // keep hyphen as its own token (ranges: "1-2 مليون")
     .replace(/\s+/g, ' ')

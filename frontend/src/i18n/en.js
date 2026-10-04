@@ -6,8 +6,10 @@
 // ---------------------------------------------------------------------------------------
 export default {
   meta: {
-    title: "AL-Madenah RealEstate — Qatar's Most Exclusive Real Estate Portal",
-    description: "AL-Madenah Real Estate — buy and rent apartments, villas, penthouses, offices and shops across The Pearl, Lusail, West Bay and Doha, Qatar.",
+    // See the note on the Arabic side: this is the search-result and link-preview text,
+    // kept to roughly 60 characters so it is not cut off mid-word.
+    title: 'AL-Madenah RealEstate — property for sale and rent in Qatar',
+    description: 'AL-Madenah Real Estate — find apartments, villas, penthouses, offices and shops for sale and rent in Qatar.',
   },
 
   common: {
@@ -88,10 +90,11 @@ export default {
   },
 
   home: {
-    heroEyebrow: 'Doha · Lusail · The Pearl',
-    heroTitle1: "Qatar's Most Exclusive",
-    heroTitle2: 'Real Estate Portal',
-    heroSubtitle: "Buy and rent apartments, villas, penthouses and offices across Qatar's finest addresses.",
+    // Plain wording on purpose — see the note on the Arabic side.
+    heroEyebrow: 'Apartments · Villas · Offices · Shops',
+    heroTitle1: 'Find your property',
+    heroTitle2: 'in Qatar',
+    heroSubtitle: 'For sale and for rent.',
     searchPlaceholder: 'Location, area, or keyword…',
     allAreas: 'All areas',
     propertyType: 'Property type',
@@ -141,6 +144,7 @@ export default {
     keywordOrArea: 'Keyword or area',
     bedroomsAny: 'Bedrooms (any)',
     bathroomsAny: 'Bathrooms (any)',
+    filterListOnly: 'Furnishing and amenity filters are available in list view.',
     furnishingAny: 'Furnishing (any)',
     furnished: 'Furnished',
     semiFurnished: 'Semi-furnished',
@@ -402,9 +406,8 @@ export default {
     talk: 'Talk to a consultant',
     whatsapp: 'Call us on WhatsApp',
     newsletter: 'Market Newsletter',
-    emailPlaceholder: 'Your email',
-    subscribe: 'Subscribe',
-    subscribed: 'Subscribed — welcome aboard!',
+    newsletterBody: 'Tell us what you are looking for and a consultant will get back to you with matching listings and market notes.',
+    newsletterCta: 'Send us a message',
   },
 
   forms: {
@@ -651,6 +654,7 @@ export default {
       cover: 'COVER',
       moveLeft: 'Move left', movePhotoRight: 'Move right', removePhoto: 'Remove photo',
       noPhotos: 'No photos yet.',
+      partialCreate: 'The listing was created but one of the follow-up steps failed. The form is now editing that listing — fix the problem below and press Save again; it will not create a second copy.',
       needPhoto: 'Add at least one photo before saving.',
       needLocation: 'Select the property location on the map before saving.\nSearch for the area or click the map in the Location section.',
       needType: 'Pick a property type.',
@@ -711,10 +715,11 @@ export default {
       title: 'Settings',
       siteName: 'Site name', contactPhone: 'Contact phone', whatsappNumber: 'WhatsApp number', contactEmail: 'Contact email',
       instagram: 'Instagram URL', linkedin: 'LinkedIn URL',
-      taxNumber: 'Tax number (placeholder — replace with the issued number)',
+      taxNumber: 'Tax number',
       footerAbout: 'Footer about text', footerAboutAr: 'Footer about text (Arabic)',
-      save: 'Save Settings',
-      saved: 'Settings saved — live across the site.',
+      readOnlyTitle: 'These values are read-only for now',
+      readOnlyBody: 'They come from the site configuration file frontend/src/config/company.js and are baked in when the site is built. This page used to accept edits and confirm "Settings saved", but nothing was ever sent anywhere: the change lived in the open tab and disappeared on the next refresh. Edit the file and rebuild to change them. A Settings API is still to be built; when it lands, this page becomes editable again.',
+      empty: 'Not set',
     },
     auth: {
       adminsTitle: 'Admins',

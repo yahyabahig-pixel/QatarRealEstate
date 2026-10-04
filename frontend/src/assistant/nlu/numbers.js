@@ -38,7 +38,17 @@ const GUARD_A = '(?![؀-ۿa-z])'
 const NUM = `(?:\\d+(?:[.,]\\d+)*|${GUARD_B}(?:${WORDS_ALT})${GUARD_A})`
 // مليونين/الفين are dual forms — a count of 2 baked into the word itself.
 // The trailing guard keeps "الف" from firing inside "الفيلا".
-const MULT = `(?:مليونين|ملايين|مليون|مليارات|مليار|الفين|الاف|الف|billions?|millions?|thousands?|k|m)${GUARD_A}`
+const MULT_WORDS = 'مليونين|ملايين|مليون|مليارات|مليار|الفين|الاف|الف|billions?|millions?|thousands?'
+// "k" and "m" are the ONLY multipliers that are a single letter, and they used to sit in
+// this alternation unguarded on the left. Every English word ending in one therefore read
+// as a budget: "I am looking for a villa for sale" set a maximum price of 1,000,000 (from
+// the "m" of "am"), "show me villas near a park" set 1,000, and "apartment with a gym for
+// sale" set 1,000,000 while swallowing the word "gym". The visitor got zero results and no
+// clue why. A digit has to be in front — that is what "2m" and "800k" actually look like.
+// (One or two spaces are tolerated so "1.5 m" still reads; JS allows variable-length
+// lookbehind, and GUARD_B above already relies on it.)
+const MULT_SUFFIX = '(?<=\\d\\s{0,2})[km]'
+const MULT = `(?:${MULT_WORDS}|${MULT_SUFFIX})${GUARD_A}`
 const FRAC = '(?:و\\s?(?:نصف|نص|ربع)|and a half)'
 
 // A money-ish amount: "2 مليون", "مليون ونص", "800 الف", "1.5m", "8000", "خمسه الاف".
@@ -64,7 +74,9 @@ function wordOrNumber(s) {
 export function readAmount(str) {
   if (!str) return NaN
   const s = str.trim()
-  const m = s.match(new RegExp(`^(?:(${NUM})\\s*)?(مليونين|ملايين|مليون|مليارات|مليار|الفين|الاف|الف|billions?|millions?|thousands?|k|m)(?:\\s*(${FRAC}))?$`))
+  // Same multiplier vocabulary as MULT above — one list, so the extractor and the reader
+  // can never drift apart about what counts as "k".
+  const m = s.match(new RegExp(`^(?:(${NUM})\\s*)?(${MULT_WORDS}|${MULT_SUFFIX})(?:\\s*(${FRAC}))?$`))
   if (m) {
     const dual = DUAL_MULTS[m[2]] || null
     const base = dual ?? (m[1] != null ? wordOrNumber(m[1]) : 1)

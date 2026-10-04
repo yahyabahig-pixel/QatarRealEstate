@@ -711,9 +711,9 @@ Ordered by impact. Everything here is verifiable in the code.
 
 ### Hygiene
 
-17. **No tests.** Sixteen projects, all production.
+17. **~~No tests.~~** A domain test project now exists (`tests/RealEstate.Domain.Tests`), plus frontend unit tests and an end-to-end persistence run — see [TESTING.md](TESTING.md). The application layer, the controllers and the React components are still uncovered.
 18. **No `[ProducesResponseType]` anywhere** — the OpenAPI document has no response schemas.
-19. **Naming accidents that will outlive their authors:** `namespace RealEstate.Domain.DomainErros` (typo, consistent across all fifteen files); a directory literally named `Configurations.cs`; a directory named `Dtos ` with a trailing space; `Enums/ListingKind.CS` with an uppercase extension; `Entities/Propertytype.cs` with a lowercase `t`; six Application files with no namespace at all; a committed `.DS_Store`.
+19. **Naming accidents that will outlive their authors:** `namespace RealEstate.Domain.DomainErros` (typo, consistent across all fifteen files); a directory literally named `Configurations.cs`, a directory named `Dtos ` with a trailing space and `Enums/ListingKind.CS` with an uppercase extension (all three since renamed); `Entities/Propertytype.cs` with a lowercase `t`; six Application files with no namespace at all; a committed `.DS_Store`.
 20. **Error messages contradict their constants** — `Title.TooShort` says "at least 3 characters" against `MinTitleLength = 10`; `Title.TooLong` says 150 against `MaxTitleLength = 100`. These strings reach the client verbatim.
 21. **Dead code** — the `Period` enum (unreferenced), `RentTerms.Id` (ignored by EF but still part of record equality), `PropertyConstants.PrimaryMediaCount`, three of four `PropertyFeatureErrors` members, `BuildingBlocks.Persistence` entirely.
 

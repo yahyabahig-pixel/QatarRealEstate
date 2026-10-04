@@ -43,7 +43,10 @@ public sealed class ListPropertiesForAdminHandler
             IsActive: request.IsActive,
             OwnerScopeUserId: ownerScope,
             Page: Math.Max(request.Page, 1),
-            PageSize: Math.Clamp(request.PageSize, 1, 100));
+            PageSize: Math.Clamp(request.PageSize, 1, 100),
+            AreaId: request.AreaId,
+            AgentId: request.AgentId,
+            PropertyTypeId: request.PropertyTypeId);
 
         return await _queries.ListForAdminAsync(filter, cancellationToken);
     }

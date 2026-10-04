@@ -1,0 +1,72 @@
+# =========================================================================================
+# THROWAWAY verification stack. Completely separate from the live one.
+#
+# Nothing here touches production data. The safeguards are structural, not a convention:
+#
+#   * `name: qre-verify` sets the compose project name, so every container, network and
+#     volume is prefixed qre-verify_ — a different namespace from the live stack's `qre`.
+#     `docker compose -f docker-compose.test.yml down -v` therefore cannot delete the live
+#     database volume even if it is run in the wrong directory.
+#   * The database volume is declared HERE with its own name. The live mssql-data volume is
+#     never referenced by this file.
+#   * Its own passwords, from VERIFY_* variables with obviously-test defaults. Compose does
+#     still load ./.env for interpolation — it always does, whatever -f is passed — but this
+#     file references only VERIFY_* names, which a production .env does not define, so the
+#     defaults below are what apply and the live SA password and JWT secret are never used.
+#   * The backend is published on 18080, not 80, so it cannot collide with the live site.
+#   * ASPNETCORE_ENVIRONMENT is Development, which is what lets `seed --demo` run at all.
+#
+# Driven by scripts/verify.sh — see that file for what is actually asserted.
+# =========================================================================================
+
+name: qre-verify
+
+services:
+
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2025-latest
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: ${VERIFY_SA_PASSWORD:-Verify_Only_Pa55word}
+      MSSQL_PID: Express
+      MSSQL_MEMORY_LIMIT_MB: "2048"
+    # No ports: reached only through the private network and `docker compose exec`.
+    volumes:
+      - verify-mssql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' -b"]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 20s
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    image: qre-backend:verify
+    environment:
+      # Development, not Production: the demo seed command refuses to run in Production,
+      # and this stack exists precisely to seed demo data and then delete it.
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__RealEstateDb: "Server=sqlserver,1433;Database=QatarRealEstateVerify;User Id=sa;Password=${VERIFY_SA_PASSWORD:-Verify_Only_Pa55word};TrustServerCertificate=True;"
+      Jwt__Secret: ${VERIFY_JWT_SECRET:-verify-only-signing-key-not-a-secret-0123456789abcdef}
+      MainAdmin__Email: ${VERIFY_ADMIN_EMAIL:-verify@example.test}
+      MainAdmin__Password: ${VERIFY_ADMIN_PASSWORD:-Verify123}
+      MainAdmin__FullName: Verify Admin
+      Cors__AllowedOrigins__0: http://localhost:18080
+      Startup__ApplyMigrations: "true"
+      Startup__UseHttpsRedirection: "false"
+      # Bootstrap only. Demo content is a separate, explicit command — which is the whole
+      # behaviour under test.
+      Startup__SeedIdentity: "true"
+      Startup__SeedReferenceData: "true"
+    ports:
+      - "${VERIFY_API_PORT:-18080}:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
+volumes:
+  # Prefixed qre-verify_ on disk. scripts/verify.sh deletes it at the end of every run.
+  verify-mssql-data:

@@ -187,7 +187,9 @@ export default function AssistantWidget() {
           </div>
 
           {/* input */}
-          <footer className="shrink-0 border-t border-neutral-200 bg-white p-2.5 flex items-center gap-2">
+          {/* A div, not a <footer>: this is the composer row, and a global "hide the footer"
+              rule must never be able to reach it again. */}
+          <div className="shrink-0 border-t border-neutral-200 bg-white p-2.5 flex items-center gap-2">
             <input ref={inputRef} value={draft} onChange={(e) => setDraft(e.target.value)}
               onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); submit() } }}
               placeholder={t('assistant.placeholder')} dir="auto" maxLength={400}
@@ -196,7 +198,7 @@ export default function AssistantWidget() {
               className="w-10 h-10 shrink-0 rounded-full bg-primary text-white flex items-center justify-center shadow-md shadow-primary/25 hover:bg-primary-dark active:scale-95 transition-all disabled:opacity-40 disabled:pointer-events-none">
               <SendIcon className="w-4 h-4 rtl:-scale-x-100" />
             </button>
-          </footer>
+          </div>
         </section>
       )}
     </>

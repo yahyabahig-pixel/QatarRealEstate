@@ -61,6 +61,7 @@ export default function ListingsMap({
   const mapRef = useRef(null)
   const markersRef = useRef(new Map())     // key → mapboxgl.Marker ("p<id>" | "c<clusterId>")
   const popupRef = useRef(null)
+  const popupIdRef = useRef(null)          // which listing the open popup belongs to
   const itemsRef = useRef(new Map())       // id → item (popup + label data)
   const userMovedRef = useRef(false)
   const activeIdRef = useRef(null)
@@ -106,10 +107,13 @@ export default function ListingsMap({
     const map = mapRef.current
     if (!mapboxgl || !map) return
     popupRef.current?.remove()
+    popupIdRef.current = String(it.id)
     popupRef.current = new mapboxgl.Popup({ offset: 18, closeButton: true, maxWidth: '280px' })
       .setLngLat([Number(it.lng), Number(it.lat)])
       .setHTML(popupHtml(it))
       .addTo(map)
+    // The visitor can close it with the × too; forget which listing it showed when they do.
+    popupRef.current.on('close', () => { popupIdRef.current = null })
   }
 
   // ---- markers, synced from the clustered source -------------------------
@@ -254,6 +258,7 @@ export default function ListingsMap({
       cancelled = true
       ro?.disconnect()
       popupRef.current?.remove()
+      popupIdRef.current = null
       markersRef.current.forEach((m) => m.remove())
       markersRef.current.clear()
       mapRef.current?.remove()
@@ -279,9 +284,17 @@ export default function ListingsMap({
       })),
     })
 
-    // Result set changed: rebuild markers so labels/clusters can't go stale, and close
-    // a popup that may point at a listing no longer in the results.
-    if (popupRef.current && ![...itemsRef.current.keys()].some(id => true)) popupRef.current.remove()
+    // Result set changed: rebuild markers so labels/clusters can't go stale, and close a
+    // popup that points at a listing no longer in the results.
+    //
+    // The test here used to be `![...itemsRef.current.keys()].some(id => true)`, which is
+    // only "the map has no pins at all" written the long way round — it never looked at
+    // which listing the popup was showing. So narrowing the filters left a popup open,
+    // floating over the map, advertising a listing that was no longer in the results.
+    if (popupRef.current && popupIdRef.current && !itemsRef.current.has(popupIdRef.current)) {
+      popupRef.current.remove()
+      popupIdRef.current = null
+    }
     markersRef.current.forEach((m) => m.remove())
     markersRef.current.clear()
     syncMarkers()

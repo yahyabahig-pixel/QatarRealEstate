@@ -120,10 +120,16 @@ sequenceDiagram
     B->>B: build DI container, validate JWT secret ≥ 32 chars
     B->>S: migrate schema "auth"        (retry 20 × 5s)
     B->>S: migrate schema "realestate"  (retry 20 × 5s)
-    alt SEED_DATA = true
+    B->>S: SELECT Key FROM SeedHistory
+    alt "default-positions-v1" not recorded
         B->>S: seed roles → Main Admin → 4 positions
-        B->>S: seed catalogues → 49 listings → backfills  (~695 rows)
+        B->>S: INSERT SeedHistory('default-positions-v1')
     end
+    alt "reference-data-v1" not recorded
+        B->>S: seed property types + feature catalogue
+        B->>S: INSERT SeedHistory('reference-data-v1')
+    end
+    note over B,S: Demo listings are NOT here. They are<br/>`seed --demo`, run by hand, refused in Production.
     B->>B: Kestrel listening on :8080
 ```
 

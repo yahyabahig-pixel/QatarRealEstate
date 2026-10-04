@@ -430,7 +430,7 @@ Two details worth stealing:
 
 Total: roughly **695 rows** across ten tables in eight `SaveChanges` batches.
 
-Set `SEED_DATA=false` after the first successful deploy so that deleted demo listings do not reappear.
+Demo data is no longer seeded on startup. The bootstrap (roles, the Main Admin, the default positions and the reference catalogues) runs automatically and is recorded in a `SeedHistory` table, so each batch runs exactly once and whatever you delete stays deleted. The demo listings are an explicit command that refuses to run in Production: `docker compose run --rm backend seed --demo`. There is no longer a flag to remember to turn off.
 
 ---
 

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { whatsAppHref } from '../lib/contact'
+import { isRoomless } from '../lib/propertyDisplay'
 import { useI18n } from '../i18n/I18nContext'
 import { fmtPrice, useFavourite, WhatsAppIcon } from './ui'
 import { IconArea, IconBath, IconBed, IconCamera, IconChevronLeft, IconChevronRight, IconHeart, IconPin } from './icons'
@@ -15,7 +17,10 @@ export default function PropertyCard({ p, wide = false, blurPrice = false }) {
   const to = `/property/${p.purpose}/${p.id}`
   const next = (e) => { e.preventDefault(); setIdx(i => (i + 1) % p.images.length) }
   const prev = (e) => { e.preventDefault(); setIdx(i => (i - 1 + p.images.length) % p.images.length) }
-  const isLand = p.type === 'Land'
+  // Shared with MapListingCard: the two cards must agree about the same listing.
+  // 'Land' alone missed shops, offices and warehouses, which also store 0 rooms and
+  // were therefore advertised as "Studio".
+  const isLand = isRoomless(p.type)
 
   // Agent strip renders only when the record is resolvable — live search cards
   // are thin DTOs, so the row simply doesn't appear there. Never a broken avatar.
@@ -85,7 +90,7 @@ export default function PropertyCard({ p, wide = false, blurPrice = false }) {
         {blurPrice && <p className="text-xs text-mist">{t('property.offMarketNote')} <Link to="/contact-us" className="text-primary font-medium">{t('property.offMarketContact')}</Link> {t('property.offMarketDetails')}</p>}
         <div className="flex gap-2 pt-1.5">
           <Link to={to} className="btn-dark flex-1 !py-2">{t('common.viewDetails')}</Link>
-          <a href={`https://wa.me/${settings.whatsapp}?text=${encodeURIComponent(t('property.waCardMessage', { ref: p.referenceNo }))}`} target="_blank" rel="noreferrer"
+          <a href={whatsAppHref(settings.whatsapp, t('property.waCardMessage', { ref: p.referenceNo }))} target="_blank" rel="noreferrer"
             className="bg-[#25d366] hover:bg-[#1fb958] text-white w-10 rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:shadow-[#25d366]/25" aria-label={t('common.whatsapp')}>
             <WhatsAppIcon />
           </a>

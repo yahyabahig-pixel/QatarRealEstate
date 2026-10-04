@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
+import { telHref, whatsAppHref, mailHref } from '../lib/contact'
 import { useToast } from '../components/Toast'
 import { InquiryForm, LogoMarquee } from '../components/misc'
 import { WhatsAppIcon } from '../components/ui'
@@ -63,9 +64,16 @@ export function ContactUs() {
           </div>
           <div className="card h-52 bg-neutral-100 flex items-center justify-center gap-2 text-neutral-400"><IconMap className="w-5 h-5" /> {t('support.mapPlaceholder')}</div>
           <div className="flex flex-wrap gap-3">
-            <a href={`tel:${settings.phone}`} className="btn-dark"><IconPhone className="w-4 h-4" /> {settings.phone}</a>
-            <a href={`https://wa.me/${settings.whatsapp}`} className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
-            <a href={`mailto:${settings.email}`} className="btn-outline"><IconMail className="w-4 h-4" /> {settings.email}</a>
+            {/* One button per channel that is actually configured — never a dead link. */}
+            {telHref(settings.phone) && (
+              <a href={telHref(settings.phone)} className="btn-dark"><IconPhone className="w-4 h-4" /> {settings.phone}</a>
+            )}
+            {whatsAppHref(settings.whatsapp) && (
+              <a href={whatsAppHref(settings.whatsapp)} target="_blank" rel="noreferrer" className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg px-5 py-2.5 text-sm font-semibold flex items-center gap-2 transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
+            )}
+            {mailHref(settings.email) && (
+              <a href={mailHref(settings.email)} className="btn-outline"><IconMail className="w-4 h-4" /> {settings.email}</a>
+            )}
           </div>
         </div>
       </div>

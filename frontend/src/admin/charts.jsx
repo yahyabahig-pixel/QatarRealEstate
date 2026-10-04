@@ -52,7 +52,6 @@ function smoothPath(pts, top, bottom, tension = 0.22) {
   return d
 }
 
-const MONTHS_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
 // ---------------------------------------------------------------------------------------
 //  WaveChart — compact smooth area / multi-line over 12 months.

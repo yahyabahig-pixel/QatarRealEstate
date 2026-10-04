@@ -13,6 +13,15 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)          // CurrentAdminDto from /api/auth/me
   const [status, setStatus] = useState('loading') // loading | anonymous | authenticated
 
+  // Signing in and out changes WHICH data the app is allowed to see, and the shared store
+  // loaded its slices once, on mount. Nothing told it the identity had changed, so after a
+  // login the admin kept looking at the anonymous view — no real enquiries, only active
+  // agents — until they pressed refresh by hand. This event is that signal; DataContext
+  // listens for it and reloads. (sessionStorage is per-tab, so the native 'storage' event
+  // never fires for our own writes.)
+  const announceIdentityChange = () =>
+    window.dispatchEvent(new Event('qre:auth-changed'))
+
   const loadMe = useCallback(async () => {
     if (!tokenStore.get()) { setStatus('anonymous'); return }
     try {
@@ -24,7 +33,10 @@ export function AuthProvider({ children }) {
   }, [])
 
   useEffect(() => {
-    setUnauthorizedHandler(() => { tokenStore.clear(); setUser(null); setStatus('anonymous') })
+    setUnauthorizedHandler(() => {
+      tokenStore.clear(); setUser(null); setStatus('anonymous')
+      announceIdentityChange()   // an expired token is a logout too
+    })
     loadMe()
   }, [loadMe])
 
@@ -33,11 +45,13 @@ export function AuthProvider({ children }) {
     tokenStore.set(token.accessToken)
     const me = await authApi.me()
     setUser(me); setStatus('authenticated')
+    announceIdentityChange()
     return me
   }, [])
 
   const logout = useCallback(() => {
     tokenStore.clear(); setUser(null); setStatus('anonymous')
+    announceIdentityChange()
   }, [])
 
   const value = useMemo(() => ({

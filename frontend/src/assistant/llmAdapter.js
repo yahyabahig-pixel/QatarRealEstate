@@ -17,8 +17,13 @@
 // ---------------------------------------------------------------------------------------
 const URL_FROM_ENV = import.meta.env?.VITE_ASSISTANT_LLM_URL || ''
 
+// The kill switch. Flip this to true when a local endpoint is actually provisioned; until
+// then `enabled` is false whatever the environment says. It is a named constant rather than
+// `false && …` so it reads as a decision, not as dead code a linter has to flag.
+const LLM_ENABLED = false
+
 export const llm = {
-  enabled: false && !!URL_FROM_ENV, // flip the literal when a local endpoint is provisioned
+  enabled: LLM_ENABLED && !!URL_FROM_ENV,
 
   // Rephrase an already-correct templated reply. MUST resolve to usable text either way.
   async polish(text /* , { lang, filters } */) {

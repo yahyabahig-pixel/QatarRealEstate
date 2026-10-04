@@ -5,8 +5,12 @@
 // ---------------------------------------------------------------------------------------
 export default {
   meta: {
-    title: 'AL-Madenah RealEstate — بوابة قطر العقارية الأكثر تميّزًا',
-    description: 'المدينة للعقارات — تملّك واستأجر الشقق والفلل والبنتهاوس والمكاتب والمحلات في أرقى مناطق قطر: اللؤلؤة، لوسيل، الخليج الغربي والدوحة.',
+    // What Google shows and what a WhatsApp link preview reads out, so it says the same
+    // thing the page itself says. Kept short: a title much past ~60 characters is cut off
+    // mid-word in search results. The property types live in the description, where there
+    // is room for them and where they still help someone searching for one.
+    title: 'AL-Madenah RealEstate — عقارات للبيع والإيجار في قطر',
+    description: 'المدينة للعقارات — ابحث عن شقق وفلل وبنتهاوس ومكاتب ومحلات تجارية للبيع والإيجار في قطر.',
   },
 
   common: {
@@ -87,10 +91,13 @@ export default {
   },
 
   home: {
-    heroEyebrow: 'الدوحة · لوسيل · اللؤلؤة',
-    heroTitle1: 'بوابة قطر العقارية',
-    heroTitle2: 'الأكثر تميّزًا',
-    heroSubtitle: 'تملّك واستأجر الشقق والفلل والبنتهاوس والمكاتب في أرقى عناوين قطر.',
+    // Plain wording on purpose. This used to name three districts and call itself "the most
+    // exclusive portal" — a claim a visitor cannot check and an area list that quietly tells
+    // anyone looking outside those three that the site is not for them.
+    heroEyebrow: 'شقق · فلل · مكاتب · محلات تجارية',
+    heroTitle1: 'ابحث عن عقارك',
+    heroTitle2: 'في قطر',
+    heroSubtitle: 'للبيع والإيجار.',
     searchPlaceholder: 'الموقع أو المنطقة أو كلمة مفتاحية…',
     allAreas: 'كل المناطق',
     propertyType: 'نوع العقار',
@@ -140,6 +147,7 @@ export default {
     keywordOrArea: 'كلمة مفتاحية أو منطقة',
     bedroomsAny: 'غرف النوم (الكل)',
     bathroomsAny: 'الحمّامات (الكل)',
+    filterListOnly: 'فلاتر الأثاث والمميزات متاحة في عرض القائمة.',
     furnishingAny: 'التأثيث (الكل)',
     furnished: 'مفروش',
     semiFurnished: 'نصف مفروش',
@@ -399,10 +407,9 @@ export default {
     subtitle: 'تحرّكات السوق والإطلاقات الجديدة والفرص الخاصة — قبل وصولها إلى المنصات.',
     talk: 'تحدّث مع مستشار',
     whatsapp: 'راسلنا على واتساب',
-    newsletter: 'النشرة العقارية',
-    emailPlaceholder: 'بريدك الإلكتروني',
-    subscribe: 'اشترك',
-    subscribed: 'تم الاشتراك — أهلًا بك معنا!',
+    newsletter: 'نشرة السوق',
+    newsletterBody: 'قول لنا بتدوّر على إيه، وهيتواصل معك مستشار بعقارات مناسبة وأخبار السوق.',
+    newsletterCta: 'ابعت لنا رسالة',
   },
 
   forms: {
@@ -649,6 +656,7 @@ export default {
       cover: 'الغلاف',
       moveLeft: 'تحريك لليسار', movePhotoRight: 'تحريك لليمين', removePhoto: 'إزالة الصورة',
       noPhotos: 'لا توجد صور بعد.',
+      partialCreate: 'العقار اتعمل بس خطوة بعده فشلت. النموذج دلوقتي بيعدّل نفس العقار — صلّح المشكلة تحت واضغط حفظ تاني، ومش هيتعمل نسخة تانية.',
       needPhoto: 'أضف صورة واحدة على الأقل قبل الحفظ.',
       needLocation: 'حدّد موقع العقار على الخريطة قبل الحفظ.\nابحث عن المنطقة أو انقر على الخريطة في قسم الموقع.',
       needType: 'اختر نوع العقار.',
@@ -709,10 +717,11 @@ export default {
       title: 'الإعدادات',
       siteName: 'اسم الموقع', contactPhone: 'هاتف التواصل', whatsappNumber: 'رقم واتساب', contactEmail: 'بريد التواصل',
       instagram: 'رابط إنستغرام', linkedin: 'رابط لينكدإن',
-      taxNumber: 'الرقم الضريبي (مؤقت — استبدله بالرقم الرسمي)',
+      taxNumber: 'الرقم الضريبي',
       footerAbout: 'نص التعريف في التذييل', footerAboutAr: 'نص التعريف في التذييل (بالعربية)',
-      save: 'حفظ الإعدادات',
-      saved: 'تم حفظ الإعدادات — سارية عبر الموقع.',
+      readOnlyTitle: 'القيم دي للعرض بس دلوقتي',
+      readOnlyBody: 'مصدرها ملف الإعدادات frontend/src/config/company.js وبتتثبّت وقت بناء الموقع. الصفحة دي كانت بتقبل التعديل وتقول «تم الحفظ» من غير ما تبعت حاجة لأي مكان: التغيير كان بيعيش في التبويب المفتوح بس ويضيع مع أول refresh. عدّل الملف وأعد البناء عشان تغيّرها. لسه فيه شغل باقي لعمل واجهة برمجية للإعدادات؛ لما تخلص الصفحة دي هترجع تقبل التعديل.',
+      empty: 'غير محدّد',
     },
     auth: {
       adminsTitle: 'المديرون',

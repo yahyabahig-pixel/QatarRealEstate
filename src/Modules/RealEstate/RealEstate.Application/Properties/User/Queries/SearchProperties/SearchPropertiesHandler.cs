@@ -21,9 +21,17 @@ public sealed class SearchPropertiesHandler : IQueryHandler<SearchPropertiesQuer
             MinPrice: request.MinPrice,
             MaxPrice: request.MaxPrice,
             SortBy: request.Sort,
-            Page: request.Page,
-            PageSize: request.PageSize);
+            // Clamped here as well as in the validator. The validator rejects a bad page with a
+            // 400, which is the right answer for a typo; this is the belt that stops an
+            // unvalidated caller (a future internal one) turning `(page - 1) * pageSize` into
+            // an arithmetic overflow and a 500.
+            Page: Math.Max(1, request.Page),
+            PageSize: Math.Clamp(request.PageSize, 1, 100),
+            AreaId: request.AreaId,
+            AgentId: request.AgentId,
+            FeatureIds: request.FeatureIds is { Length: > 0 } ids ? ids.Distinct().ToList() : null,
+            Furnishing: string.IsNullOrWhiteSpace(request.Furnishing) ? null : request.Furnishing.Trim());
 
-        return await  _queries.SearchAsync(criteria, cancellationToken);
+        return await _queries.SearchAsync(criteria, cancellationToken);
     }
 }

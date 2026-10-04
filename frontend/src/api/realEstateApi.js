@@ -12,6 +12,23 @@ import { API_URL, http, qs } from './client'
 // JsonStringEnumConverter.
 // ---------------------------------------------------------------------------------------
 
+// ---- media URLs ------------------------------------------------------------------------
+//
+// An uploaded photo is STORED as a relative path: "/api/media/images/{id}". It used to be
+// stored as an absolute URL built from whatever address the bundle happened to be built
+// against — so every photo uploaded while the site ran on http://<ip> kept pointing at
+// http://<ip> after the move to a domain, and the browser blocked all of them as mixed
+// content. A relative path follows the site wherever it goes.
+//
+// resolveMediaUrl turns what is STORED into what a browser should REQUEST, and leaves
+// anything absolute (Unsplash, an old row not yet migrated) exactly as it is.
+export const resolveMediaUrl = (url) => {
+  if (!url) return url
+  if (/^(https?:)?\/\//i.test(url) || url.startsWith('data:')) return url
+  if (!url.startsWith('/')) return url
+  return `${API_URL}${url}`
+}
+
 // ---- backend → UI mappers -------------------------------------------------------------
 
 const kindToPurpose = (k) => (k === 'Sale' ? 'buy' : 'rent')
@@ -26,13 +43,15 @@ const statusToUi = (s) => ({
 }[s] || String(s || '').toLowerCase())
 
 export const mapAgent = (a) => ({
-  id: a.id, name: a.name, title: a.jobTitle, photo: a.photoUrl, slug: a.slug,
+  id: a.id, name: a.name, title: a.jobTitle, photo: resolveMediaUrl(a.photoUrl), slug: a.slug,
+  photoStored: a.photoUrl,     // what to send back on save; `photo` is for rendering
   phone: a.phone, whatsapp: a.whatsApp, email: a.email, rating: a.rating,
   bio: a.bio, active: a.isActive,
 })
 
 export const mapArea = (a) => ({
-  id: a.id, name: a.name, slug: a.slug, photo: a.photoUrl, intro: a.intro,
+  id: a.id, name: a.name, slug: a.slug, photo: resolveMediaUrl(a.photoUrl), intro: a.intro,
+  photoStored: a.photoUrl,
   propertyCount: a.propertyCount,          // computed by the backend — no client counting
 })
 
@@ -52,7 +71,8 @@ export const mapDevelopment = (d) => {
     lat: hasCoords ? lat : null, lng: hasCoords ? lng : null,
     x: hasCoords ? String(lng) : '', y: hasCoords ? String(lat) : '',
     deliveryYear: d.deliveryYear,
-    coverImage: d.coverImageUrl, description: d.description, unitsCount: d.unitsCount,
+    coverImage: resolveMediaUrl(d.coverImageUrl), coverImageStored: d.coverImageUrl,
+    description: d.description, unitsCount: d.unitsCount,
     developer: d.developerName, startingPrice: d.startingPrice, paymentPlan: d.paymentPlan,
   }
 }
@@ -71,7 +91,9 @@ export const mapPropertyListItem = (p) => ({
   title: p.title,
   purpose: kindToPurpose(p.listingKind),
   status: statusToUi(p.status),
-  price: p.offerPrice ?? p.price ?? 0,
+  // null (not 0) when the price is withheld: the API sends no figure at all for a
+  // "price on request" listing, and 0 would render as "QAR 0".
+  price: p.priceOnRequest ? null : (p.offerPrice ?? p.price ?? 0),
   originalPrice: p.offerPrice != null ? p.price : null,
   currency: p.currency || 'QAR',
   // The real flag now, not "we couldn't see a price". A listing always has terms --
@@ -81,12 +103,21 @@ export const mapPropertyListItem = (p) => ({
   bedrooms: p.numberOfRooms,
   bathrooms: p.bathrooms,
   sizeSqm: Number(p.areaInSquareMeters) || 0,
-  images: p.coverImageUrl ? [p.coverImageUrl] : [],
+  images: p.coverImageUrl ? [resolveMediaUrl(p.coverImageUrl)] : [],
   exclusive: !!p.isFeatured,
   offPlan: !!p.isOffPlan,
-  type: '', area: '', district: '', amenities: [], agentId: null,
-  // Balcony and Furnishing live in the feature catalog, and list DTOs carry no features
-  // by design (one SQL row per card) -- both populate on the details page.
+  // These four used to be hardcoded empty, which is why filtering by area, type or agent in
+  // the browser matched nothing at all: every card claimed to have no area, no type and no
+  // agent. The API sends them now; the pages that need MORE than a name filter on the server.
+  type: p.propertyTypeName || '',
+  typeId: p.propertyTypeId || null,
+  area: p.areaName || '',
+  areaId: p.areaId || null,
+  district: p.district || '',
+  agentId: p.agentId || null,
+  // Amenities are still absent by design: a list endpoint stays one SQL row per card, so
+  // amenity filtering is a server-side query (?featureIds=…), not a client-side scan.
+  amenities: [],
   balcony: false, furnishing: '',
   addedOn: '',
 })
@@ -99,6 +130,7 @@ export const mapPropertyMapItem = (p) => ({
   title: p.title,
   area: p.area || '',
   price: p.price ?? null,
+  priceOnRequest: !!p.priceOnRequest,
   currency: p.currency || 'QAR',
   beds: p.beds ?? 0,
   bathrooms: p.bathrooms ?? 0,
@@ -106,7 +138,7 @@ export const mapPropertyMapItem = (p) => ({
   sizeM2: Number(p.sizeM2) || 0,
   lat: p.lat,
   lng: p.lng,
-  thumbUrl: p.thumbUrl || '',
+  thumbUrl: p.thumbUrl ? resolveMediaUrl(p.thumbUrl) : '',
   isExclusive: !!p.isExclusive,
   isOffPlan: !!p.isOffPlan,
 })
@@ -133,10 +165,20 @@ export const mapPropertyDetails = (p) => ({
   area: p.areaName || '',
   areaId: p.areaId || null,
   district: p.location?.street || '',
+  // Carried through so an edit does not silently blank them. The form merges the patch onto
+  // THIS object and sends the whole record back, so a field missing here is a field wiped on
+  // every save — that is how locState became a copy of the city and locDescription vanished.
+  locCountry: p.location?.country || 'Qatar',
+  locState: p.location?.state || '',
+  locDescription: p.location?.description || '',
+  // Payment terms, likewise. They were rebuilt from constants on every save, so an
+  // installment plan turned into Cash and a 24-month contract became 12.
+  paymentMethodValue: p.sale?.paymentMethod || null,
+  contractDuration: p.rent?.contractDurationMonths || null,
   bedrooms: p.specs?.numberOfRooms ?? 0,
   bathrooms: p.specs?.bathrooms ?? 0,
   sizeSqm: Number(p.specs?.areaInSquareMeters) || 0,
-  price: p.offerPrice ?? p.sale?.amount ?? p.rent?.amount ?? 0,
+  price: p.priceOnRequest ? null : (p.offerPrice ?? p.sale?.amount ?? p.rent?.amount ?? 0),
   originalPrice: p.offerPrice != null ? (p.sale?.amount ?? p.rent?.amount) : null,
   currency: p.sale?.currency || p.rent?.currency || 'QAR',
   // A listing always carries terms (the domain requires them for its ListingKind); this
@@ -151,8 +193,10 @@ export const mapPropertyDetails = (p) => ({
   // detail page hides the whole Location block rather than showing a map of nowhere.
   lat: p.latitude ?? null,
   lng: p.longitude ?? null,
-  images: [...(p.media || [])].sort((a, b) => a.order - b.order).map(m => m.url),
-  media: p.media || [],                       // full objects, for the admin media manager
+  images: [...(p.media || [])].sort((a, b) => a.order - b.order).map(m => resolveMediaUrl(m.url)),
+  // Full objects for the admin media manager. `url` is kept EXACTLY as stored (the reorder
+  // and remove endpoints match on the stored value), and `displayUrl` is the one to render.
+  media: (p.media || []).map(m => ({ ...m, displayUrl: resolveMediaUrl(m.url) })),
   amenities: (p.features || []).map(f => f.name),
   features: p.features || [],                 // full objects, for the admin feature editor
   // Both live in the Features catalog — read back here so the pages that ask for
@@ -174,14 +218,27 @@ export const mapPropertyDetails = (p) => ({
 
 // ---- UI → backend body builders -------------------------------------------------------
 
+// The inverse of resolveMediaUrl: what the browser is SHOWING → what should be STORED.
+// Our own media URLs go back to a relative path; anything external is stored as-is.
+export const toStoredMediaUrl = (url) => {
+  if (!url) return url
+  if (API_URL && url.startsWith(`${API_URL}/api/media/images/`)) return url.slice(API_URL.length)
+  // Also handles a value stored absolutely before this change, on whatever origin.
+  const match = /^https?:\/\/[^/]+(\/api\/media\/images\/.+)$/i.exec(url)
+  return match ? match[1] : url
+}
+
+
 const agentBody = (f) => ({
-  name: f.name, jobTitle: f.title, photoUrl: f.photo, slug: f.slug || null,
+  // toStoredMediaUrl, not f.photo: rendering resolves a relative path to an absolute URL, and
+  // sending that back would store the absolute one again — the very thing we moved away from.
+  name: f.name, jobTitle: f.title, photoUrl: toStoredMediaUrl(f.photo), slug: f.slug || null,
   phone: f.phone || null, whatsApp: f.whatsapp || null, email: f.email || null,
   rating: Number(f.rating) || 0, bio: f.bio || null,
 })
 
 const areaBody = (f) => ({
-  name: f.name, photoUrl: f.photo, slug: f.slug || null, intro: f.intro || null,
+  name: f.name, photoUrl: toStoredMediaUrl(f.photo), slug: f.slug || null, intro: f.intro || null,
 })
 
 const developmentBody = (f) => ({
@@ -198,7 +255,7 @@ const developmentBody = (f) => ({
     description: f.locDescription || null,
   },
   deliveryYear: Number(f.deliveryYear) || new Date().getFullYear(),
-  coverImageUrl: f.coverImage, slug: f.slug || null, description: f.description || null,
+  coverImageUrl: toStoredMediaUrl(f.coverImage), slug: f.slug || null, description: f.description || null,
   unitsCount: Number(f.unitsCount) || 0, developerName: f.developer || f.developerName || null,
   startingPrice: Number(f.startingPrice) || 0, paymentPlan: f.paymentPlan || null,
 })
@@ -223,7 +280,9 @@ export const propertyCommand = (f, typeIdByName, areaIdByName) => {
       country: f.locCountry || 'Qatar',
       city: f.city || 'Doha',
       street: f.district || f.area || f.city || 'Doha',
-      postalCode: '00000',
+      postalCode: f.postalCode || '00000',
+      // Falls back to the city only when the record genuinely has no state — it used to
+      // OVERWRITE a real state with the city name on every save.
       state: f.locState || f.city || 'Doha',
       // From the LocationPicker. Convention everywhere: X = LONGITUDE, Y = LATITUDE
       // (same as the backend Location value object). '0' only as a legacy fallback for
@@ -232,8 +291,20 @@ export const propertyCommand = (f, typeIdByName, areaIdByName) => {
       y: f.y !== undefined && f.y !== '' && f.y !== null ? String(f.y) : '0',
       description: f.locDescription || null,
     },
-    sale: isSale ? { price: money, paymentMethod: 'Cash', installment: null } : null,
-    rent: isSale ? null : { price: money, contractDurationMonths: 12 },
+    // Payment terms are CARRIED, not re-invented. These were hardcoded — 'Cash', no
+    // installment plan, a 12-month contract — and the admin form sends the whole record on
+    // every save, so editing a photo turned an installment plan into a cash sale and a
+    // 24-month lease into a 12-month one.
+    sale: isSale
+      ? {
+          price: money,
+          paymentMethod: f.paymentMethodValue || 'Cash',
+          installment: f.installment ?? null,
+        }
+      : null,
+    rent: isSale
+      ? null
+      : { price: money, contractDurationMonths: Number(f.contractDuration) || 12 },
     specs: {
       numberOfRooms: Number(f.bedrooms) || 0,
       areaInSquareMeters: Number(f.sizeSqm) || 0,
@@ -444,10 +515,20 @@ export const propertiesAdminApi = {
       })),
     }
   },
-  details: (id) => publicApi.propertyDetails(id),   // same DTO serves both sides
+  // The ADMIN details read. The public endpoint now serves published, active listings only
+  // (that is what unpublishing means) and withholds the figure behind "price on request" —
+  // the edit form needs a draft to open and the real price to save back, so it asks here.
+  async details(id) { return mapPropertyDetails(await http(`/api/admin/properties/${id}`)) },
   create: (command) => http('/api/admin/properties', { method: 'POST', body: command }),
   update: (id, command) => http(`/api/admin/properties/${id}`, { method: 'PUT', body: command }),
-  addMedia: (id, items) => http(`/api/admin/properties/${id}/media`, { method: 'POST', body: { items } }),
+  addMedia: (id, items) => http(`/api/admin/properties/${id}/media`, {
+    method: 'POST',
+    body: { items: items.map(m => ({ ...m, url: toStoredMediaUrl(m.url) })) },
+  }),
+  // The gallery order the admin arranged; the first id becomes the cover.
+  reorderMedia: (id, mediaIds) => http(`/api/admin/properties/${id}/media/order`, {
+    method: 'PUT', body: { mediaIds },
+  }),
   removeMedia: (id, mediaId) => http(`/api/admin/properties/${id}/media/${mediaId}`, { method: 'DELETE' }),
   setFeatures: (id, features) => http(`/api/admin/properties/${id}/features`, { method: 'PUT', body: { features } }),
   setOffer: (id, offer) => http(`/api/admin/properties/${id}/offer`, { method: 'PUT', body: { offer } }),
@@ -474,9 +555,10 @@ export const imagesAdminApi = {
   remove: (id) => http(`/api/admin/media/images/${id}`, { method: 'DELETE' }),
 }
 
-// The public URL an uploaded image is served from (GET /api/media/images/{id}) —
-// this is what goes into Property media and Agent photo fields.
-export const imageUrl = (id) => `${API_URL}/api/media/images/${id}`
+// What gets STORED in Property media, Agent.PhotoUrl, Area.PhotoUrl and
+// Development.CoverImageUrl: a RELATIVE path, so the photo keeps working when the site
+// changes address (http://<ip> → https://<domain>). Use resolveMediaUrl to render it.
+export const imageUrl = (id) => `/api/media/images/${id}`
 
 // ---- feature (amenity) catalog management ---------------------------------------------
 

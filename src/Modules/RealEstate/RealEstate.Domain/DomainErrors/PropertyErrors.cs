@@ -91,7 +91,21 @@ public static class PropertyErrors
     public static Error NotPublishable =>
         Error.Validation("Property.NotPublishable", "The property cannot be published in its current state.");
 
+    public static Error MediaOrderInvalid =>
+        Error.Validation("Property.Media.OrderInvalid",
+            "The new photo order must list every photo of this property exactly once.");
+
     public static Error AlreadyArchived =>
         Error.Conflict("Property.AlreadyArchived", "The property is already archived.");
+
+    public static Error ClosedDealNotPublishable =>
+        Error.Conflict("Property.ClosedDealNotPublishable",
+            "This listing was sold or rented before it was archived, so it cannot be published " +
+            "again. Create a new listing for a new deal.");
+
+    public static Error OutcomeDoesNotMatchListingKind =>
+        Error.Validation("Property.OutcomeDoesNotMatchListingKind",
+            "A listing for sale can only be marked sold, and a listing for rent can only be " +
+            "marked rented.");
 
 }

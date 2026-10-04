@@ -53,7 +53,7 @@ nginx:1.27-alpine   → static files + our conf, ~74 MB
 
 - `node:22-slim` rather than Alpine because Tailwind v4 pulls in native binaries (`lightningcss`) whose musl variants occasionally fail to install.
 - `npm ci || npm install` — npm generates lockfiles that are platform-incomplete: on macOS it prunes dependencies of optional packages that only matter on Linux, and `npm ci` then refuses to run. The fallback resolves the gap; versions stay pinned for everything the lockfile does list.
-- **`VITE_API_URL` and `VITE_MAPBOX_TOKEN` arrive as build args and are inlined into the bundle.** This is the single most important operational fact about this image.
+- **`VITE_API_URL` and `VITE_SITE_URL` arrive as build args and are inlined into the bundle.** This is the single most important operational fact about this image: changing `PUBLIC_ORIGIN` requires `docker compose build frontend`, not just a restart.
 
 ---
 
@@ -69,8 +69,10 @@ Everything comes from a `.env` file sitting next to `docker-compose.yml` on the 
 | `MAIN_ADMIN_EMAIL` | ✅ | Blank ⇒ `AuthSeeder` throws ⇒ backend crash-loop. Deliberate |
 | `MAIN_ADMIN_PASSWORD` | ✅ | Must satisfy the Identity policy |
 | `MAIN_ADMIN_NAME` | — | Defaults to `Main Admin` |
-| `SEED_DATA` | ✅ | `true` for the first deploy, `false` afterwards |
-| `VITE_MAPBOX_TOKEN` | — | Public `pk.` token. Without it maps render an explanatory panel and everything else works |
+| ~~`SEED_DATA`~~ | — | **Gone.** Delete the line from `.env`. The bootstrap now runs once, always, and records itself; the demo listings moved behind `docker compose run --rm backend seed --demo` |
+| `DB_USER` / `DB_PASSWORD` | recommended | The login the app uses. Blank falls back to `sa`; `./scripts/create-db-user.sh` creates a proper one |
+| ~~`VITE_MAPBOX_TOKEN`~~ | — | Unused. Maps run on MapLibre GL + OpenFreeMap: no account, no token. Still passed as a build arg so an existing `.env` does not break; leave it blank |
+| `CADDY_HSTS` | — | `max-age=0` (off, the default) until a real certificate is being served |
 | `SITE_ADDRESS` | — | Caddy. `:443` or a hostname. Defaults to `:443` |
 | `CADDY_TLS` | — | `internal` or an email address. Defaults to `internal` |
 
@@ -99,7 +101,7 @@ Hardcoded in `docker-compose.yml` rather than exposed as variables — deliberat
 
 ```bash
 # On the server
-git clone https://github.com/ahmedgndy/QatarRealEstateAPI.git /opt/qre
+git clone https://github.com/yahyabahig-pixel/QatarRealEstate.git /opt/qre
 cd /opt/qre
 
 cp .env.example .env
@@ -131,7 +133,9 @@ docker compose ps                  # three or four containers, one publishing po
 curl -sI http://<host>             # expect HTTP/1.1 200
 ```
 
-Log in at `http://<host>/admin/login` with `MAIN_ADMIN_EMAIL` / `MAIN_ADMIN_PASSWORD`, confirm the data is there, then **set `SEED_DATA=false`** and `docker compose up -d backend` so deleted demo listings do not come back on the next restart.
+Log in at `http://<host>/admin/login` with `MAIN_ADMIN_EMAIL` / `MAIN_ADMIN_PASSWORD`. The site starts **empty of listings** — that is deliberate. Demo data is no longer seeded on startup. The bootstrap (roles, the Main Admin, the default positions and the reference catalogues) runs automatically and is recorded in a `SeedHistory` table, so each batch runs exactly once and whatever you delete stays deleted. The demo listings are an explicit command that refuses to run in Production: `docker compose run --rm backend seed --demo`.
+
+There is nothing to turn off afterwards. The old instruction here was to set `SEED_DATA=false` once the first deploy was done; forgetting it is what put deleted demo listings back on every restart.
 
 ---
 
@@ -196,22 +200,62 @@ docker compose down && git pull && docker compose build && docker compose up -d
 docker compose logs -f backend
 docker compose logs --tail=100 frontend
 
+# Verify a change before deploying it — builds, tests, and proves a delete survives a
+# restart, all against a throwaway database. Your data is not touched.
+./scripts/verify.sh
+
+# Insert the demo listings (DEVELOPMENT ONLY — refused when ASPNETCORE_ENVIRONMENT
+# is Production). They are no longer seeded automatically; that is what used to put
+# deleted demo data back on every restart.
+docker compose run --rm backend seed --demo
+
 # Database shell
 docker compose exec sqlserver /opt/mssql-tools18/bin/sqlcmd \
   -S localhost -U sa -P "$SA_PASSWORD" -C -Q "SELECT COUNT(*) FROM realestate.Properties"
 ```
 
-### Backups — currently missing
+### Backups
 
-**There is no backup job in this repository.** This is the highest-value operational gap. A starting point:
+`mssql-data` is the only copy of every listing, every photo (photos are `varbinary` columns,
+not files on disk) and every lead. A Docker volume is not a backup: it does not survive
+`docker compose down -v`, a mistyped `docker volume rm`, or the disk it sits on.
 
 ```bash
-docker compose exec -T sqlserver /opt/mssql-tools18/bin/sqlcmd \
-  -S localhost -U sa -P "$SA_PASSWORD" -C \
-  -Q "BACKUP DATABASE QatarRealEstate TO DISK='/var/opt/mssql/backup/qre.bak' WITH FORMAT, COMPRESSION"
+./scripts/backup-db.sh
 ```
 
-Mount a host directory at `/var/opt/mssql/backup`, run it nightly from cron, copy off-host, and **test a restore** — an untested backup is a hypothesis.
+Runs `BACKUP DATABASE` inside the container — a real, consistent SQL Server backup, not a
+file copy of a running database — verifies it with `RESTORE VERIFYONLY`, copies the `.bak`
+out to `./backups`, and deletes backups older than `RETENTION_DAYS` (14 by default).
+
+Put it on a cron job:
+
+```cron
+30 2 * * *  cd /opt/qre && ./scripts/backup-db.sh >> /var/log/qre-backup.log 2>&1
+```
+
+Two things the script cannot do for you:
+
+**Copy `./backups` off this machine.** A backup on the same disk as the database does not
+survive that disk. `rsync`, `rclone`, an object store — anything that is somewhere else.
+
+**Rehearse the restore.** An untested backup is a guess, not a backup:
+
+```bash
+./scripts/restore-db.sh backups/QatarRealEstate-20260930-023000.bak
+```
+
+That restores into a scratch database (`QatarRealEstate_RestoreTest`) and prints the row
+counts that came back. The live database is not touched. Do it once now, and again after
+any meaningful schema change.
+
+The real thing, for the day it is needed:
+
+```bash
+docker compose stop backend
+./scripts/restore-db.sh backups/<file>.bak --into-live    # asks you to type the DB name
+docker compose start backend
+```
 
 ### Volumes
 
@@ -240,7 +284,8 @@ Compose prefixes volume names with the project name; use the prefixed form with 
 | Caddy exits immediately | `docker/caddy/Caddyfile` is missing, so Docker created a **directory** at the bind-mount path | Restore the file, remove the stray directory |
 | Certificate warning on a bare IP | Expected in mode B | Get a hostname, or use mode A |
 | `COPY docker/nginx/default.conf … not found` | The `docker/` tree is missing from the build context | Restore it; check `git status` and `.dockerignore` |
-| Empty site after a fresh deploy | `SEED_DATA` was `false` on first run | Set it `true` once, restart the backend, then set it back |
+| Empty site after a fresh deploy | Expected: demo content is not seeded automatically any more | `docker compose run --rm backend seed --demo` on a DEVELOPMENT database, or add real listings through the admin panel |
+| Deleted listings come back after a restart | A `SeedHistory` row is missing, or someone ran `seed --demo --force` | `SELECT * FROM realestate.SeedHistory` — a batch with a row there never runs again |
 
 ---
 
@@ -250,7 +295,10 @@ Compose prefixes volume names with the project name; use the prefixed form with 
 - [ ] `JWT_SECRET` is 48+ random characters and **not** any value from `appsettings*.json`
 - [ ] `SA_PASSWORD` rotated away from every value in the repository
 - [ ] `MAIN_ADMIN_PASSWORD` is strong and stored in a password manager
-- [ ] `SEED_DATA=false` after the first successful deploy
+- [ ] `DB_USER` / `DB_PASSWORD` set — the app is not connecting as `sa` (`./scripts/create-db-user.sh`)
+- [ ] `./scripts/backup-db.sh` on a cron job, and `./backups` copied to another machine
+- [ ] A restore rehearsed at least once (`./scripts/restore-db.sh <file>`)
+- [ ] `./scripts/verify.sh` passes
 - [ ] `PUBLIC_ORIGIN` matches the scheme and host users actually type
 - [ ] The frontend image was rebuilt after the last `PUBLIC_ORIGIN` change
 - [ ] A hostname with a real certificate, or a conscious decision to run plain HTTP

@@ -62,6 +62,19 @@ EXPOSE 8080
 
 COPY --from=build /app/publish .
 
+# Normalise read permissions on the published output.
+#
+# COPY preserves the mode a file had on the way in. A file that reached the build context with
+# 0600 — which is what happens when it is written by a tool that defaults to owner-only, or
+# copied off a share — stays 0600 through `dotnet publish` and into this image. The app then
+# runs as $APP_UID, a DIFFERENT user from the one that owns it, and dies on startup with
+# "Access to the path '/app/appsettings.json' is denied" before it listens on anything. nginx
+# answers 502 and nothing in that message points at a file mode.
+#
+# a+rX: readable by everyone, and +X adds execute only where it already exists (directories and
+# real executables), never on plain data files.
+RUN chmod -R a+rX /app
+
 # Home for the DataProtection key ring (see DataProtection:KeyRingPath in Program.cs).
 # This has to happen BEFORE the USER switch below: after it the process is an unprivileged
 # numeric UID and cannot create anything under a root-owned directory. docker-compose.yml

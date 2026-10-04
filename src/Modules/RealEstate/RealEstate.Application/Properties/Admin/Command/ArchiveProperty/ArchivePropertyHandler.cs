@@ -4,6 +4,7 @@ using RealEstate.Application.Abstractions.Messaging;
 using RealEstate.Application.Abstractions.Persistence;
 using RealEstate.Application.policies;
 using RealEstate.Application.Properties.Admin.ArchiveProperty;
+using RealEstate.Domain.Entities;
 
 public sealed class ArchivePropertyHandler : ICommandHandler<ArchivePropertyCommand, Updated>
 {
@@ -18,18 +19,25 @@ public sealed class ArchivePropertyHandler : ICommandHandler<ArchivePropertyComm
         _unitOfWork = unitOfWork;
         _ownership = ownership;
     }
+
     public async Task<Result<Updated>> Handle(ArchivePropertyCommand request, CancellationToken cancellationToken)
     {
         var property = await _properties.GetByIdAsync(request.Id, cancellationToken);
         if (property is null) return Error.NotFound("Property.NotFound", "Property was not found.");
+
         var canModify = _ownership.CanModify(property);
         if (canModify.IsError) return canModify.TopError;
 
+        var oldStatus = property.Status;
+
         var archived = property.Archive();
         if (archived.IsError) return archived.TopError;
+
+        // Same trail as every other transition — see ChangePropertyPublicationStatusHandler.
+        _properties.RecordStatusChange(
+            PropertyStatusHistory.Record(property.Id, oldStatus, property.Status, request.Reason));
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return Result.Updated;
-
     }
-
 }

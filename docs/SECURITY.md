@@ -36,7 +36,7 @@ These are development placeholders. **Treat every one of them as compromised.** 
 - [ ] Blank the values in all three files and load them from configuration instead
 - [ ] Make `AuthDbContextFactory` read from an environment variable, with a clearly-fake fallback
 - [ ] Consider purging them from git history (`git filter-repo`) — note this rewrites every commit hash
-- [ ] Rotate the Mapbox token if `frontend/.env.local` was ever shared. It is git-ignored and **not** in the repository, but it does exist on developer machines. Domain-restrict the replacement in the Mapbox dashboard
+- [x] ~~Rotate the Mapbox token~~ — no longer applicable. Maps run on MapLibre GL + OpenFreeMap, which need no account and no token, and MapLibre is bundled rather than fetched from a CDN
 
 ### How secrets are supposed to flow
 
@@ -190,11 +190,13 @@ Caddy is the intended edge, obtaining and renewing certificates in-process — n
 
 **Let's Encrypt cannot issue a certificate for a bare IP address.** A hostname is the only route to a trusted certificate. If the site is running on an IP, plain HTTP is usually the more honest option than a self-signed certificate — see [DEPLOYMENT.md](DEPLOYMENT.md#tls-modes).
 
-Headers set at the Caddy edge: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, and the `Server` banner removed. **HSTS is deliberately commented out** while a self-signed certificate is in use — enabling it would pin visitors to HTTPS for a year against an untrusted certificate.
+Headers set at the Caddy edge: `X-Content-Type-Options: nosniff`, `X-Frame-Options: SAMEORIGIN`, `Referrer-Policy: strict-origin-when-cross-origin`, and the `Server` banner removed. **HSTS is off by default** (`CADDY_HSTS=max-age=0` in `.env`) and must stay off while a self-signed certificate is in use — enabling it would pin visitors to HTTPS against an untrusted certificate. It is now a variable rather than a commented-out line, so turning it on is a `.env` change and a restart. Start at `max-age=300`, confirm the site loads in a fresh browser, then raise it.
 
-**There is intentionally no Content-Security-Policy.** The app loads images from `images.unsplash.com` and scripts and tiles from Mapbox; a wrong CSP would blank exactly those and look identical to a backend outage. A correct one is worth adding, carefully, with those origins allow-listed.
+**There IS a Content-Security-Policy**, set by nginx — see `docker/nginx/security-headers.conf`. It was previously left out on the grounds that the app pulled scripts from a third-party CDN; it no longer does. MapLibre used to be loaded from `unpkg.com` at a floating major version with no integrity check, on every page including the admin property form — and the admin's JWT lives in `sessionStorage`, where any script on the page can read it. MapLibre is now a project dependency served from this origin, which is what made a real policy possible.
 
-`X-Forwarded-Proto` is mapped through nginx to Kestrel so that the original client scheme survives the plaintext Caddy → nginx hop. `Startup__UseHttpsRedirection` stays `false` because `Program.cs` never calls `UseForwardedHeaders()` — Kestrel would otherwise see the plaintext hop and redirect forever. Caddy already redirects at the edge.
+The policy allows scripts only from `'self'`, styles from `'self'` plus inline (React `style={{…}}` attributes), fonts from Google Fonts, images from `https:` (listing photos can be any URL an admin pastes), and connections to `'self'` plus `tiles.openfreemap.org`. `frame-ancestors 'none'`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`. The one runtime fetch MapLibre insists on doing by URL — the RTL text plugin for Arabic map labels — is vendored into `frontend/public/vendor/`.
+
+`X-Forwarded-Proto` is mapped through nginx to Kestrel so that the original client scheme survives the plaintext Caddy → nginx hop. `Program.cs` now calls `UseForwardedHeaders()` as its first middleware, so Kestrel sees the client's real scheme and address — which is also what makes the per-IP rate limits meaningful, since without it every request appears to come from the nginx container. `Startup__UseHttpsRedirection` stays `false` regardless: Caddy already redirects at the edge, and a second redirect inside the app is a loop waiting for a misconfiguration.
 
 ---
 
@@ -231,7 +233,7 @@ Ordered by severity.
 | 9 | **Content type is trusted** | A file with a JPEG MIME type and arbitrary bytes is stored and served back with that type |
 | 10 | **`Leads` has no retention policy** | Personal data stored indefinitely with no soft delete and no purge. Relevant to any privacy regime that applies |
 | 11 | **No dependency scanning in CI** | No Dependabot, no `dotnet list package --vulnerable`, no `npm audit` gate |
-| 12 | **No tests** | None of the Main Admin invariants, the catalogue validation or the token claim set is covered |
+| 12 | **Thin tests** | A domain suite now covers the Property status rules, the coordinate parser, the media order and the image-upload checks, and an end-to-end run proves a delete survives a restart — see [TESTING.md](TESTING.md). Still uncovered: the Main Admin invariants, the permission filters and the token claim set, all of which live in the application layer |
 
 ### Suggested order
 

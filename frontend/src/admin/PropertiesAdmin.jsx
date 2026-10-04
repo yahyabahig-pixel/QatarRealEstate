@@ -218,6 +218,16 @@ export default function PropertiesAdmin() {
     if (res && res.ok === false) {
       // Backend said no: the form stays open, every field keeps its value, the real
       // error (ProblemDetails title + validation messages) shows centered on screen.
+      //
+      // `createdId` means the listing row WAS created and a later request in the chain
+      // failed (photos, amenities, publish). Switch the open form into edit mode for that
+      // row, so pressing Save again finishes the same listing instead of creating another
+      // draft beside it — which is exactly what used to happen, once per attempt.
+      if (!isEdit && res.createdId) {
+        setEditing({ id: res.createdId })
+        setNotice({ kind: 'error', message: `${t('admin.props.partialCreate')}\n${res.error}` })
+        return
+      }
       setNotice({ kind: 'error', message: res.error })
       return
     }

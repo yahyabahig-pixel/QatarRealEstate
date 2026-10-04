@@ -63,6 +63,17 @@ public static class AppPermissions
         public const string Delete = "Job.Delete";
     }
 
+    // Customer enquiries: names, phone numbers and email addresses of real people who asked
+    // about a listing. Its own permission set because "may post a job advert" and "may read
+    // every customer's phone number" are not the same authority — before these existed, every
+    // admin account could read and permanently delete the whole enquiry list.
+    public static class Lead
+    {
+        public const string Read   = "Lead.Read";
+        public const string Update = "Lead.Update";   // working the pipeline: change a lead's status
+        public const string Delete = "Lead.Delete";   // permanent; for spam and test submissions
+    }
+
     public static class Media
     {
         public const string Upload = "Media.Upload";
@@ -108,6 +119,7 @@ public static class AppPermissions
         Area.Read, Area.Create, Area.Update, Area.Delete,
         Feature.Read, Feature.Create, Feature.Update, Feature.Delete,
         Job.Read, Job.Create, Job.Update, Job.Delete,
+        Lead.Read, Lead.Update, Lead.Delete,
         Media.Upload, Media.Delete,
         User.Read, User.Update, User.Delete,
         Admin.Read, Admin.Create, Admin.Update, Admin.Delete, Admin.AssignPosition,

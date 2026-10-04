@@ -15,6 +15,9 @@
     <PackageReference Include="Serilog.AspNetCore" Version="10.0.0" />
 
     <!-- Composition root: the ONLY project that references both ends of each module. -->
+    <!-- Explicit rather than transitive: Program.cs registers the shared pipeline behaviour
+         from this assembly by name, so the dependency is real and should be stated. -->
+    <ProjectReference Include="..\BuildingBlocks\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
     <ProjectReference Include="..\Modules\RealEstate\RealEstate.Api\RealEstate.Api.csproj" />
     <ProjectReference Include="..\Modules\RealEstate\RealEstate.Infrastructure\RealEstate.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Auth\Auth.Api\Auth.Api.csproj" />

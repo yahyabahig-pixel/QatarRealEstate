@@ -66,8 +66,22 @@ export async function http(path, { method = 'GET', body, auth = true } = {}) {
 
 // Build "?a=1&b=2" from an object, skipping null/undefined/'' so the backend's
 // record-constructor binding sees genuinely absent parameters, not empty strings.
+//
+// An ARRAY value becomes a repeated key — "?featureIds=a&featureIds=b" — because that is
+// the only shape ASP.NET Core binds to a Guid[] parameter. Object.fromEntries used to
+// collapse the array into one comma-joined value ("featureIds=a,b"), which the model
+// binder rejects outright: the amenity filter silently sent nothing the server understood.
+// An empty array is dropped entirely, exactly like an empty string.
 export const qs = (params = {}) => {
-  const pairs = Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== '')
-  if (pairs.length === 0) return ''
-  return '?' + new URLSearchParams(Object.fromEntries(pairs)).toString()
+  const search = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => {
+    if (v === undefined || v === null || v === '') return
+    if (Array.isArray(v)) {
+      v.filter(x => x !== undefined && x !== null && x !== '').forEach(x => search.append(k, x))
+      return
+    }
+    search.append(k, v)
+  })
+  const out = search.toString()
+  return out ? `?${out}` : ''
 }

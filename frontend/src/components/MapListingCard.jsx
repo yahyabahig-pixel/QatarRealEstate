@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useI18n } from '../i18n/I18nContext'
+import { isRoomless } from '../lib/propertyDisplay'
 import { compactPrice, displayCurrency, useFavourite } from './ui'
 import { IconHeart, IconPin } from './icons'
 
@@ -17,8 +18,14 @@ export default function MapListingCard({ item, purpose, active = false, onHover 
   const { t, typeLabel } = useI18n()
   const [fav, toggleFav] = useFavourite(item.id)
 
+  // A plot of LAND has no bedrooms, and "0 bedrooms" was being rendered as "Studio" — so
+  // every land listing advertised itself as a studio apartment. Property types that have no
+  // rooms simply say nothing about rooms.
+  const roomless = isRoomless(item.type)
   const specs = [
-    item.beds === 0 ? t('common.studio') : (item.beds === 1 ? t('common.bed') : t('common.beds', { n: item.beds })),
+    roomless
+      ? null
+      : item.beds === 0 ? t('common.studio') : (item.beds === 1 ? t('common.bed') : t('common.beds', { n: item.beds })),
     item.bathrooms > 0 ? (item.bathrooms === 1 ? t('common.bath') : t('common.baths', { n: item.bathrooms })) : null,
     item.sizeM2 > 0 ? `${Number(item.sizeM2).toLocaleString()} ${t('property.sqm')}` : null,
   ].filter(Boolean)
@@ -61,7 +68,11 @@ export default function MapListingCard({ item, purpose, active = false, onHover 
           </p>
         )}
         <div className="font-bold text-[15px] text-ink tracking-tight mt-1">
-          {item.price == null
+          {/* The API now sends NO price for a "price on request" listing, and the flag says
+              which kind of missing this is. This card used to print the figure the map
+              endpoint sent regardless — which is how two listings marked "on request"
+              showed "QAR 9.8M" and "QAR 6.8M" in the default view of /buy. */}
+          {item.priceOnRequest || item.price == null
             ? t('common.priceOnRequest')
             : displayCurrency(item.currency || 'QAR') + ' ' + compactPrice(item.price) + (purpose === 'rent' ? t('common.perMonth') : '')}
         </div>

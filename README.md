@@ -10,7 +10,7 @@
 [![Architecture](https://img.shields.io/badge/architecture-modular%20monolith-2B2D42)](docs/ARCHITECTURE.md)
 [![Docker](https://img.shields.io/badge/deploy-docker%20compose-2496ED)](docs/DEPLOYMENT.md)
 
-[Architecture](docs/ARCHITECTURE.md) · [System Design](docs/SYSTEM_DESIGN.md) · [Modules](docs/MODULES.md) · [API](docs/API.md) · [Database](docs/DATABASE.md) · [Developer Guide](docs/DEVELOPER_GUIDE.md) · [Deployment](docs/DEPLOYMENT.md) · [Security](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md)
+[Architecture](docs/ARCHITECTURE.md) · [System Design](docs/SYSTEM_DESIGN.md) · [Modules](docs/MODULES.md) · [API](docs/API.md) · [Database](docs/DATABASE.md) · [Developer Guide](docs/DEVELOPER_GUIDE.md) · [Testing](docs/TESTING.md) · [Deployment](docs/DEPLOYMENT.md) · [Security](docs/SECURITY.md) · [Roadmap](docs/ROADMAP.md)
 
 </div>
 
@@ -42,7 +42,7 @@ The Real Estate module is a full operational surface in its own right — 49 see
 |---|---|
 | **Home** — hero, search, featured grid<br><img src="docs/images/01-home.png" width="100%"> | **Listings** — filters, sorting, pagination<br><img src="docs/images/02-listings.png" width="100%"> |
 | **Property Details** — gallery, specs, agent, map<br><img src="docs/images/03-property-details.png" width="100%"> | **Map Search** — viewport query, price bubbles<br><img src="docs/images/04-map-search.png" width="100%"> |
-| **Admin Dashboard** — statistics, most-viewed<br><img src="docs/images/05-admin-dashboard.png" width="100%"> | **Admin Properties** — CRUD, media, publication<br><img src="docs/images/06-admin-properties.png" width="100%"> |
+| **Admin Dashboard** — statistics, most-viewed<br><img src="docs/images/05-admin-dashboard.png" width="100%"> | **Admin Permissions** — positions and permission catalogue<br><img src="docs/images/07-admin-permissions.png" width="100%"> |
 | **Positions & Permissions**<br><img src="docs/images/07-admin-permissions.png" width="100%"> | **Mobile**<br><img src="docs/images/08-mobile.png" width="100%"> |
 
 ---
@@ -163,7 +163,7 @@ Two properties of this pipeline are worth stating explicitly:
 | Logging | Serilog | Structured, with a per-request correlation id pushed into `LogContext` |
 | API docs | Microsoft.AspNetCore.OpenApi | Served at `/openapi/v1.json` in Development |
 | Frontend | React 19 · Vite 8 · Tailwind v4 · react-router 7 | Tailwind v4's CSS-first `@theme` keeps the design tokens in one file |
-| Maps | Mapbox GL (lazy-loaded from CDN) | Routes without a map ship zero Mapbox bytes |
+| Maps | MapLibre GL + OpenFreeMap tiles, bundled and code-split | No account, no token, no third-party script; routes without a map ship zero map bytes |
 | Delivery | Docker Compose — SQL Server, API, nginx (+ optional Caddy TLS edge) | One `docker compose up -d` from bare VPS to running system |
 
 ---
@@ -173,8 +173,8 @@ Two properties of this pipeline are worth stating explicitly:
 **Prerequisites:** Docker + Docker Compose. Nothing else — the .NET SDK and Node are only needed for local development outside containers.
 
 ```bash
-git clone https://github.com/ahmedgndy/QatarRealEstateAPI.git
-cd QatarRealEstateAPI
+git clone https://github.com/yahyabahig-pixel/QatarRealEstate.git
+cd QatarRealEstate
 
 cp .env.example .env
 # Fill in at minimum: SA_PASSWORD, JWT_SECRET (48+ chars), MAIN_ADMIN_EMAIL,
@@ -185,7 +185,7 @@ docker compose up -d --build
 docker compose logs -f backend
 ```
 
-The API applies both modules' migrations on start (retrying for up to 100 seconds while SQL Server warms up), then seeds roles, the Main Admin, four positions, and ~695 rows of catalogue and demo listings. Set `SEED_DATA=false` after the first successful run.
+The API applies both modules' migrations on start, then seeds roles, the Main Admin, four positions and the reference catalogues — each batch recorded in a `SeedHistory` table so it runs exactly once and anything deleted afterwards stays deleted. The ~695 rows of demo listings are **not** part of that: they are an explicit command, refused in Production, `docker compose run --rm backend seed --demo`.
 
 | | |
 |---|---|
@@ -255,7 +255,17 @@ flowchart LR
 
 Adding a permission is one constant plus one attribute — no migration, no policy registration, because `PermissionPolicyProvider` builds `perm:*` policies on demand. Positions can only store strings that exist in the catalogue, validated inside the `Position` aggregate, so a typo can never sit dormant in the table.
 
-The full model, the Main Admin's five layers of protection, and an honest list of the gaps — no token revocation, no refresh tokens, no rate limiting on login — is in **[docs/SECURITY.md](docs/SECURITY.md)**.
+The full model, the Main Admin's five layers of protection, and an honest list of the gaps — no token revocation, no refresh tokens — is in **[docs/SECURITY.md](docs/SECURITY.md)**. Login and the public write endpoints are rate-limited per client IP.
+
+## Verifying a change
+
+```bash
+./scripts/verify.sh
+```
+
+One command: compiles the backend, runs the test suites, builds the frontend, and proves
+end-to-end that a delete survives a restart — against a throwaway database that is deleted
+afterwards. Your data is not touched. See **[docs/TESTING.md](docs/TESTING.md)**.
 
 ---
 

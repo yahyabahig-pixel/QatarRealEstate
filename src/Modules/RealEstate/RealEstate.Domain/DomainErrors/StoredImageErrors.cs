@@ -4,6 +4,10 @@ namespace RealEstate.Domain.DomainErros;
 
 public static class StoredImageErrors
 {
+    public static Error ContentDoesNotMatchType =>
+        Error.Validation("Image.ContentDoesNotMatchType",
+            "The uploaded file is not a valid image of the type it claims to be.");
+
     public static Error NotFound =>
         Error.NotFound("Image.NotFound", "The requested image was not found.");
 

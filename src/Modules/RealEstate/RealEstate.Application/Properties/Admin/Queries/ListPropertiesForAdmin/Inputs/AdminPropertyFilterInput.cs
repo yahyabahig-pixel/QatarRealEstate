@@ -9,4 +9,10 @@ public sealed record AdminPropertyFilter(
     bool? IsActive,
     Guid? OwnerScopeUserId,
     int Page,
-    int PageSize);
+    int PageSize,
+    // The admin grid's own filters, answered in SQL. They used to be applied in the browser
+    // against whatever page the grid happened to be holding, which quietly made them wrong the
+    // moment the portfolio outgrew one page.
+    Guid? AreaId = null,
+    Guid? AgentId = null,
+    Guid? PropertyTypeId = null);

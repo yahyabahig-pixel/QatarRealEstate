@@ -1,6 +1,7 @@
 
 
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Api.Errors;
 using RealEstate.Application.Properties.User.Command.RecordPropertyView;
@@ -47,7 +48,12 @@ public sealed class PropertiesController : ApiControllerBase
         => (await Sender.Send(new GetRelatedPropertiesQuery(id, take), ct)).ToOk();
 
     // POST /api/properties/{id}/views  — fire-and-forget view counter, 204 always on success.
+    //
+    // Anonymous and it writes, so it is rate limited per address: the counter feeds the
+    // "Most viewed" dashboard the team makes decisions from, and a loop in a browser tab
+    // could otherwise put any listing at the top of it.
     [HttpPost("{id:guid}/views")]
+    [EnableRateLimiting("public-write")]
     public async Task<IActionResult> RecordView(Guid id, CancellationToken ct)
         => (await Sender.Send(new RecordPropertyViewCommand(id), ct)).ToNoContent();
 }

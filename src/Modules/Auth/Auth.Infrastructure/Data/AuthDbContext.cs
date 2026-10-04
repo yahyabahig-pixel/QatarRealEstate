@@ -15,6 +15,10 @@ public sealed class AuthDbContext : IdentityDbContext<AppUser, AppRole, Guid>
     public DbSet<Position> Positions => Set<Position>();
     // PositionPermission is reached through the Position aggregate — no public DbSet.
 
+    // Which seed batches have already been applied to this database's auth schema.
+    public DbSet<Auth.Infrastructure.Data.Seeding.AuthSeedHistoryEntry> SeedHistory =>
+        Set<Auth.Infrastructure.Data.Seeding.AuthSeedHistoryEntry>();
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.HasDefaultSchema("auth");

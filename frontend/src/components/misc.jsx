@@ -1,15 +1,22 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { whatsAppHref, mailHref } from '../lib/contact'
 import { useI18n } from '../i18n/I18nContext'
 import { useToast } from './Toast'
-import { PARTNER_NAMES } from '../data/mockData'
+import { COMPANY } from '../config/company'
 import PropertyCard from './PropertyCard'
 import { SectionHeading, WhatsAppIcon } from './ui'
 import { IconMail, IconX } from './icons'
 
 export function LogoMarquee({ dark = false }) {
-  const logos = [...PARTNER_NAMES, ...PARTNER_NAMES]
+  // The list used to be eight real Qatari companies hardcoded in the MOCK DATA file, under
+  // a heading that reads "Trusted by Leading Partners & Developers" — a public claim of a
+  // business relationship with each of them, made by a seed fixture. It now comes from
+  // COMPANY.partners, which ships empty: no partners configured, no strip.
+  const { partners } = COMPANY
+  if (!partners?.length) return null
+  const logos = [...partners, ...partners]
   return (
     <div className="overflow-hidden py-10">
       <div className="marquee-track flex gap-16 w-max">
@@ -103,8 +110,12 @@ export function FloatingContact() {
     <div className="fixed bottom-6 start-6 z-40 flex flex-col items-start gap-2">
       {open && (
         <div className="bg-ink text-white shadow-2xl shadow-black/25 border border-white/10 rounded-xl p-2 text-sm w-48">
-          <a href={`https://wa.me/${settings.whatsapp}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
-          <a href={`mailto:${settings.email}`} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><IconMail /> {t('common.email')}</a>
+          {whatsAppHref(settings.whatsapp) && (
+            <a href={whatsAppHref(settings.whatsapp)} target="_blank" rel="noreferrer" className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><WhatsAppIcon /> {t('common.whatsapp')}</a>
+          )}
+          {mailHref(settings.email) && (
+            <a href={mailHref(settings.email)} className="flex items-center gap-2.5 rounded-lg px-3 py-2.5 hover:bg-white/8 hover:text-primary transition-colors"><IconMail /> {t('common.email')}</a>
+          )}
         </div>
       )}
       <button onClick={() => setOpen(o => !o)} className="btn-primary !rounded-full !px-5 shadow-xl shadow-primary/25">

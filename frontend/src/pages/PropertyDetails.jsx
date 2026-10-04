@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
+import { telHref, whatsAppHref } from '../lib/contact'
 import { useI18n } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import { Breadcrumb, SectionHeading, fmtPrice, WhatsAppIcon, Star } from '../components/ui'
 import { InquiryForm, RecentlyViewed } from '../components/misc'
-import { IconArrowUpRight, IconCamera, IconChevronLeft, IconChevronRight, IconHeart, IconPhone, IconShare, IconSparkle, IconX } from '../components/icons'
+import { IconCamera, IconChevronLeft, IconChevronRight, IconHeart, IconPhone, IconShare, IconSparkle, IconX } from '../components/icons'
 import PropertyLocation from '../components/PropertyLocation'
 import { fallbackQatarCoord } from '../lib/geo'
 import { resolveFeatureIcon } from '../lib/featureIcons'
@@ -16,13 +17,15 @@ import { publicApi } from '../api/realEstateApi'
 // wa.me accepts DIGITS ONLY — "+974 5512-3456" must become "97455123456". The message is
 // the professional template with the REAL property title, fully URL-encoded. Numbers and
 // names come from the Agent record; nothing here is hardcoded.
-const waDigits = (n) => String(n || '').replace(/\D/g, '')
+//
+// The dial link is a DIFFERENT shape and used to be built with the WhatsApp helper, which
+// strips the "+". "tel:97455123456" dials as a local number, so the call failed from
+// abroad; telHref keeps the country-code plus.
 const waHref = (agent, p, t) => {
-  const num = waDigits(agent?.whatsapp || agent?.phone)
-  if (!num || !p) return null
-  const firstName = String(agent.name || '').trim().split(/\s+/)[0]
+  if (!p) return null
+  const firstName = String(agent?.name || '').trim().split(/\s+/)[0]
   const text = t('property.waMessage', { name: firstName, title: p.title })
-  return `https://wa.me/${num}?text=${encodeURIComponent(text)}`
+  return whatsAppHref(agent?.whatsapp || agent?.phone, text)
 }
 
 export default function PropertyDetails() {
@@ -235,10 +238,10 @@ export default function PropertyDetails() {
             )}
             {/* Contact buttons render ONLY when the agent actually has that channel —
                 never a broken tel:/wa.me link to nowhere. */}
-            {agent && (agent.phone || waHref(agent, p, t)) && (
-              <div className={`grid gap-2 ${agent.phone && waHref(agent, p, t) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {agent.phone && (
-                  <a href={`tel:${waDigits(agent.phone)}`} className="btn-dark !py-2"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
+            {agent && (telHref(agent.phone) || waHref(agent, p, t)) && (
+              <div className={`grid gap-2 ${telHref(agent.phone) && waHref(agent, p, t) ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {telHref(agent.phone) && (
+                  <a href={telHref(agent.phone)} className="btn-dark !py-2"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
                 )}
                 {waHref(agent, p, t) && (
                   <a href={waHref(agent, p, t)} target="_blank" rel="noreferrer"
@@ -258,7 +261,7 @@ export default function PropertyDetails() {
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-ink text-white flex items-center justify-between px-4 py-3">
         <span className="text-primary font-semibold text-sm">{fmtPrice(p)}</span>
         <div className="flex gap-2">
-          {agent?.phone && <a href={`tel:${waDigits(agent.phone)}`} className="btn-primary !py-1.5 text-xs">{t('common.call')}</a>}
+          {telHref(agent?.phone) && <a href={telHref(agent.phone)} className="btn-primary !py-1.5 text-xs">{t('common.call')}</a>}
           {waHref(agent, p, t) && (
             <a href={waHref(agent, p, t)} target="_blank" rel="noreferrer"
               className="bg-[#25d366] rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">

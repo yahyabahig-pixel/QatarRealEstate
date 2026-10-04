@@ -325,6 +325,24 @@ namespace Auth.Infrastructure.Data.Migrations
                     b.ToTable("AspNetUserTokens", "auth");
                 });
 
+            modelBuilder.Entity("Auth.Infrastructure.Data.Seeding.AuthSeedHistoryEntry", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<DateTimeOffset>("AppliedAtUtc")
+                        .HasColumnType("datetimeoffset");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SeedHistory", "auth");
+                });
+
             modelBuilder.Entity("Auth.Domain.Entities.PositionPermission", b =>
                 {
                     b.HasOne("Auth.Domain.Entities.Position", null)

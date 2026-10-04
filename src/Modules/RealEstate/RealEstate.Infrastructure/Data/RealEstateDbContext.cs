@@ -18,6 +18,11 @@ public sealed class RealEstateDbContext : DbContext
     public DbSet<Lead> Leads => Set<Lead>();
     // Media & PropertyFeature are reached through the Property aggregate — no public DbSet needed.
 
+    // Infrastructure bookkeeping, not business data: which seed batches have already been
+    // applied to this database. See SeedHistoryEntry for why deleting a seeded row has to stick.
+    public DbSet<RealEstate.Infrastructure.Data.Seeding.SeedHistoryEntry> SeedHistory =>
+        Set<RealEstate.Infrastructure.Data.Seeding.SeedHistoryEntry>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         // Picks up every IEntityTypeConfiguration<> in this assembly automatically.

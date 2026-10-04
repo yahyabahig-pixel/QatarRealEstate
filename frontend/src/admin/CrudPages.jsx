@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -8,7 +8,7 @@ import { resolveFeatureIcon } from '../lib/featureIcons'
 import LocationPicker from '../components/LocationPicker'
 import PropertyLocation from '../components/PropertyLocation'
 import { MOCK_MODE } from '../api/client'
-import { imagesAdminApi, imageUrl, leadsAdminApi } from '../api/realEstateApi'
+import { leadsAdminApi } from '../api/realEstateApi'
 
 // ---------------------------------------------------------------------------------------
 // Developments now carry the SAME Location object as properties, picked with the SAME
@@ -433,32 +433,51 @@ export function LeadsAdmin() {
 }
 
 export function SettingsAdmin() {
-  const { settings, setSettings } = useData()
+  // ---------------------------------------------------------------------------------------
+  // READ-ONLY on purpose.
+  //
+  // This page used to be a form. Submitting it called setSettings(...) — which writes the
+  // React state of the currently open tab — and then showed "Settings saved — live across
+  // the site." Nothing was sent to the server, because there is no settings endpoint and no
+  // settings table: the phone number, the email and the tax number all come from
+  // frontend/src/config/company.js and are baked into the bundle at build time. The next
+  // refresh threw the edit away, and the admin had been told it was live everywhere.
+  //
+  // Until a Settings API exists, the honest thing is to SHOW the values and say where they
+  // actually live. The form comes back the day there is somewhere real to save it to.
+  // ---------------------------------------------------------------------------------------
+  const { settings } = useData()
   const { t } = useI18n()
-  const toast = useToast()
-  const [f, setF] = useState(settings)
-  const set = (k) => (e) => setF({ ...f, [k]: e.target.value })
+
+  const rows = [
+    [t('admin.settings.siteName'), settings.siteName],
+    [t('admin.settings.contactPhone'), settings.phone],
+    [t('admin.settings.whatsappNumber'), settings.whatsapp],
+    [t('admin.settings.contactEmail'), settings.email],
+    [t('admin.settings.instagram'), settings.instagram === '#' ? '' : settings.instagram],
+    [t('admin.settings.linkedin'), settings.linkedin === '#' ? '' : settings.linkedin],
+    [t('admin.settings.taxNumber'), settings.taxNumber],
+    [t('admin.settings.footerAbout'), settings.footerAbout],
+    [t('admin.settings.footerAboutAr'), settings.footerAboutAr],
+  ]
+
   return (
     <div className="max-w-2xl">
       <PageTitle title={t('admin.settings.title')} />
-      <form className="grid md:grid-cols-2 gap-4" onSubmit={e => { e.preventDefault(); setSettings(f); toast(t('admin.settings.saved')) }}>
-        <Field label={t('admin.settings.siteName')}><input className="field-dark" value={f.siteName} onChange={set('siteName')} /></Field>
-        <Field label={t('admin.settings.contactPhone')}><input className="field-dark" value={f.phone} onChange={set('phone')} /></Field>
-        <Field label={t('admin.settings.whatsappNumber')}><input className="field-dark" value={f.whatsapp} onChange={set('whatsapp')} /></Field>
-        <Field label={t('admin.settings.contactEmail')}><input className="field-dark" value={f.email} onChange={set('email')} /></Field>
-        <Field label={t('admin.settings.instagram')}><input className="field-dark" value={f.instagram} onChange={set('instagram')} /></Field>
-        <Field label={t('admin.settings.linkedin')}><input className="field-dark" value={f.linkedin} onChange={set('linkedin')} /></Field>
-        <Field label={t('admin.settings.taxNumber')}>
-          <input className="field-dark" value={f.taxNumber ?? ''} onChange={set('taxNumber')} />
-        </Field>
-        <div className="md:col-span-2"><Field label={t('admin.settings.footerAbout')}><textarea rows="3" className="field-dark" value={f.footerAbout} onChange={set('footerAbout')} /></Field></div>
-        <div className="md:col-span-2">
-          <Field label={t('admin.settings.footerAboutAr')}>
-            <textarea rows="2" dir="rtl" lang="ar" className="field-dark text-right" value={f.footerAboutAr ?? ''} onChange={set('footerAboutAr')} />
-          </Field>
-        </div>
-        <div className="md:col-span-2"><button className="btn-primary">{t('admin.settings.save')}</button></div>
-      </form>
+      <div className="panel-dark p-5 mb-6 border-s-2 border-primary">
+        <div className="text-white font-semibold mb-1.5">{t('admin.settings.readOnlyTitle')}</div>
+        <p className="text-sm text-neutral-400 leading-relaxed">{t('admin.settings.readOnlyBody')}</p>
+      </div>
+      <dl className="panel-dark divide-y divide-white/6">
+        {rows.map(([label, value]) => (
+          <div key={label} className="px-5 py-3.5 grid sm:grid-cols-[200px_1fr] gap-1.5">
+            <dt className="text-xs uppercase tracking-wider text-neutral-500 pt-0.5">{label}</dt>
+            <dd className={value ? 'text-neutral-200 text-sm break-words' : 'text-neutral-600 text-sm italic'}>
+              {value || t('admin.settings.empty')}
+            </dd>
+          </div>
+        ))}
+      </dl>
     </div>
   )
 }

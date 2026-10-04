@@ -9,12 +9,14 @@ using RealEstate.Application.Properties.Admin.ChangePropertyPublicationStatus;
 using RealEstate.Application.Properties.Admin.Command.AddPropertyMedia;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty;
 using RealEstate.Application.Properties.Admin.Command.DeleteProperty;
+using RealEstate.Application.Properties.Admin.Command.ReorderPropertyMedia;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatured;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyFeatures;
 using RealEstate.Application.Properties.Admin.Command.SetPropertyOffer;
 using RealEstate.Application.Properties.Admin.Command.UpdateProperty;
 using RealEstate.Application.Properties.Admin.Queries.GetDashboardStatistics;
 using RealEstate.Application.Properties.Admin.Queries.GetMostViewedProperties;
+using RealEstate.Application.Properties.Admin.Queries.GetPropertyForAdmin;
 using RealEstate.Application.Properties.Admin.Queries.GetPropertyStatusHistory;
 using RealEstate.Application.Properties.Admin.RemovePropertyMedia;
 
@@ -45,12 +47,25 @@ public sealed class AdminPropertiesController : ApiControllerBase
     public async Task<IActionResult> MostViewed([FromQuery] GetMostViewedPropertiesQuery query, CancellationToken ct)
         => (await Sender.Send(query, ct)).ToOk();
 
-    // POST /api/admin/properties  → 201 + Location: /api/properties/{newId}
+    // GET /api/admin/properties/{id} — the admin panel's own details read.
+    //
+    // The public GET /api/properties/{id} serves published, active listings only (that is what
+    // unpublishing means), and it withholds the figure behind "price on request". The edit form
+    // needs both, so it reads here.
+    [HttpGet("{id:guid}", Name = "GetPropertyForAdmin")]
+    [HasPermission(AppPermissions.Property.Read)]
+    public async Task<IActionResult> ById(Guid id, CancellationToken ct)
+        => (await Sender.Send(new GetPropertyForAdminQuery(id), ct)).ToOk();
+
+    // POST /api/admin/properties  → 201 + Location: /api/admin/properties/{newId}
+    //
+    // Points at the ADMIN route, not the public one: a new listing is created as a Draft, and
+    // the public route would answer the Location header it was just handed with a 404.
     [HttpPost]
     [HasPermission(AppPermissions.Property.Create)]
     public async Task<IActionResult> Create([FromBody] CreatePropertyCommand command, CancellationToken ct)
         => (await Sender.Send(command, ct))
-            .ToCreatedAtRoute("GetPropertyDetails", id => new { id });
+            .ToCreatedAtRoute("GetPropertyForAdmin", id => new { id });
 
     // PUT /api/admin/properties/{id}
     [HttpPut("{id:guid}")]
@@ -67,6 +82,15 @@ public sealed class AdminPropertiesController : ApiControllerBase
     [HasPermission(AppPermissions.Property.Update)]
     public async Task<IActionResult> AddMedia(Guid id, [FromBody] AddPropertyMediaRequest body, CancellationToken ct)
         => (await Sender.Send(new AddPropertyMediaCommand(id, body.Items), ct)).ToNoContent();
+
+    // PUT /api/admin/properties/{id}/media/order — { "mediaIds": ["…","…"] }, first = cover.
+    //
+    // The admin form's reorder arrows had nothing to call: saving compared photos by URL, so a
+    // pure reordering read as "no change" and the cover never moved.
+    [HttpPut("{id:guid}/media/order")]
+    [HasPermission(AppPermissions.Property.Update)]
+    public async Task<IActionResult> ReorderMedia(Guid id, [FromBody] ReorderPropertyMediaRequest body, CancellationToken ct)
+        => (await Sender.Send(new ReorderPropertyMediaCommand(id, body.MediaIds), ct)).ToNoContent();
 
     // DELETE /api/admin/properties/{id}/media/{mediaId}
     [HttpDelete("{id:guid}/media/{mediaId:guid}")]
@@ -102,11 +126,15 @@ public sealed class AdminPropertiesController : ApiControllerBase
     public async Task<IActionResult> SetFeatured(Guid id, [FromBody] SetPropertyFeaturedRequest body, CancellationToken ct)
         => (await Sender.Send(new SetPropertyFeaturedCommand(id, body.IsFeatured), ct)).ToNoContent();
 
-    // POST /api/admin/properties/{id}/archive
+    // POST /api/admin/properties/{id}/archive   — optional body { "reason": "..." }
+    //
+    // The body is optional so the existing callers, which send none, keep working; the reason
+    // goes into the status-history audit trail. Without it every archive row was recorded
+    // with no explanation, which is most of the value of having the trail.
     [HttpPost("{id:guid}/archive")]
     [HasPermission(AppPermissions.Property.Publish)]
-    public async Task<IActionResult> Archive(Guid id, CancellationToken ct)
-        => (await Sender.Send(new ArchivePropertyCommand(id), ct)).ToNoContent();
+    public async Task<IActionResult> Archive(Guid id, [FromBody] ArchivePropertyRequest? body, CancellationToken ct)
+        => (await Sender.Send(new ArchivePropertyCommand(id, body?.Reason), ct)).ToNoContent();
 
     // DELETE /api/admin/properties/{id} -- PERMANENT removal (media, features and status
     // history cascade with it). Archive above stays the reversible alternative.

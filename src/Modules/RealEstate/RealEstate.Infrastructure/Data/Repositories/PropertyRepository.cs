@@ -29,4 +29,10 @@ public sealed class PropertyRepository : IPropertyRepository
         _db.PropertyTypes.AnyAsync(t => t.Id == propertyTypeId, ct);
 
     public void Remove(Property property) => _db.Properties.Remove(property);
+
+    // Added, not saved: the caller's own SaveChangesAsync commits the listing and its audit
+    // row together. The AuditableEntityInterceptor stamps CreatedBy/CreatedAtUtc on the way
+    // out, which is where the trail's "who" and "when" come from.
+    public void RecordStatusChange(PropertyStatusHistory entry) =>
+        _db.PropertyStatusHistories.Add(entry);
 }

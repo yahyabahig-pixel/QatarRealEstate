@@ -1,0 +1,134 @@
+# =========================================================================================
+# Continuous integration.
+#
+# There was none: nothing checked that a change compiled, and nothing ran a test, because
+# there were no tests. A broken build was discovered on the server, during a deploy.
+#
+# Four jobs, all of which must pass before a pull request is merged:
+#   backend    — compiles every C# project and runs the domain test suite
+#   frontend   — lint, unit tests, production build
+#   images     — builds both Docker images exactly as the server does
+#   persistence— the end-to-end check that a delete actually sticks across a restart
+#
+# The last one is the regression guard for the bug that started all this: demo data coming
+# back after it was deleted. It runs the same scripts/verify.sh a person runs locally.
+# =========================================================================================
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+
+  backend:
+    name: Backend — build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # Restore separately so a package-resolution failure is reported as itself rather
+      # than as a mysterious compile error two steps later.
+      - name: Restore
+        run: dotnet restore QatarRealEstate.slnx
+
+      - name: Build
+        run: dotnet build QatarRealEstate.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test QatarRealEstate.slnx --configuration Release --no-build --verbosity normal
+
+  frontend:
+    name: Frontend — lint, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      # `npm ci` rather than `npm install`: it installs exactly what package-lock.json
+      # pins and fails if the lock file and package.json disagree.
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build
+
+  images:
+    name: Docker images build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      # Built exactly the way the server builds them, so "it worked on my machine" and
+      # "it worked in CI" mean the same thing. Not pushed anywhere.
+      - name: Backend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.backend
+          push: false
+          tags: qre-backend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # No build-args, so VITE_API_URL is empty and the resulting image would run in mock
+      # mode. That is fine here: this job asks "does the image build?", not "does it run?".
+      # The persistence job below is what exercises a real, configured stack.
+      - name: Frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.frontend
+          push: false
+          tags: qre-frontend:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  persistence:
+    name: Persistence — a delete must survive a restart
+    runs-on: ubuntu-latest
+    needs: [backend, images]
+    steps:
+      - uses: actions/checkout@v4
+
+      # SQL Server needs a few GB; the default runner has enough once the pre-installed
+      # toolchains that this job does not use are out of the way.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc || true
+          df -h /
+
+      - name: Run the verification suite
+        # The frontend and the unit tests already ran in their own jobs; this one is here
+        # for the end-to-end persistence checks against a throwaway database.
+        run: ./scripts/verify.sh --skip-frontend
+
+      - name: Container logs on failure
+        if: failure()
+        run: docker compose -f docker-compose.test.yml logs --tail 200 || true

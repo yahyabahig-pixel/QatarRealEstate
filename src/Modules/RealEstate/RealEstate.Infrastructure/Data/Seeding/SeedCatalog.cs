@@ -259,7 +259,7 @@ internal static class SeedCatalog
                 new() { FeatureName = "Covered Parking", Value = "1" },
                 new() { FeatureName = "Balconies",       Value = "2" },
                 new() { FeatureName = "Floor Number",    Value = "8" },
-                new() { FeatureName = "Furnishing",      Value = "Fully furnished" },
+                new() { FeatureName = "Furnishing",      Value = "Furnished" },
             ],
         },
 
@@ -385,7 +385,7 @@ internal static class SeedCatalog
                 new() { FeatureName = "24/7 Security" },
                 new() { FeatureName = "Floor Number",      Value = "4" },
                 new() { FeatureName = "Distance To Metro", Value = "150" },
-                new() { FeatureName = "Furnishing",        Value = "Fully furnished" },
+                new() { FeatureName = "Furnishing",        Value = "Furnished" },
             ],
         },
 

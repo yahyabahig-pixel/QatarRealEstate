@@ -11,6 +11,7 @@
 #   REAL CERTIFICATE (needs a hostname pointing at this server)
 #     SITE_ADDRESS=qre.example.com
 #     CADDY_TLS=you@example.com
+#     CADDY_HSTS=max-age=300            <- then raise it once the site is confirmed
 #
 # After switching to a hostname, PUBLIC_ORIGIN in .env must become
 # https://qre.example.com AND the frontend image must be rebuilt — Vite bakes it
@@ -39,15 +40,37 @@
 		X-Frame-Options "SAMEORIGIN"
 		Referrer-Policy "strict-origin-when-cross-origin"
 
-		# Enable ONLY once a real, trusted certificate is in place. HSTS pins
-		# this host to HTTPS in every visitor's browser for a year; turning it
-		# on while still using the internal CA locks people out of the site.
-		# Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# HSTS. Driven from .env so it can be turned on WITHOUT editing this file,
+		# which is what kept it commented out and forgotten.
+		#
+		#   CADDY_HSTS="max-age=0"                             <- off (the default)
+		#   CADDY_HSTS="max-age=300"                           <- 5-minute rehearsal
+		#   CADDY_HSTS="max-age=31536000; includeSubDomains"   <- live
+		#
+		# The default is max-age=0 rather than no header at all, because that is the
+		# documented way to CLEAR an HSTS policy a browser has already cached. If
+		# HSTS is ever turned on by mistake, setting this back to max-age=0 is what
+		# releases the visitors who saw it.
+		#
+		# Turn it on ONLY once a real, trusted certificate is being served. HSTS
+		# pins this host to HTTPS in every visitor's browser for as long as
+		# max-age says, and a browser that has seen it will refuse to fall back —
+		# so switching it on while still using Caddy's internal CA locks people
+		# out of the site, and lowering max-age afterwards does not reach the
+		# browsers that already cached it. Start at max-age=300, confirm the site
+		# still loads in a fresh browser, then raise it.
+		Strict-Transport-Security {$CADDY_HSTS}
 	}
 
-	# Deliberately NO Content-Security-Policy. The app pulls images from
-	# images.unsplash.com and tiles/scripts from Mapbox; a wrong CSP would blank
-	# exactly those and look identical to a backend outage.
+	# Content-Security-Policy is set by nginx, one layer in — see
+	# docker/nginx/security-headers.conf. It lives there because that is the layer
+	# that also serves the files the policy is about, and because the site works
+	# with or without Caddy in front of it.
+	#
+	# (It used to say there was deliberately no CSP at all, on the grounds that the
+	# app loaded scripts from a third-party CDN. It no longer does: MapLibre is
+	# bundled and served from this origin, which is what made a real policy
+	# possible.)
 
 	reverse_proxy frontend:80 {
 		# Property photo uploads are ~25 MB and the API resizes them inline, so

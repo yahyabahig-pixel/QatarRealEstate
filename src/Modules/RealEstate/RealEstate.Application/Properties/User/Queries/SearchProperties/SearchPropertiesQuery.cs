@@ -16,4 +16,9 @@ public sealed record SearchPropertiesQuery(
     decimal? MaxPrice = null,
     PropertySortBy Sort = PropertySortBy.Relevance,
     int Page = 1,
-    int PageSize = 24) : IQuery<PagedResult<PropertyListItem>>;
+    int PageSize = 24,
+    // ?areaId=…&agentId=…&featureIds=…&featureIds=…&furnishing=Furnished
+    Guid? AreaId = null,
+    Guid? AgentId = null,
+    Guid[]? FeatureIds = null,
+    string? Furnishing = null) : IQuery<PagedResult<PropertyListItem>>;

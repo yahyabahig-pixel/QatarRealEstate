@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
+import { mailHref } from '../lib/contact'
 import { IconAward } from './icons'
 
 // Navigation columns. Every target is a route registered in App.jsx — no placeholders.
@@ -52,7 +53,7 @@ export default function Footer() {
   ].filter(([, url]) => isRealUrl(url))
 
   return (
-    <footer className="bg-ink text-neutral-300">
+    <footer className="qre-site-footer bg-ink text-neutral-300">
       {/* main footer */}
       <div className="max-w-7xl mx-auto px-4 py-14 grid md:grid-cols-4 gap-10">
         <div className="md:col-span-1">
@@ -92,7 +93,12 @@ export default function Footer() {
           </div>
           {/* Privacy / Terms / Cookies deliberately absent: no such routes exist in App.jsx,
               and a link to nowhere is worse than no link. Add the routes, then add them here. */}
-          <a href={`mailto:${settings.email}`} className="hover:text-primary transition-colors">{settings.email}</a>
+          {/* Rendered only when a real address is configured. It used to print
+              "hello@almadenah.example" — a reserved TLD that can never receive mail — as
+              the company's public contact address on every page. */}
+          {mailHref(settings.email) && (
+            <a href={mailHref(settings.email)} className="hover:text-primary transition-colors">{settings.email}</a>
+          )}
         </div>
       </div>
     </footer>

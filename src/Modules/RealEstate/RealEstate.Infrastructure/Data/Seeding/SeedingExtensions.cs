@@ -4,34 +4,44 @@ using Microsoft.Extensions.Logging;
 namespace RealEstate.Infrastructure.Data.Seeding;
 
 // ---------------------------------------------------------------------------------------------
-//  The one line the Host needs.
+//  What the Host calls. Two separate entry points, because the two batches answer to different
+//  rules: reference data is safe on a production database, demo data is sales material.
 //
-//  In src/Host/Program.cs, after `var app = builder.Build();`:
+//  Both are RUN-ONCE (recorded in realestate.SeedHistory), so a row an admin deletes afterwards
+//  stays deleted. See RealEstateDbSeeder for the whole reasoning.
 //
-//      if (app.Environment.IsDevelopment())
-//      {
-//          app.MapOpenApi();
-//          await app.Services.SeedRealEstateAsync();     // <-- add this
-//      }
-//
-//  Nothing has to be registered in DI: the extension opens its own scope and resolves the
-//  DbContext that AddRealEstateInfrastructure already registered.
+//  Neither migrates. The database must already exist with its migrations applied.
 // ---------------------------------------------------------------------------------------------
-
 public static class SeedingExtensions
 {
     /// <summary>
-    /// Runs the RealEstate seed data. Idempotent — calling it on every startup is safe.
-    /// Assumes the database already exists and the migrations are applied
-    /// (`dotnet ef database update`); it deliberately does NOT migrate for you.
+    /// Property types + the feature catalog. Returns true when this call actually inserted the
+    /// batch, false when it was already applied.
     /// </summary>
-    public static async Task SeedRealEstateAsync(
-        this IServiceProvider services,
-        CancellationToken cancellationToken = default)
+    public static Task<bool> SeedRealEstateReferenceDataAsync(
+        this IServiceProvider services, bool force = false, CancellationToken cancellationToken = default)
+        => RunAsync(services, (seeder, ct) => seeder.SeedReferenceDataAsync(force, ct),
+                    "reference data", cancellationToken);
+
+    /// <summary>
+    /// Demo listings, consultants, areas, projects and job adverts. Development and testing
+    /// only — the caller is responsible for the production guard (see Host's SeedCommand).
+    /// </summary>
+    public static Task<bool> SeedRealEstateDemoDataAsync(
+        this IServiceProvider services, bool force = false, CancellationToken cancellationToken = default)
+        => RunAsync(services, (seeder, ct) => seeder.SeedDemoDataAsync(force, ct),
+                    "demo data", cancellationToken);
+
+    private static async Task<bool> RunAsync(
+        IServiceProvider services,
+        Func<RealEstateDbSeeder, CancellationToken, Task<bool>> run,
+        string what,
+        CancellationToken cancellationToken)
     {
         await using var scope = services.CreateAsyncScope();
 
         var db = scope.ServiceProvider.GetRequiredService<RealEstateDbContext>();
+        var clock = scope.ServiceProvider.GetService<TimeProvider>() ?? TimeProvider.System;
 
         var logger = scope.ServiceProvider
             .GetService<ILoggerFactory>()
@@ -39,12 +49,12 @@ public static class SeedingExtensions
 
         try
         {
-            await new RealEstateDbSeeder(db, logger).SeedAsync(cancellationToken);
+            return await run(new RealEstateDbSeeder(db, logger, clock), cancellationToken);
         }
         catch (Exception ex)
         {
-            logger?.LogError(ex, "RealEstate seeding failed.");
-            throw;   // fail fast in development — silent half-seeded data is worse than a crash
+            logger?.LogError(ex, "RealEstate {What} seeding failed.", what);
+            throw;   // fail fast — silent half-seeded data is worse than a crash
         }
     }
 }

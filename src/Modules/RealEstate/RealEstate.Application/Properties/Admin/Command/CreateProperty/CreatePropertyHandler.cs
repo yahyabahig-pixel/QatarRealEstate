@@ -8,6 +8,7 @@ using RealEstate.Application.Properties.Admin.Command.CreateProperty;
 using RealEstate.Application.Properties.Admin.Command.CreateProperty.Inputs;
 using RealEstate.Application.Properties.Admin.Policies;
 using RealEstate.Domain.Entities;
+using RealEstate.Domain.Enums;
 using RealEstate.Domain.ValueObjects;
 
 public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyCommand, Guid>
@@ -119,6 +120,13 @@ public sealed class CreatePropertyHandler : ICommandHandler<CreatePropertyComman
         if (onRequest.IsError) return onRequest.TopError;
 
         await _properties.AddAsync(property.Value, cancellationToken);
+
+        // The first entry in the audit trail: the listing was born a Draft. Without it the
+        // dashboard's monthly figures and GET {id}/history start mid-story, and a listing
+        // created-then-published in the same session shows a publish event with no creation.
+        _properties.RecordStatusChange(
+            PropertyStatusHistory.Record(property.Value.Id, null, PropertyStatus.Draft, "Created"));
+
         await _unitOfWork.SaveChangesAsync(cancellationToken);
         return property.Value.Id;
 

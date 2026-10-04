@@ -10,6 +10,8 @@ public sealed record PropertyMapItem(
     Guid Id,
     string Title,
     string? Area,
+    // NULL for a "price on request" listing. The flag below says which of the two kinds of
+    // null this is, so the card can print "Price on request" rather than nothing at all.
     decimal? Price,
     string? Currency,
     int Beds,
@@ -20,7 +22,11 @@ public sealed record PropertyMapItem(
     double Lng,
     string? ThumbUrl,
     bool IsExclusive,
-    bool IsOffPlan);
+    bool IsOffPlan,
+    // Trailing and defaulted so existing construction sites keep compiling. This row used to
+    // carry no such flag at all, which is why the map — the DEFAULT view on /buy and /rent —
+    // printed the asking price of every listing whose price was supposed to be hidden.
+    bool PriceOnRequest = false);
 
 /// <summary>
 /// The viewport, already validated and clamped by the handler. Kept separate from the query

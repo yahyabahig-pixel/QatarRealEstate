@@ -10,4 +10,7 @@ public sealed record ListPropertiesForAdminQuery(
     bool? IsFeatured = null,
     bool? IsActive = null,
     int Page = 1,
-    int PageSize = 24) : IQuery<PagedResult<AdminPropertyListItemDto>>;
+    int PageSize = 24,
+    Guid? AreaId = null,
+    Guid? AgentId = null,
+    Guid? PropertyTypeId = null) : IQuery<PagedResult<AdminPropertyListItemDto>>;

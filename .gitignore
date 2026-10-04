@@ -498,3 +498,5 @@ _to_delete/
 
 # FUSE mount artifacts (Cowork device bridge) — never commit
 .fuse_hidden*
+WATCH.command
+RUN-STEP.command

@@ -23,15 +23,12 @@ export function PriceLabelSync() {
   return null
 }
 
-// Map pins have ~70px of room. "12,500,000 QAR" does not fit; "12.5M" does.
-// Deliberately unit-less -- the currency lives on the card, not on the pin.
-export const compactPrice = (amount) => {
-  const n = Number(amount)
-  if (!Number.isFinite(n) || n <= 0) return 'POA'
-  if (n >= 1e6) return `${(n / 1e6).toFixed(n >= 1e7 ? 0 : 1).replace(/\.0$/, '')}M`
-  if (n >= 1e3) return `${Math.round(n / 1e3)}K`
-  return String(Math.round(n))
-}
+// compactPrice moved to lib/format.js — a pure function, importable without React.
+// Re-exported here so the existing `import { compactPrice } from './ui'` call sites keep
+// working unchanged.
+export { compactPrice } from '../lib/format'
+
+
 
 // ---------------------------------------------------------------------------------------
 // Favourites — a purely client-side nicety (saved in this browser via localStorage).

@@ -1,5 +1,5 @@
 import { uiText } from '../i18n/uiText'
-import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import {
   seedProperties, seedDevelopments, seedAreas, seedAgents, seedJobs,
   seedSettings, seedInquiries, refFor, AMENITIES, PROPERTY_TYPES,
@@ -9,8 +9,9 @@ import { MOCK_MODE, tokenStore } from '../api/client'
 import {
   publicApi, catalogApi, propertyCommand, mapFeature, NAMED_FEATURES,
   agentsAdminApi, areasAdminApi, developmentsAdminApi, jobsAdminApi,
-  propertiesAdminApi, featuresAdminApi, leadsApi, leadsAdminApi,
+  propertiesAdminApi, featuresAdminApi, leadsApi, leadsAdminApi, toStoredMediaUrl,
 } from '../api/realEstateApi'
+import { orderedMediaIds, planMediaSync } from '../lib/mediaSync'
 
 // ---------------------------------------------------------------------------------------
 // The SHARED store. The public site reads from it; the admin panel writes to it.
@@ -20,12 +21,22 @@ import {
 //   LIVE (VITE_API_URL set) — slices load from the API on mount; every admin action calls
 //     the API and then re-fetches its slice, so what you see is what the database holds.
 //
-// STILL LOCAL IN BOTH MODES (no backend module yet — deliberately, they're next):
-//   settings, inquiries.
-// Articles were removed from the application entirely.
+// NOTHING FROM mockData REACHES LIVE MODE. Every slice starts EMPTY in live mode, including
+// inquiries — which used to start from three invented customers (James Whitfield, Aisha
+// Rahman, Marco Bellini). An admin logging in saw "Leads 3" with those names, and the real
+// enquiries only appeared after a manual page refresh, because the token lives in
+// sessionStorage and the admin lists were loaded once, on mount, before anyone had logged in.
+//
+// STILL LOCAL IN BOTH MODES (no backend module yet): settings.
 // ---------------------------------------------------------------------------------------
 const DataContext = createContext(null)
 const uid = () => Math.random().toString(36).slice(2, 10)
+
+// How many rows a slice loads per request. The store used to ask for 100 and ignore
+// totalCount, so listing 101 existed in the database and nowhere on the site. Now the
+// loaders follow the pages until they have everything (bounded, see MAX_PAGES).
+const PAGE_SIZE = 100
+const MAX_PAGES = 50        // 5,000 rows is far past this brokerage's scale; a stop, not a limit
 
 // Mock features derive from the old hardcoded amenity list, shaped like FeatureAdminDto.
 const mockFeatures = AMENITIES.map((name, i) => ({
@@ -43,7 +54,10 @@ export function DataProvider({ children }) {
   const [features, setFeatures] = useState(MOCK_MODE ? mockFeatures : [])
   const [propertyTypes, setPropertyTypes] = useState(
     MOCK_MODE ? PROPERTY_TYPES.map(n => ({ id: n, name: n })) : [])
-  const [inquiries, setInquiries] = useState(seedInquiries)
+  // Live mode starts with NO enquiries. Real ones arrive from the API once an admin is signed
+  // in; before that there is nothing to show, and showing invented people instead is worse
+  // than showing an empty list.
+  const [inquiries, setInquiries] = useState(MOCK_MODE ? seedInquiries : [])
   const [settings, setSettings] = useState(seedSettings)
   const [recentlyViewed, setRecentlyViewed] = useState([])
   const [loading, setLoading] = useState(!MOCK_MODE)
@@ -55,10 +69,24 @@ export function DataProvider({ children }) {
   // the token lacks the permission — the public site must never break on a stale token.
   const authed = () => !!tokenStore.get()
 
-  const reloadProperties = useCallback(async () => {
-    const page = await publicApi.searchProperties({ pageSize: 100 })
-    setProperties(page.items)
+  // Walks a paged endpoint to the end instead of taking the first page and calling it the
+  // whole dataset. `fetchPage` takes { page, pageSize } and resolves to { items, totalCount }.
+  const loadAllPages = useCallback(async (fetchPage) => {
+    const all = []
+    for (let page = 1; page <= MAX_PAGES; page++) {
+      const result = await fetchPage({ page, pageSize: PAGE_SIZE })
+      const items = result?.items || []
+      all.push(...items)
+      const total = result?.totalCount
+      if (items.length < PAGE_SIZE) break
+      if (typeof total === 'number' && all.length >= total) break
+    }
+    return all
   }, [])
+
+  const reloadProperties = useCallback(async () => {
+    setProperties(await loadAllPages(publicApi.searchProperties))
+  }, [loadAllPages])
 
   const reloadAgents = useCallback(async () => {
     setAgents(authed()
@@ -88,30 +116,61 @@ export function DataProvider({ children }) {
   }, [])
 
   const reloadInquiries = useCallback(async () => {
-    if (!authed()) return
-    const page = await leadsAdminApi.list({ pageSize: 100 }).catch(() => null)
-    if (page) setInquiries(page.items)
-  }, [])
+    if (!authed()) { setInquiries([]); return }
+    // A 403 here is normal now: enquiries are behind Lead.Read, and not every position has it.
+    // An empty list is the honest answer for those admins — not an error, and not fake rows.
+    const items = await loadAllPages(leadsAdminApi.list).catch(() => null)
+    if (items) setInquiries(items)
+  }, [loadAllPages])
+
+  const loadAll = useCallback(async () => {
+    const results = await Promise.allSettled([
+      reloadProperties(), reloadAgents(), reloadAreas(), reloadDevelopments(),
+      reloadJobs(), reloadFeatures(), reloadInquiries(),
+      catalogApi.propertyTypes().then(setPropertyTypes),
+    ])
+    const failed = results.filter(r => r.status === 'rejected')
+    if (failed.length) {
+      console.error('API load failed:', failed.map(f => f.reason))
+      setApiError(uiText.apiLoadError)
+    }
+    return failed.length === 0
+  }, [reloadProperties, reloadAgents, reloadAreas, reloadDevelopments,
+      reloadJobs, reloadFeatures, reloadInquiries])
 
   useEffect(() => {
     if (MOCK_MODE) return
     let cancelled = false
     ;(async () => {
-      const results = await Promise.allSettled([
-        reloadProperties(), reloadAgents(), reloadAreas(), reloadDevelopments(),
-        reloadJobs(), reloadFeatures(), reloadInquiries(),
-        catalogApi.propertyTypes().then(ts => !cancelled && setPropertyTypes(ts)),
-      ])
-      if (cancelled) return
-      const failed = results.filter(r => r.status === 'rejected')
-      if (failed.length) {
-        console.error('API load failed:', failed.map(f => f.reason))
-        setApiError(uiText.apiLoadError)
-      }
-      setLoading(false)
+      await loadAll()
+      if (!cancelled) setLoading(false)
     })()
     return () => { cancelled = true }
-  }, [reloadProperties, reloadAgents, reloadAreas, reloadDevelopments, reloadJobs, reloadFeatures, reloadInquiries])
+  }, [loadAll])
+
+  // Re-load every slice when the SIGNED-IN IDENTITY changes.
+  //
+  // This is what was missing. The lists load once on mount; signing in happens later and
+  // navigates inside the SPA, so nothing reloaded and the admin kept looking at the anonymous
+  // view — no real enquiries, only active agents, only open jobs — until they pressed refresh.
+  // Signing out has the mirror problem: another admin's data would stay on screen.
+  const lastToken = useRef(MOCK_MODE ? null : tokenStore.get())
+  const onIdentityChanged = useCallback(() => {
+    if (MOCK_MODE) return
+    const token = tokenStore.get()
+    if (token === lastToken.current) return
+    lastToken.current = token
+    loadAll()
+  }, [loadAll])
+
+  useEffect(() => {
+    if (MOCK_MODE) return undefined
+    // sessionStorage is per-tab, so 'storage' does not fire for our own writes. AuthContext
+    // dispatches this event itself on login and logout; the listener is here because the
+    // store is what has to react to it.
+    window.addEventListener('qre:auth-changed', onIdentityChanged)
+    return () => window.removeEventListener('qre:auth-changed', onIdentityChanged)
+  }, [onIdentityChanged])
 
   // Name → id lookups the property form mapper needs (see realEstateApi.propertyCommand).
   const typeIdByName = useMemo(
@@ -147,7 +206,9 @@ export function DataProvider({ children }) {
 
   // ---- mock CRUD ----------------------------------------------------------------------
   const mockCrud = (setter) => ({
-    add: (item) => { const withId = { id: uid(), ...item }; setter(prev => [withId, ...prev]); return withId },
+    // `active` is part of the record like any other field. It used to be dropped on create,
+    // so an agent or a job created as "inactive" appeared on the public site immediately.
+    add: (item) => { const withId = { id: uid(), active: true, ...item }; setter(prev => [withId, ...prev]); return withId },
     update: (id, patch) => setter(prev => prev.map(x => x.id === id ? { ...x, ...patch } : x)),
     remove: (id) => setter(prev => prev.filter(x => x.id !== id)),
   })
@@ -181,7 +242,17 @@ export function DataProvider({ children }) {
   }
 
   const liveCrud = (api, reload, rows, { toggleKey } = {}) => ({
-    add: guard(async (form) => { await api.create(form); await reload() }),
+    add: guard(async (form) => {
+      const created = await api.create(form)
+      // A record created as INACTIVE has to be deactivated right after it is created: POST
+      // has no "active" field (the domain starts everything active), so without this an agent
+      // or a job the admin switched off on the create form went live the moment it was saved.
+      if (toggleKey && form?.[toggleKey] === false) {
+        const id = created?.id ?? created
+        if (id) await api.toggleActive(id, false)
+      }
+      await reload()
+    }),
     update: guard(async (id, patch) => {
       const current = rows.find(x => x.id === id) || {}
       const merged = { ...current, ...patch }
@@ -209,14 +280,21 @@ export function DataProvider({ children }) {
   // "N/A" furnishing means "don't record it", so the feature is left off rather than
   // stored as the literal string. Names the catalog doesn't know are dropped, which is
   // what stops a stale chip from 400-ing the whole save.
-  const toFeatureSelection = (form = {}) => {
+  //
+  // A feature the listing ALREADY carries keeps its stored value. Every non-furnishing
+  // feature used to be sent as the literal 'Yes', so a Number feature that read
+  // "Balconies: 4" came back as "Balconies: Yes" after any unrelated save.
+  const toFeatureSelection = (form = {}, existing = []) => {
+    const valueByName = Object.fromEntries((existing || []).map(f => [f.name, f.value]))
     const names = new Set(form.amenities || [])
     if (form.furnishing && form.furnishing !== 'N/A') names.add(NAMED_FEATURES.FURNISHING)
     else names.delete(NAMED_FEATURES.FURNISHING)
     return [...names]
       .map(name => featureIdByName[name] && ({
         featureId: featureIdByName[name],
-        value: name === NAMED_FEATURES.FURNISHING ? form.furnishing : 'Yes',
+        value: name === NAMED_FEATURES.FURNISHING
+          ? form.furnishing
+          : (valueByName[name] ?? 'Yes'),
       }))
       .filter(Boolean)
   }
@@ -231,52 +309,90 @@ export function DataProvider({ children }) {
   }
 
   const livePropertyActions = {
-    add: guard(async (form) => {
-      const created = await propertiesAdminApi.create(propertyCommand(form, typeIdByName, areaIdByName))
-      const id = created?.id ?? created
-      if (form.images?.length) {
-        await propertiesAdminApi.addMedia(id, form.images.map((url, i) => ({
-          url, mediaType: 'Image', width: 1200, height: 800, order: i, isPrimary: i === 0,
-        })))
+    // NOT wrapped in `guard`, because this one needs to report the id even when it fails.
+    //
+    // Creating a listing is up to five requests: create, media, features, publish, feature.
+    // Request one produces a real row in the database. If request three then fails — a
+    // feature that no longer exists, an expired token, a dropped connection — the old code
+    // surfaced the error and left the form believing it was still creating something. The
+    // admin fixed the field, pressed Save, and got a SECOND draft; a third attempt, a third
+    // draft. The id travels back on the failure path too, so the form can switch itself
+    // into edit mode and the next Save updates the row that already exists.
+    add: async (form) => {
+      let id = null
+      try {
+        const created = await propertiesAdminApi.create(propertyCommand(form, typeIdByName, areaIdByName))
+        id = created?.id ?? created
+        if (form.images?.length) {
+          // toStoredMediaUrl for the same reason as in update(): store the relative path, so
+          // the photo keeps working when the site moves from an IP to a domain. Everything
+          // the uploader hands the form here is already relative — this is what keeps that
+          // true if a URL ever arrives by another route.
+          await propertiesAdminApi.addMedia(id, form.images.map((src, i) => ({
+            url: toStoredMediaUrl(src),
+            mediaType: 'Image', width: 1200, height: 800, order: i, isPrimary: i === 0,
+          })))
+        }
+        const sel = toFeatureSelection(form)
+        if (sel.length) await propertiesAdminApi.setFeatures(id, sel)
+        if (form.status === 'available') await propertiesAdminApi.publication(id, 'Publish')
+        // Exclusive = the domain's IsFeatured. Must come AFTER publish — the backend only
+        // features published listings (a draft marked exclusive is simply not promoted yet).
+        if (form.exclusive && form.status === 'available') {
+          await propertiesAdminApi.setFeatured(id, true)
+        }
+        await reloadProperties()
+        return { ok: true, value: { id } }
+      } catch (err) {
+        console.error(err)
+        // The half-finished draft is real: put it in the table so it is visible and can be
+        // finished or deleted rather than sitting there invisibly.
+        if (id) await reloadProperties().catch(() => {})
+        return { ok: false, error: describeError(err), status: err?.status, createdId: id }
       }
-      const sel = toFeatureSelection(form)
-      if (sel.length) await propertiesAdminApi.setFeatures(id, sel)
-      if (form.status === 'available') await propertiesAdminApi.publication(id, 'Publish')
-      // Exclusive = the domain's IsFeatured. Must come AFTER publish — the backend only
-      // features published listings (a draft marked exclusive is simply not promoted yet).
-      if (form.exclusive && form.status === 'available') {
-        await propertiesAdminApi.setFeatured(id, true)
-      }
-      await reloadProperties()
-      return { id }
-    }),
+    },
     update: guard(async (id, patch) => {
+      // The admin endpoint: a draft has to be loadable, and the real figure behind
+      // "price on request" has to come back, neither of which the public endpoint does.
       const current = await propertiesAdminApi.details(id)
       const merged = { ...current, ...patch }
       await propertiesAdminApi.update(id, propertyCommand(merged, typeIdByName, areaIdByName))
       if ('amenities' in patch || 'furnishing' in patch) {
-        const selection = toFeatureSelection(merged)
-        if (!sameSelection(toFeatureSelection(current), selection)) {
+        const selection = toFeatureSelection(merged, current.features)
+        if (!sameSelection(toFeatureSelection(current, current.features), selection)) {
           await propertiesAdminApi.setFeatures(id, selection)
         }
       }
       if ('images' in patch) {
-        // Sync media by URL: remove what the admin removed, add what they added.
-        const keep = new Set(patch.images)
-        const removed = (current.media || []).filter(m => !keep.has(m.url))
-        const existing = new Set((current.media || []).map(m => m.url))
-        const added = patch.images.filter(u => !existing.has(u))
-        for (const m of removed) await propertiesAdminApi.removeMedia(id, m.id)
+        // planMediaSync normalises both sides to the STORED shape before comparing them.
+        // See lib/mediaSync.js for why that matters; in short, the form holds rendered
+        // (absolute) urls for photos already on the listing and relative ones for photos
+        // added in this session, while media[].url is always the stored value.
+        const { wanted, added, removed } = planMediaSync(patch.images, current.media)
+
+        // ADD BEFORE REMOVE, deliberately. These are separate requests with no transaction
+        // around them, so one can fail with the other already done. Removing first means an
+        // expired token between the two leaves the listing with NO photos; adding first
+        // leaves it with one too many, which an admin can see and fix. Neither order is
+        // atomic; only one of them can lose the originals.
         if (added.length) {
           await propertiesAdminApi.addMedia(id, added.map((url, i) => ({
             url, mediaType: 'Image', width: 1200, height: 800,
             order: (current.media?.length || 0) + i, isPrimary: false,
           })))
         }
+        for (const m of removed) await propertiesAdminApi.removeMedia(id, m.id)
+
+        // ...and then set the ORDER the admin arranged, which comparing by URL cannot see.
+        // Without this the reorder arrows did nothing and the cover photo never changed.
+        const after = await propertiesAdminApi.details(id)
+        const orderedIds = orderedMediaIds(wanted, after.media)
+        if (orderedIds) await propertiesAdminApi.reorderMedia(id, orderedIds)
       }
       if ('status' in patch && patch.status !== current.status) {
         const action = { available: 'Publish', sold: 'MarkSold', rented: 'MarkRented', draft: 'Unpublish' }[patch.status]
         if (action) await propertiesAdminApi.publication(id, action)
+        else if (patch.status === 'archived') await propertiesAdminApi.archive(id)
       }
       // Exclusive = IsFeatured, applied AFTER any publication change so "publish + feature"
       // in one save works. Featuring a non-published listing is skipped (backend would 409);
@@ -297,10 +413,17 @@ export function DataProvider({ children }) {
   const value = useMemo(() => ({
     properties, developments, areas, agents, jobs, jobDepartments, features, propertyTypes,
     inquiries, settings, recentlyViewed,
+    // Name → id lookups. The public pages need them to turn what a visitor clicked (an
+    // amenity chip labelled "Pool", a type chip labelled "Villa") into the ids the search
+    // endpoint filters by. Without them those filters can only run in the browser, over a
+    // list DTO that carries neither amenities nor furnishing — which is why they matched
+    // nothing at all in live mode.
+    typeIdByName, featureIdByName, areaIdByName,
     loading, apiError, clearApiError: () => setApiError(null),
     areaCount, trackView, addInquiry, setSettings,
     // Refresh the shared public slice after direct admin API calls (no-op in mock mode).
     reloadProperties: MOCK_MODE ? () => {} : reloadProperties,
+    reloadInquiries: MOCK_MODE ? () => {} : reloadInquiries,
 
     propertyActions: MOCK_MODE
       ? {
@@ -325,7 +448,7 @@ export function DataProvider({ children }) {
       ? {
           ...mockCrud(setAgents),
           add: (item) => {
-            const withId = { id: uid(), slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), ...item }
+            const withId = { id: uid(), active: true, slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'), ...item }
             setAgents(prev => [withId, ...prev]); return withId
           },
         }
