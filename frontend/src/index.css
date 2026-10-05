@@ -101,6 +101,29 @@ html[lang="ar"] .tracking-wider { letter-spacing: .04em !important; }
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
 
+/* ----------------------------------------------------------------------------------
+   HERO BACKDROP MOTION
+   A slow drift across the photograph — a Ken Burns push, not a pan that draws the eye
+   away from the headline sitting on top of it. 28s and ~9% of travel, so at any single
+   moment it is barely perceptible; it reads as a photograph that is alive rather than
+   as an animation.
+
+   The scale floor is 1.15 because the image is blurred, and a blur samples past the
+   element's edges: anything less and the feathered edge creeps into frame.
+
+   The global prefers-reduced-motion rule above already flattens this to a still frame.
+   The slideshow's timer is stopped in JS for the same reason — without that it would
+   hard-cut between photographs instead of fading, which is worse than not moving.
+   ---------------------------------------------------------------------------------- */
+@keyframes qre-hero-drift {
+  from { transform: scale(1.15) translate3d(0, 0, 0); }
+  to   { transform: scale(1.26) translate3d(-2%, -1.5%, 0); }
+}
+.qre-hero-slide {
+  animation: qre-hero-drift 28s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
 @layer components {
   /* ---------------------------------------------------------------- typography */
 

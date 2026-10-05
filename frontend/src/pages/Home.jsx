@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
@@ -30,6 +30,94 @@ const ALT_HEROES = [
 // as a single tunable constant: 70% of a 20px ceiling. Turn it down towards 0px to sharpen the
 // photograph, or up for a softer backdrop — nothing else needs touching.
 const HERO_BLUR = '14px'
+
+// All four photographs, in order. They were already here as error fallbacks and never shown;
+// they are the rotation now, and a photograph that fails to load simply drops out of it.
+const HERO_SLIDES = [HERO, ...ALT_HEROES]
+const SLIDE_MS = 7000     // how long each photograph holds
+const FADE_MS = 2000      // how long the crossfade between two of them takes
+
+// ---------------------------------------------------------------------------------------
+// The moving backdrop. Two things give it life: a slow crossfade between the four Qatar
+// photographs, and a continuous drift (see .qre-hero-slide in index.css) so the frame is
+// never completely still.
+//
+// Three things it is careful about:
+//   • WEIGHT — these are 2400px photographs. Only the first is requested up front, with
+//     fetchPriority high, because it is the page's largest contentful paint. The rest are
+//     added once it has settled — loaded OR failed — so they cost nothing before the page
+//     is usable, and a dead first URL still lets the others through.
+//   • MOTION — someone who asks their system for reduced motion gets a still frame. The
+//     CSS rule flattens the drift, and the timer below never starts, because a crossfade
+//     with no transition is a hard cut, which is worse than no movement at all.
+//   • FAILURE — a photograph that will not load is removed from the rotation instead of
+//     showing an empty frame when its turn comes round.
+// ---------------------------------------------------------------------------------------
+function HeroBackdrop({ alt }) {
+  const [index, setIndex] = useState(0)
+  // "Settled", not "loaded": the first photograph FAILING has to release the others too,
+  // or one dead URL takes the whole backdrop down with it — three good photographs left
+  // unmounted behind a flag that only a successful load could ever set.
+  const [settled, setSettled] = useState(false)
+  const [broken, setBroken] = useState(() => new Set())
+  const reduced = useRef(false)
+
+  const dropSlide = (src) => setBroken((b) => (b.has(src) ? b : new Set(b).add(src)))
+
+  useEffect(() => {
+    const mq = window.matchMedia?.('(prefers-reduced-motion: reduce)')
+    reduced.current = !!mq?.matches
+    if (!settled || reduced.current) return
+
+    const live = HERO_SLIDES.filter((src) => !broken.has(src))
+    if (live.length < 2) return            // nothing to cross-fade to
+
+    const id = setInterval(() => {
+      setIndex((i) => {
+        for (let step = 1; step <= HERO_SLIDES.length; step++) {
+          const next = (i + step) % HERO_SLIDES.length
+          if (!broken.has(HERO_SLIDES[next])) return next
+        }
+        return i
+      })
+    }, SLIDE_MS)
+    return () => clearInterval(id)
+  }, [settled, broken])
+
+  // Which photograph is actually on screen. Derived rather than stored: if the one the
+  // timer is pointing at turns out to be broken, the first working one shows instead. An
+  // earlier version patched the index from inside the error handler and could point it at
+  // a photograph that was ALSO broken, leaving the frame empty with good photos unused.
+  const active = broken.has(HERO_SLIDES[index])
+    ? HERO_SLIDES.findIndex((src) => !broken.has(src))
+    : index
+
+  return (
+    <div className="absolute inset-0 overflow-hidden">
+      {HERO_SLIDES.map((src, i) => {
+        // The first photograph is always mounted; the rest wait until it has settled.
+        if (i > 0 && !settled) return null
+        if (broken.has(src)) return null
+        return (
+          <img
+            key={src}
+            src={src}
+            alt={i === 0 ? alt : ''}
+            aria-hidden={i === 0 ? undefined : true}
+            fetchPriority={i === 0 ? 'high' : 'low'}
+            loading={i === 0 ? 'eager' : 'lazy'}
+            decoding="async"
+            onLoad={i === 0 ? () => setSettled(true) : undefined}
+            onError={() => { if (i === 0) setSettled(true); dropSlide(src) }}
+            style={{ filter: `blur(${HERO_BLUR})`, transitionDuration: `${FADE_MS}ms` }}
+            className={`qre-hero-slide absolute inset-0 w-full h-full object-cover transition-opacity ease-in-out ${
+              i === active ? 'opacity-100' : 'opacity-0'}`}
+          />
+        )
+      })}
+    </div>
+  )
+}
 
 export default function Home() {
   const { properties, developments, areas, agents, areaCount, propertyTypes } = useData()
@@ -64,24 +152,7 @@ export default function Home() {
     <>
       {/* HERO */}
       <section className="relative h-screen min-h-[680px] flex items-center justify-center overflow-hidden">
-        <img
-          src={HERO}
-          alt="The West Bay skyline across Doha Bay, Qatar"
-          fetchPriority="high"
-          /* If the primary crop ever stops resolving, fall through the alternates rather than
-             leaving a bare indigo panel. Each onError advances one step and then stops. */
-          onError={(e) => {
-            const i = Number(e.currentTarget.dataset.fallback || 0)
-            if (i < ALT_HEROES.length) {
-              e.currentTarget.dataset.fallback = String(i + 1)
-              e.currentTarget.src = ALT_HEROES[i]
-            }
-          }}
-          /* scale-115 (not 105) because a blur samples past the element's edges and would
-             otherwise feather them into the background — the overscan hides that entirely. */
-          style={{ filter: `blur(${HERO_BLUR})` }}
-          className="absolute inset-0 w-full h-full object-cover scale-115"
-        />
+        <HeroBackdrop alt="The West Bay skyline across Doha Bay, Qatar" />
         {/* indigo unifier — carries the brand dark and keeps white type legible on any crop */}
         <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/55 to-ink/90" />
         {/* logo-red cast — a quiet full-bleed tint that pulls the backdrop toward the
