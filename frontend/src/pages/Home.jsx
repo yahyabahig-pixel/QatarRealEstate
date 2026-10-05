@@ -146,10 +146,15 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Everything from here down is ONE white surface. The sections used to sit on four
+          different backgrounds in a row — a dark band, then the page's grey, then grey
+          again, then white — which made the page under the search panel look unsettled. */}
+      <div className="bg-white">
+
       {/* DEVELOPMENTS SLIDER */}
-      <section className="bg-ink text-white py-20">
+      <section className="py-20">
         <div className="max-w-7xl mx-auto px-4">
-          <SectionHeading dark eyebrow={t('home.devEyebrow')} title={t('home.devTitle')}
+          <SectionHeading eyebrow={t('home.devEyebrow')} title={t('home.devTitle')}
             subtitle={t('home.devSubtitle')} link="/developments" linkLabel={t('home.devLink')} />
           <div className="flex gap-6 overflow-x-auto no-scrollbar pb-4 snap-x">
             {developments.map(d => (
@@ -200,7 +205,7 @@ export default function Home() {
 
       {/* AGENTS */}
       {topAgents.length > 0 && (
-        <section className="bg-white border-t border-neutral-200 py-20">
+        <section className="border-t border-neutral-200 py-20">
           <div className="max-w-7xl mx-auto px-4">
             <SectionHeading eyebrow={t('home.agentsEyebrow')} title={t('home.agentsTitle')}
               subtitle={t('home.agentsSubtitle')} link="/find-agent" linkLabel={t('home.meetTeam')} />
@@ -223,6 +228,8 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      </div>
     </>
   )
 }
