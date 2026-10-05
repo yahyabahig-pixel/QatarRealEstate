@@ -131,25 +131,26 @@ export default function Home() {
 
         </div>
 
-        {/* STATISTICS — anchored to the hero's bottom edge */}
-        <div className="absolute bottom-0 inset-x-0 hidden md:block">
-          <div className="max-w-7xl mx-auto px-4">
-            <div className="grid grid-cols-4 divide-x divide-white/10 border-t border-white/10 text-white">
-              {stats.map(([v, k]) => (
-                <div key={k} className="py-6 text-center">
-                  <div className="h-serif text-3xl">{v}</div>
-                  <div className="text-[11px] uppercase tracking-[0.18em] text-white/60 mt-1">{k}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </section>
 
       {/* Everything from here down is ONE white surface. The sections used to sit on four
           different backgrounds in a row — a dark band, then the page's grey, then grey
           again, then white — which made the page under the search panel look unsettled. */}
       <div className="bg-white">
+
+      {/* STATISTICS — the first row of the white surface, not the hero's bottom edge */}
+      <div className="hidden md:block border-b border-neutral-200">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="grid grid-cols-4 divide-x divide-neutral-200">
+            {stats.map(([v, k]) => (
+              <div key={k} className="py-7 text-center">
+                <div className="h-serif text-3xl text-ink">{v}</div>
+                <div className="text-[11px] uppercase tracking-[0.18em] text-mist mt-1">{k}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
 
       {/* DEVELOPMENTS SLIDER */}
       <section className="py-20">
