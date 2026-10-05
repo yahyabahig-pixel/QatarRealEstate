@@ -34,12 +34,6 @@ const RestartIcon = ({ className = 'w-4 h-4' }) => (
   </svg>
 )
 
-// Has the mascot already waved during this visit? sessionStorage THROWS rather than
-// returning null in a private window or with site data blocked, and this runs on every page
-// — unguarded it would take the assistant down with it. Failing to remember is harmless: the
-// worst case is one extra wave.
-const GREETED_KEY = 'qre.assistantGreeted'
-
 // Heights of the two greeting shapes, each including its 12px margin: the card with the
 // welcome text, and the avatar on its own.
 const GREET_CARD_H = 170
@@ -63,12 +57,6 @@ const greetShape = () => {
   if (launcherTop - GREET_CARD_H > floor) return 'card'
   if (launcherTop - GREET_AVATAR_H > floor) return 'avatar'
   return null
-}
-const alreadyGreeted = () => {
-  try { return sessionStorage.getItem(GREETED_KEY) === '1' } catch { return false }
-}
-const markGreeted = () => {
-  try { sessionStorage.setItem(GREETED_KEY, '1') } catch { /* not remembered; it just waves again */ }
 }
 
 function Bubble({ msg, t }) {
@@ -123,11 +111,10 @@ export default function AssistantWidget() {
   // Two things greet an arriving visitor, in order: the mascot rises above the launcher and
   // waves, and once it has dropped back in, the text bubble appears.
   //
-  // The wave plays ONCE PER VISIT, remembered in sessionStorage. Plain component state would
-  // have replayed the whole five-and-a-half seconds on every refresh and every hard
-  // navigation, which is how a greeting turns into a nag. sessionStorage and not
-  // localStorage, because someone coming back tomorrow is arriving again and should be
-  // greeted again; someone reloading the page mid-visit is not.
+  // The wave plays on EVERY page load. It was once per session, remembered in session
+  // storage, and a refresh not replaying it read as broken rather than considerate — so that
+  // rule is gone. Moving between pages still does not replay it: PublicLayout mounts this
+  // component once, so the effect runs on mount and not per route.
   //
   // Reduced motion skips the wave and goes straight to the bubble. The greeting is ALL
   // movement; with transitions flattened it would be a large face appearing and vanishing
@@ -135,11 +122,10 @@ export default function AssistantWidget() {
   useEffect(() => {
     if (open || seen) { setTeaser(false); setGreet(false); return undefined }
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    const shape = still || alreadyGreeted() ? null : greetShape()
+    const shape = still ? null : greetShape()
     const wave = !!shape
     const timers = []
     if (wave) {
-      markGreeted()
       timers.push(setTimeout(() => setGreet(shape), 700))
       // Longer than the wordless version was: there is a paragraph to read now, and five
       // seconds is not enough time to read it, decide, and click.
