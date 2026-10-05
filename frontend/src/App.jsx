@@ -64,12 +64,14 @@ function ScrollToTop() {
 
 function PublicLayout() {
   const { pathname } = useLocation()
-  const overHero = pathname === '/'
+  // The home page is the only one with a full-bleed hero behind the navbar, and now the
+  // only one whose body is a single white surface. Both of those follow from the same fact.
+  const isHome = pathname === '/'
   return (
     <>
-      <Navbar overHero={overHero} />
+      <Navbar overHero={isHome} />
       <Outlet />
-      <CtaBand />
+      <CtaBand light={isHome} />
       <Footer />
       <FloatingContact />
       {/* AI property assistant — public pages only (the admin console stays clean) */}
