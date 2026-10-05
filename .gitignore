@@ -3,8 +3,16 @@
 ##
 ## Get latest from `dotnet new gitignore`
 
-# dotenv files
+# dotenv files — every variant, not just the bare name. This repository is public, so a
+# secret that gets committed is published the moment it is pushed; `.env` on its own left
+# `.env.production` and `.env.local` free to be added by accident.
 .env
+.env.*
+!.env.example
+
+# Database backups. scripts/backup-db.sh writes whole copies of the database here.
+backups/
+*.bak
 
 # User-specific files
 *.rsuser
