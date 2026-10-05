@@ -23,6 +23,10 @@ public record PropertySearchCriteria(
     Guid? AreaId = null,
     Guid? AgentId = null,
     IReadOnlyList<Guid>? FeatureIds = null,   // listing must carry ALL of them
+    // …and must carry NONE of these. "بدون مسبح" / "without a pool" is a real condition a
+    // visitor states, and until this existed the only thing the site could do with it was
+    // stop REQUIRING a pool — which answers "without a pool" with the pools.
+    IReadOnlyList<Guid>? ExcludeFeatureIds = null,
     string? Furnishing = null);               // value of the "Furnishing" catalog feature
 
 public enum PropertySortBy { Relevance = 0, PriceAsc, PriceDesc, Newest, Oldest }

@@ -30,6 +30,7 @@ public sealed class SearchPropertiesHandler : IQueryHandler<SearchPropertiesQuer
             AreaId: request.AreaId,
             AgentId: request.AgentId,
             FeatureIds: request.FeatureIds is { Length: > 0 } ids ? ids.Distinct().ToList() : null,
+            ExcludeFeatureIds: request.ExcludeFeatureIds is { Length: > 0 } notIds ? notIds.Distinct().ToList() : null,
             Furnishing: string.IsNullOrWhiteSpace(request.Furnishing) ? null : request.Furnishing.Trim());
 
         return await _queries.SearchAsync(criteria, cancellationToken);

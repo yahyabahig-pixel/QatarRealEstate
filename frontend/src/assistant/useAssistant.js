@@ -53,7 +53,7 @@ let seq = 0
 const mid = () => `m${Date.now().toString(36)}-${seq++}`
 
 export function useAssistant() {
-  const { properties, propertyTypes } = useData()
+  const { properties, propertyTypes, features } = useData()
   const { lang: uiLang } = useI18n()
 
   const [messages, setMessages] = useState([])
@@ -72,7 +72,7 @@ export function useAssistant() {
     const f = filtersRef.current
     setBusy(true)
     try {
-      const { items, total, relaxed, notes } = await runSearch(f, { properties, propertyTypes, typeIdByName })
+      const { items, total, relaxed, notes } = await runSearch(f, { properties, propertyTypes, typeIdByName, features })
       recordSearch(f, total, lang)
       const crit = summarize(f, lang)
       const extras = notesPhrase(notes, lang)
@@ -103,7 +103,7 @@ export function useAssistant() {
     } finally {
       setBusy(false)
     }
-  }, [properties, propertyTypes, typeIdByName, push])
+  }, [properties, propertyTypes, typeIdByName, features, push])
 
   const send = useCallback(async (raw) => {
     const text = String(raw || '').trim()
@@ -136,9 +136,15 @@ export function useAssistant() {
         return
 
       case 'remove': {
-        filtersRef.current = applyRemovals(filtersRef.current, parsed.removals)
+        // applyRemovals FIRST, then the slots: «بدون مسبح» clears the pool requirement and
+        // sets the exclusion in the same breath, and the order is what keeps the exclusion.
+        let rf = applyRemovals(filtersRef.current, parsed.removals)
+        rf = mergeSlots(rf, parsed.slots)
+        filtersRef.current = rf
         if (parsed.sort) filtersRef.current.sort = parsed.sort
-        const ack = parsed.removals.map((r) => removalPhrase(r, lang)).join(' ')
+        const ack = parsed.removals
+          .map((r) => removalPhrase(r, lang, parsed.slots.excludeAmenities))
+          .join(' ')
         if (hasAny(filtersRef.current)) await respondSearch(lang, ack)
         else {
           askedPurposeRef.current = false

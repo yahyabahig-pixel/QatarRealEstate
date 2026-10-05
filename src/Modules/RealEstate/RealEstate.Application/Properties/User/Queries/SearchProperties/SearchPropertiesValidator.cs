@@ -32,6 +32,11 @@ public sealed class SearchPropertiesValidator : AbstractValidator<SearchProperti
             .WithMessage("At most 30 features can be requested at once.")
             .When(x => x.FeatureIds is not null);
 
+        // Same ceiling on the other side: each excluded feature adds its own NOT EXISTS.
+        RuleFor(x => x.ExcludeFeatureIds!).Must(ids => ids.Length <= 30)
+            .WithMessage("At most 30 features can be excluded at once.")
+            .When(x => x.ExcludeFeatureIds is not null);
+
         When(x => x.MinPrice.HasValue && x.MaxPrice.HasValue, () =>
             RuleFor(x => x.MinPrice!.Value).LessThanOrEqualTo(x => x.MaxPrice!.Value)
                 .WithMessage("MinPrice must be ≤ MaxPrice."));

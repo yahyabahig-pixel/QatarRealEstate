@@ -17,8 +17,9 @@ public sealed record SearchPropertiesQuery(
     PropertySortBy Sort = PropertySortBy.Relevance,
     int Page = 1,
     int PageSize = 24,
-    // ?areaId=…&agentId=…&featureIds=…&featureIds=…&furnishing=Furnished
+    // ?areaId=…&agentId=…&featureIds=…&featureIds=…&excludeFeatureIds=…&furnishing=Furnished
     Guid? AreaId = null,
     Guid? AgentId = null,
     Guid[]? FeatureIds = null,
+    Guid[]? ExcludeFeatureIds = null,
     string? Furnishing = null) : IQuery<PagedResult<PropertyListItem>>;

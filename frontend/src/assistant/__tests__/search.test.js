@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest'
-import { runSearch, liveFetch } from '../search'
+import { runSearch, liveFetch, featureIdFor } from '../search'
 import { parseMessage } from '../nlu/parse'
-import { summarize } from '../replies'
+import { summarize, notesPhrase } from '../replies'
 import { applyRemovals, mergeSlots } from '../filters'
 
 // ---------------------------------------------------------------------------------------
@@ -140,5 +140,99 @@ describe('the count reported to the user is the MATCH count, not the page size',
     publicApi.searchProperties.mockResolvedValue({ items: [], totalCount: 0 })
     await live({ unknownPlace: { label: 'الدفنة', stem: 'الدفن' } })
     expect(publicApi.searchProperties).toHaveBeenCalledWith(expect.objectContaining({ q: 'الدفن' }))
+  })
+})
+
+// ---------------------------------------------------------------------------------------
+// "Without a pool" used to be answered WITH the pools. The removal machinery could only
+// stop REQUIRING an amenity, and the amenity sweep further down then read the same word as
+// a requirement — so the assistant returned the exact opposite of what was asked.
+// ---------------------------------------------------------------------------------------
+const FEATURES = [
+  { id: 'f-pool', name: 'Swimming Pool' },
+  { id: 'f-gym', name: 'Gym' },
+  { id: 'f-garden', name: 'Private Garden' },
+]
+const WITH_POOL = [
+  { id: 10, title: 'Villa with pool', purpose: 'buy', type: 'Villa', status: 'available', city: 'Doha', area: 'Al Waab', bedrooms: 5, bathrooms: 5, price: 6000000, sizeSqm: 500, amenities: ['Swimming Pool'] },
+  { id: 11, title: 'Villa without one', purpose: 'buy', type: 'Villa', status: 'available', city: 'Doha', area: 'Al Waab', bedrooms: 5, bathrooms: 5, price: 5000000, sizeSqm: 450, amenities: ['Gym'] },
+]
+const poolCtx = { properties: WITH_POOL, propertyTypes: TYPES, typeIdByName: { Villa: 't2' }, features: FEATURES }
+
+describe('a negated amenity is EXCLUDED, not merely un-required', () => {
+  it('tells «بدون مسبح» apart from «شيل شرط المسبح»', () => {
+    const neg = parseMessage('فيلا للبيع بدون مسبح', { hasContext: true })
+    expect(neg.removals).toContainEqual({ kind: 'amenity', key: 'pool' })
+    expect(neg.slots.excludeAmenities).toEqual(['pool'])
+
+    const drop = parseMessage('شيل شرط المسبح', { hasContext: true })
+    expect(drop.removals).toContainEqual({ kind: 'amenity', key: 'pool' })
+    expect(drop.slots.excludeAmenities).toBeUndefined()
+  })
+
+  it('drops the listings that have it', async () => {
+    const { items } = await runSearch({ purpose: 'sale', excludeAmenities: ['pool'] }, poolCtx)
+    expect(items.map((p) => p.id)).toEqual([11])
+  })
+
+  it('does not also stop requiring it for everyone else', async () => {
+    const { items } = await runSearch({ purpose: 'sale', amenities: ['pool'] }, poolCtx)
+    expect(items.map((p) => p.id)).toEqual([10])
+  })
+
+  it('says so in the criteria line', () => {
+    expect(summarize({ type: 'villa', excludeAmenities: ['pool'] }, 'ar')).toContain('بدون مسبح')
+    expect(summarize({ type: 'villa', excludeAmenities: ['pool'] }, 'en')).toContain('without pool')
+  })
+
+  it('changing your mind replaces the condition instead of keeping both', () => {
+    expect(mergeSlots({ excludeAmenities: ['pool'] }, { amenities: ['pool'] }))
+      .toEqual({ amenities: ['pool'] })
+    expect(mergeSlots({ amenities: ['pool'] }, { excludeAmenities: ['pool'] }))
+      .toEqual({ excludeAmenities: ['pool'] })
+  })
+})
+
+describe('amenities are a real server-side filter now, not a disclaimer', () => {
+  beforeEach(() => { publicApi.searchProperties.mockReset() })
+
+  it('sends featureIds and excludeFeatureIds', async () => {
+    publicApi.searchProperties.mockResolvedValue({ items: [], totalCount: 0 })
+    await liveFetch({ amenities: ['pool'], excludeAmenities: ['gym'] }, [], {}, FEATURES)
+    expect(publicApi.searchProperties).toHaveBeenCalledWith(expect.objectContaining({
+      featureIds: ['f-pool'],
+      excludeFeatureIds: ['f-gym'],
+    }))
+  })
+
+  it('reports only the amenities the catalogue has no feature for', async () => {
+    // 'metro' has no matching row in FEATURES — that one, and only that one, is unverified.
+    const { notes } = await runSearch({ amenities: ['pool', 'metro'] }, { ...poolCtx, properties: [] })
+    // MOCK_MODE is on in tests, so the mock path enforces everything and the note is empty.
+    expect(notes.unverifiedAmenities).toEqual([])
+    // The mapping itself is what the live path depends on:
+    expect(featureIdFor('pool', FEATURES)).toBe('f-pool')
+    expect(featureIdFor('metro', FEATURES)).toBeNull()
+  })
+})
+
+describe('a rental budget does not follow you into a purchase search', () => {
+  it('drops it and says what it dropped', () => {
+    const before = { purpose: 'rent', maxPrice: 8000, type: 'apartment' }
+    const after = mergeSlots(before, { purpose: 'sale' })
+    expect(after.maxPrice).toBeUndefined()
+    expect(after.droppedBudget).toEqual({ min: null, max: 8000, from: 'rent' })
+    expect(notesPhrase({ droppedBudget: after.droppedBudget }, 'ar').join(' ')).toContain('8,000')
+  })
+
+  it('keeps a budget the same message supplied', () => {
+    const after = mergeSlots({ purpose: 'rent', maxPrice: 8000 }, { purpose: 'sale', maxPrice: 2000000 })
+    expect(after.maxPrice).toBe(2000000)
+    expect(after.droppedBudget).toBeUndefined()
+  })
+
+  it('leaves the budget alone when the purpose has not changed', () => {
+    const after = mergeSlots({ purpose: 'rent', maxPrice: 8000 }, { beds: 2 })
+    expect(after.maxPrice).toBe(8000)
   })
 })

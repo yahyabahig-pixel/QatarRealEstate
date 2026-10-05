@@ -84,6 +84,17 @@ public sealed class PropertyQueries : IPropertyQueries
             }
         }
 
+        if (criteria.ExcludeFeatureIds is { Count: > 0 } excludedIds)
+        {
+            // NONE of them: "without a pool" has to remove the listings that have one, not
+            // merely stop asking for one. Same unique (PropertyId, FeatureId) index, negated.
+            foreach (var featureId in excludedIds)
+            {
+                var unwanted = featureId;
+                query = query.Where(p => !p.PropertyFeatures.Any(pf => pf.FeatureId == unwanted));
+            }
+        }
+
         if (!string.IsNullOrWhiteSpace(criteria.Furnishing))
         {
             var furnishing = criteria.Furnishing;

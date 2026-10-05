@@ -114,5 +114,20 @@ export const RESET = ['ابدا من جديد', 'من الاول', 'بحث جد�
 // immediately, so a bare "مش عارف" or "غير كده" still does nothing.
 export const REMOVE_VERBS = ['شيل شرط', 'شيل', 'الغي شرط', 'الغي', 'امسح شرط', 'امسح', 'استغني عن', 'بلاش شرط', 'بلاش', 'من غير شرط', 'من غير', 'بدون شرط', 'بدون', 'ما ابي', 'ما ابغي', 'ما اريد', 'لا اريد', 'مش عايز شرط', 'مش عايز', 'مش عاوز', 'مش', 'غير', 'بلا', 'remove the', 'remove', 'drop the', 'drop', 'without', 'no need for', 'not interested in', 'forget the', 'forget', 'no']
 
+// Two different things hide inside REMOVE_VERBS, and treating them as one is why «بدون مسبح»
+// used to be answered with the pools.
+//
+//   «شيل شرط المسبح»  — stop REQUIRING a pool. A unit with one is still fine.
+//   «بدون مسبح»       — I do not want a pool. A unit with one is NOT fine.
+//
+// The first is a drop, the second is an exclusion, and only the second can say anything about
+// a listing that HAS the amenity. The split applies to amenities only: for a location, a type
+// or a price there is no difference between dropping the condition and negating it.
+export const NEGATION_VERBS = [
+  'من غير شرط', 'من غير', 'بدون شرط', 'بدون', 'بلاش شرط', 'بلاش', 'بلا',
+  'ما ابي', 'ما ابغي', 'ما اريد', 'لا اريد', 'مش عايز شرط', 'مش عايز', 'مش عاوز', 'مش', 'غير',
+  'without', 'no need for', 'not interested in', 'no',
+]
+
 // Availability questions — «هل عندك حاجة في West Bay؟» is a search, not small talk.
 export const AVAILABILITY = ['هل عندك', 'هل عندكم', 'عندك حاجه', 'عندكم حاجه', 'عندك شي', 'عندكم شي', 'في عندك', 'فيه عندك', 'ايش عندك', 'وش عندك', 'ايه عندك', 'do you have', 'anything in', 'got anything', 'is there anything', 'what do you have']

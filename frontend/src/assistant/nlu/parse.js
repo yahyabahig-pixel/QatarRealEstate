@@ -15,7 +15,7 @@ import { normalize, isArabicText } from './normalize.js'
 import { extractNumericSlots } from './numbers.js'
 import {
   TYPES, LOCATIONS, AMENITIES, PURPOSES, SORTS, FEATURED_WORDS,
-  GREETINGS, THANKS, BYE, WHOAMI, HELP, RESET, REMOVE_VERBS, AVAILABILITY,
+  GREETINGS, THANKS, BYE, WHOAMI, HELP, RESET, REMOVE_VERBS, NEGATION_VERBS, AVAILABILITY,
 } from './lexicon.js'
 
 // Arabic attaches particles to the word: مسبح → المسبح/ومسبح/بمسبح/وبالمسبح…
@@ -208,6 +208,7 @@ const GENERIC_PROPERTY = normList([
 ])
 
 const REMOVE_VERBS_SORTED = normList(REMOVE_VERBS)
+const NEGATION_SET = new Set(normList(NEGATION_VERBS))
 const REPLACE_VERBS = normList(['بدلا من', 'بدل من', 'بدل', 'بدال', 'عوض', 'instead of'])
 const REMOVE_TARGETS_N = REMOVE_TARGETS.map((t) => ({ kind: t.kind, words: normList(t.words) }))
 
@@ -275,7 +276,15 @@ export function parseMessage(raw, { hasContext = false } = {}) {
       let removal = null
 
       const amen = conceptAt(state.text, after, AMEN_LIST)
-      if (amen) { removal = { kind: 'amenity', key: amen.key }; consumed = amen.length }
+      if (amen) {
+        // «بدون مسبح» EXCLUDES; «شيل شرط المسبح» only stops requiring. Both clear the
+        // condition, so the removal is recorded either way — the exclusion is the extra.
+        removal = { kind: 'amenity', key: amen.key }
+        consumed = amen.length
+        if (NEGATION_SET.has(verb)) {
+          result.slots.excludeAmenities = [...new Set([...(result.slots.excludeAmenities || []), amen.key])]
+        }
+      }
       if (!removal) {
         const loc = conceptAt(state.text, after, LOC_LIST)
         if (loc) { removal = { kind: 'location', key: loc.key }; consumed = loc.length }

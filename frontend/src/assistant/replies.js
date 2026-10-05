@@ -211,6 +211,9 @@ export function summarize(f, lang) {
   else if (f.maxPrice != null) parts.push(ar ? `بحد أقصى ${money(f.maxPrice, lang)}` : `up to ${money(f.maxPrice, lang)}`)
   else if (f.minPrice != null) parts.push(ar ? `من ${money(f.minPrice, lang)}` : `from ${money(f.minPrice, lang)}`)
   if (f.amenities?.length) parts.push((ar ? 'مع ' : 'with ') + f.amenities.map((a) => amenLabel(a, lang)).join(ar ? ' و' : ' + '))
+  // Stated as its own condition, because "بدون مسبح" is something the visitor asked FOR and
+  // leaving it out of the summary makes a short result list look unexplained.
+  if (f.excludeAmenities?.length) parts.push((ar ? 'بدون ' : 'without ') + f.excludeAmenities.map((a) => amenLabel(a, lang)).join(ar ? ' ولا ' : ' or '))
   if (f.featured) parts.push(ar ? 'من العقارات المميزة' : 'featured only')
   return parts.join(' · ')
 }
@@ -226,8 +229,14 @@ export function countPhrase(n, lang) {
   return n === 1 ? 'I found 1 matching property' : `I found ${n} matching properties`
 }
 
-export function removalPhrase(removal, lang) {
+export function removalPhrase(removal, lang, excluded) {
   const ar = lang === 'ar'
+  // «بدون مسبح» is not «شيل شرط المسبح». Saying "أزلت المسبح" for the first one tells the
+  // user the opposite of what the search is about to do.
+  if (removal.kind === 'amenity' && excluded?.includes(removal.key)) {
+    const a = amenLabel(removal.key, lang)
+    return ar ? `تمام، هستبعد اللي فيه ${a}.` : `Done — I will leave out anything with ${a}.`
+  }
   const what = {
     amenity: () => amenLabel(removal.key, lang),
     location: () => (ar ? 'المنطقة' : 'the location'),
@@ -263,8 +272,16 @@ export function notesPhrase(notes, lang) {
       : 'Note: that property type is not in the site\'s catalogue yet, so I searched with the rest of your criteria.')
   if (notes?.unverifiedAmenities?.length)
     out.push(ar
-      ? `ملاحظة: تفاصيل (${notes.unverifiedAmenities.map((a) => amenLabel(a, 'ar')).join('، ')}) تجدها مؤكدة داخل صفحة كل عقار.`
-      : `Note: (${notes.unverifiedAmenities.map((a) => amenLabel(a, 'en')).join(', ')}) can be confirmed on each property's details page.`)
+      ? `ملاحظة: (${notes.unverifiedAmenities.map((a) => amenLabel(a, 'ar')).join('، ')}) غير مسجّلة ضمن مميزات الموقع، فما قدرتش أفلتر بيها — راجعها في صفحة كل عقار.`
+      : `Note: (${notes.unverifiedAmenities.map((a) => amenLabel(a, 'en')).join(', ')}) ${notes.unverifiedAmenities.length === 1 ? 'is' : 'are'} not in the site's amenity list, so I could not filter on ${notes.unverifiedAmenities.length === 1 ? 'it' : 'them'} — check each property's details page.`)
+  if (notes?.droppedBudget) {
+    const b = notes.droppedBudget
+    const amount = b.max != null ? money(b.max, lang) : money(b.min, lang)
+    const wasRent = b.from === 'rent'
+    out.push(ar
+      ? `ملاحظة: شلت ميزانية ${wasRent ? 'الإيجار' : 'الشراء'} (${amount}) لأنها مش مناسبة لبحث ${wasRent ? 'شراء' : 'إيجار'}. قل لي الميزانية الجديدة وأضيّق النتائج.`
+      : `Note: I dropped the ${wasRent ? 'rental' : 'purchase'} budget (${amount}) — it does not carry over to a ${wasRent ? 'purchase' : 'rental'} search. Tell me the new budget and I will narrow these down.`)
+  }
   return out
 }
 

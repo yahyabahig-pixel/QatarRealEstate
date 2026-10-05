@@ -39,6 +39,35 @@ export const locationEntry = (locKey) => LOCATIONS[locKey] || null
 
 const amenityTokens = (key) => (AMENITIES[key]?.match) || []
 
+// An amenity concept ("pool") → the catalog feature row the site actually stores ("Swimming
+// Pool"), so the condition can be a server-side ?featureIds= filter instead of a disclaimer.
+// Matched by the same token rule the mock catalogue uses, over the catalog the admin edits —
+// so an amenity the admin has not created a feature for returns null and is reported honestly
+// rather than silently ignored.
+export function featureIdFor(key, features) {
+  const tokens = amenityTokens(key)
+  if (!tokens.length) return null
+  const hit = (features || []).find((ft) => {
+    const name = lc(ft.name)
+    return tokens.some((t) => name.includes(t))
+  })
+  return hit?.id || null
+}
+
+// Splits the requested amenities into the ones the backend can filter on and the ones it
+// cannot. Both halves matter: the first becomes a query parameter, the second becomes the
+// note that tells the user which conditions were not applied.
+function splitAmenities(keys, features) {
+  const ids = []
+  const unmapped = []
+  for (const k of keys || []) {
+    const id = featureIdFor(k, features)
+    if (id) ids.push(id)
+    else unmapped.push(k)
+  }
+  return { ids, unmapped }
+}
+
 function amenityHits(p, key) {
   const tokens = amenityTokens(key)
   const hay = [
@@ -95,6 +124,9 @@ function mockFilter(all, f, typeNames) {
       return false
     }
     if (f.amenities?.length && !f.amenities.every((k) => amenityHits(p, k))) return false
+    // «بدون مسبح» — the listing must NOT have it. Dropping the requirement was never the
+    // same answer as excluding it.
+    if (f.excludeAmenities?.length && f.excludeAmenities.some((k) => amenityHits(p, k))) return false
     if (f.featured && !p.exclusive) return false
     return true
   })
@@ -119,7 +151,7 @@ function rank(items, f) {
 // ------------------------------------------------------------------------------------------
 const API_SORT = { priceAsc: 'PriceAsc', priceDesc: 'PriceDesc', newest: 'Newest' }
 
-function liveParams(f, typeNames, typeIdByName) {
+function liveParams(f, typeNames, typeIdByName, features) {
   const params = { pageSize: 60, page: 1 }
   if (f.purpose) params.listingKind = f.purpose === 'sale' ? 'Sale' : 'Rent'
   const typeName = typeNames.find((n) => typeIdByName?.[n])
@@ -139,6 +171,13 @@ function liveParams(f, typeNames, typeIdByName) {
   if (f.maxArea != null) params.maxArea = f.maxArea
   if (f.minPrice != null) params.minPrice = f.minPrice
   if (f.maxPrice != null) params.maxPrice = f.maxPrice
+  // Amenities are a real SQL condition now (?featureIds=…&excludeFeatureIds=…), not a
+  // disclaimer. The list DTO deliberately carries no amenities — one row per card — so the
+  // browser could never check them; the server can, and always could.
+  const wanted = splitAmenities(f.amenities, features)
+  const unwanted = splitAmenities(f.excludeAmenities, features)
+  if (wanted.ids.length) params.featureIds = wanted.ids
+  if (unwanted.ids.length) params.excludeFeatureIds = unwanted.ids
   if (API_SORT[f.sort]) params.sort = API_SORT[f.sort]
   return params
 }
@@ -146,8 +185,8 @@ function liveParams(f, typeNames, typeIdByName) {
 // Returns { items, total }: `items` is this page's rows, `total` is how many the SEARCH
 // matched. They are different numbers and conflating them is what made the assistant
 // announce "I found 60" for a search matching four hundred listings.
-export async function liveFetch(f, typeNames, typeIdByName) {
-  const page = await publicApi.searchProperties(liveParams(f, typeNames, typeIdByName))
+export async function liveFetch(f, typeNames, typeIdByName, features) {
+  const page = await publicApi.searchProperties(liveParams(f, typeNames, typeIdByName, features))
   let items = page?.items || []
   let total = Number.isFinite(page?.totalCount) ? page.totalCount : items.length
 
@@ -170,6 +209,7 @@ function relaxations(f) {
   if (f.maxPrice != null) out.push({ kind: 'price', apply: { maxPrice: Math.round(f.maxPrice * 1.25) } })
   if (f.beds != null && f.bedsExact !== false) out.push({ kind: 'beds', apply: { bedsExact: false } })
   if (f.amenities?.length) out.push({ kind: 'amenities', apply: { amenities: [] } })
+  if (f.excludeAmenities?.length) out.push({ kind: 'amenities', apply: { excludeAmenities: [] } })
   if (f.type) out.push({ kind: 'type', apply: { type: null } })
   if (f.location) out.push({ kind: 'location', apply: { location: null } })
   // An unrecognised area is the MOST likely reason a search came back empty, so dropping it
@@ -180,13 +220,24 @@ function relaxations(f) {
 
 // ------------------------------------------------------------------------------------------
 export async function runSearch(filters, ctx) {
-  const { properties = [], propertyTypes = [], typeIdByName = {} } = ctx || {}
+  const { properties = [], propertyTypes = [], typeIdByName = {}, features = [] } = ctx || {}
   const typeNames = filters.type ? matchTypeNames(filters.type, propertyTypes) : []
+
+  // Which amenity conditions can actually be ENFORCED? In mock mode the catalogue carries
+  // them, so all of them. Live, each one needs a matching row in the feature catalog the
+  // admin edits; the ones without become the honest note instead of a silent pass.
+  const unmappable = MOCK_MODE ? [] : [
+    ...splitAmenities(filters.amenities, features).unmapped,
+    ...splitAmenities(filters.excludeAmenities, features).unmapped,
+  ]
+
   const notes = {
     // the user asked for a type that doesn't exist in THIS project's catalogue
     unknownType: !!(filters.type && !typeNames.length),
-    // live rows can't verify amenities — surfaced honestly, never faked
-    unverifiedAmenities: !MOCK_MODE && (filters.amenities?.length ? [...filters.amenities] : []),
+    // amenities with no feature row behind them — stated, never faked
+    unverifiedAmenities: [...new Set(unmappable)],
+    // the budget that could not follow the user from renting to buying
+    droppedBudget: filters.droppedBudget || null,
   }
   const effective = notes.unknownType ? { ...filters, type: null } : filters
 
@@ -195,8 +246,7 @@ export async function runSearch(filters, ctx) {
       const items = rank(mockFilter(properties, f, f.type ? matchTypeNames(f.type, propertyTypes) : []), f)
       return { items, total: items.length }
     }
-    const liveF = notes.unverifiedAmenities.length ? { ...f, amenities: [] } : f
-    return liveFetch(liveF, liveF.type ? matchTypeNames(liveF.type, propertyTypes) : [], typeIdByName)
+    return liveFetch(f, f.type ? matchTypeNames(f.type, propertyTypes) : [], typeIdByName, features)
   }
 
   const first = await fetchOnce(effective)
