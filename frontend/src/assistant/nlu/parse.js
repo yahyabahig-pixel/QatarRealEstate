@@ -88,9 +88,25 @@ function eatConceptsAll(state, flat) {
   return found
 }
 
+// Filler that sits between a removal verb and the thing being removed, and carries no
+// meaning of its own. English needs an article here and Arabic does not: people write
+// "without a pool", never "without pool". Demanding that the concept start immediately
+// after the verb meant the removal silently failed on every English negation — and the
+// amenity sweep further down then read that same "pool" as a REQUIREMENT, so the
+// assistant answered "without a pool" with the pools. Skipping these words first is the
+// whole fix.
+const REMOVE_FILLER = ['a', 'an', 'the', 'any', 'شرط', 'ال']
+
 // Try to read one concept right AT the given position (used after بدل/شيل verbs).
 function conceptAt(text, from, flat) {
-  const tail = text.slice(from).replace(/^\s+/, '')
+  let tail = text.slice(from).replace(/^\s+/, '')
+  for (;;) {
+    const hit = REMOVE_FILLER.find((w) => tail === w || tail.startsWith(`${w} `))
+    if (!hit) break
+    tail = tail.slice(tail.length === hit.length ? hit.length : hit.length + 1).replace(/^\s+/, '')
+  }
+  // Everything between `from` and the concept — whitespace and filler alike — has to be
+  // counted, because the caller uses this length to cut the whole phrase out of the text.
   const offset = text.length - tail.length - from
   for (const { key, alias } of flat) {
     for (const p of PREFIXES) {

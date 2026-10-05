@@ -36,6 +36,12 @@ export function normalize(s) {
     // punctuation → space (keeps decimal points inside numbers: 1.5m)
     .replace(/[؟?!،,;:"'()[\]{}<>|/\\_@#%^&*+=~`]/g, ' ')
     .replace(/(\d)\.(\D)/g, '$1 $2')   // "2." before a word is punctuation, not a decimal
+    // A period with no digit on EITHER side is punctuation too — and the one that matters
+    // here is "ر.ق", which is how the Qatari riyal is actually written. The currency list
+    // in numbers.js has had "ر ق" in it all along; the dot was what stopped it matching, so
+    // "شقة للإيجار ٨٠٠٠ ر.ق" lost its budget entirely and returned listings at any price.
+    // "1.5" keeps its point: a digit on either side excludes it.
+    .replace(/(?<!\d)\.(?!\d)/g, ' ')
     .replace(/-/g, ' - ')              // keep hyphen as its own token (ranges: "1-2 مليون")
     .replace(/\s+/g, ' ')
     .trim()

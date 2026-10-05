@@ -26,14 +26,31 @@ const WORD_NUMS = {
   'ثمان': 8, 'ثمانيه': 8, 'تمن': 8, 'تمانيه': 8, 'تمانه': 8,
   'تسع': 9, 'تسعه': 9,
   'عشر': 10, 'عشره': 10,
+  // TENS AND HUNDREDS. Without these, "شقة بمية ألف" and "شقة عشرين ألف" fell through to
+  // the multiplier-only branch of readAmount, where the base defaults to 1 — so a hundred
+  // thousand and twenty thousand both came out as a flat 1,000 and the user's own number
+  // was thrown away with the rest of the text. A 1,000 QAR ceiling matches nothing, so an
+  // ordinary budget produced "لا توجد نتائج". These are the normalized spellings (ة→ه,
+  // ئ→ي), because that is what the matcher sees.
+  'عشرين': 20, 'ثلاثين': 30, 'تلاتين': 30, 'اربعين': 40, 'خمسين': 50,
+  'ستين': 60, 'سبعين': 70, 'ثمانين': 80, 'تمانين': 80, 'تسعين': 90,
+  'ميه': 100, 'مايه': 100, 'ميتين': 200, 'مايتين': 200,
   one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
   seven: 7, eight: 8, nine: 9, ten: 10,
+  twenty: 20, thirty: 30, forty: 40, fifty: 50,
+  sixty: 60, seventy: 70, eighty: 80, ninety: 90, hundred: 100,
 }
 // longest first so "ثلاثه" wins over "ثلاث"
 const WORDS_ALT = Object.keys(WORD_NUMS).sort((a, b) => b.length - a.length).join('|')
 
 // Word-numbers are guarded on both sides so "ست" can never fire inside "استوديو".
-const GUARD_B = '(?<![؀-ۿa-z])'
+//
+// The one exception on the left is a leading بـ or لـ, which in Arabic is glued to the
+// word rather than spaced off it: a budget is written "بمية ألف", not "ب مية ألف". The
+// plain guard rejected that, so "شقة بمية ألف" lost its hundred and came back as a 1,000
+// ceiling — while the identical "شقة مية ألف" worked. Only ب and ل are let through, and
+// only at a word boundary, so "استوديو" stays safe (the ست there follows ا, not ب).
+const GUARD_B = '(?:(?<![؀-ۿa-z])|(?<=(?:^|\\s)[بل]))'
 const GUARD_A = '(?![؀-ۿa-z])'
 const NUM = `(?:\\d+(?:[.,]\\d+)*|${GUARD_B}(?:${WORDS_ALT})${GUARD_A})`
 // مليونين/الفين are dual forms — a count of 2 baked into the word itself.
@@ -50,9 +67,16 @@ const MULT_WORDS = 'مليونين|ملايين|مليون|مليارات|ملي
 const MULT_SUFFIX = '(?<=\\d\\s{0,2})[km]'
 const MULT = `(?:${MULT_WORDS}|${MULT_SUFFIX})${GUARD_A}`
 const FRAC = '(?:و\\s?(?:نصف|نص|ربع)|and a half)'
+// A fraction stated BEFORE the multiplier: "نص مليون", "ربع مليون", "half a million".
+// FRAC above only reads the trailing form ("مليون ونص"), so "نص مليون" used to match the
+// bare multiplier and come back as a whole million — double what the user asked for, and
+// the kind of error that quietly prices them out of every result they wanted.
+const FRAC_PRE = '(?:نصف|نص|ربع|half(?: an?)?|quarter(?: of an?)?)'
+const FRAC_VALUES = [[/ربع|quarter/, 0.25], [/نصف|نص|half/, 0.5]]
+const fracValue = (s) => (FRAC_VALUES.find(([re_]) => re_.test(s)) || [null, 1])[1]
 
-// A money-ish amount: "2 مليون", "مليون ونص", "800 الف", "1.5m", "8000", "خمسه الاف".
-const AMOUNT = `((?:${NUM}\\s*)?${MULT}(?:\\s*${FRAC})?|${NUM})`
+// A money-ish amount: "2 مليون", "مليون ونص", "نص مليون", "800 الف", "1.5m", "8000".
+const AMOUNT = `((?:${FRAC_PRE}\\s*)?(?:${NUM}\\s*)?${MULT}(?:\\s*${FRAC})?|${NUM})`
 
 const MULT_VALUES = {
   'مليون': 1e6, 'ملايين': 1e6, 'مليونين': 1e6, 'مليار': 1e9, 'مليارات': 1e9,
@@ -76,16 +100,26 @@ export function readAmount(str) {
   const s = str.trim()
   // Same multiplier vocabulary as MULT above — one list, so the extractor and the reader
   // can never drift apart about what counts as "k".
-  const m = s.match(new RegExp(`^(?:(${NUM})\\s*)?(${MULT_WORDS}|${MULT_SUFFIX})(?:\\s*(${FRAC}))?$`))
+  const m = s.match(new RegExp(
+    `^(?:(${FRAC_PRE})\\s*)?(?:(${NUM})\\s*)?(${MULT_WORDS}|${MULT_SUFFIX})(?:\\s*(${FRAC}))?$`))
   if (m) {
-    const dual = DUAL_MULTS[m[2]] || null
-    const base = dual ?? (m[1] != null ? wordOrNumber(m[1]) : 1)
-    const mult = MULT_VALUES[m[2]] ?? 1
+    const [, pre, num, multWord, post] = m
+    const dual = DUAL_MULTS[multWord] || null
+    // "نص مليون" has no number of its own: the fraction IS the base.
+    const base = dual ?? (num != null ? wordOrNumber(num) : (pre ? fracValue(pre) : 1))
+    const mult = MULT_VALUES[multWord] ?? 1
     let v = base * mult
-    if (m[3]) v += (/ربع/.test(m[3]) ? 0.25 : 0.5) * mult
+    if (post) v += (/ربع|quarter/.test(post) ? 0.25 : 0.5) * mult
     return v
   }
   return wordOrNumber(s)
+}
+
+// The multiplier word inside an already-matched AMOUNT, or undefined. Used to carry the
+// scale of one end of a range onto the other.
+function multiplierOf(str) {
+  const m = String(str ?? '').match(new RegExp(`(${MULT_WORDS}|${MULT_SUFFIX})`))
+  return m ? m[1] : undefined
 }
 
 // -------------------------------------------------------------------------------------
@@ -163,8 +197,14 @@ export function extractNumericSlots(normalizedText) {
     slots.maxPrice = readAmount(a)
   })
   consume(state, `${RANGE_OPEN}\\s*${AMOUNT}\\s*${RANGE_SEP}\\s*${AMOUNT}\\s*(?:${CURRENCY})?`, (a, b) => {
-    const lo = readAmount(a), hi = readAmount(b)
+    let lo = readAmount(a)
+    const hi = readAmount(b)
     if (!Number.isFinite(lo) || !Number.isFinite(hi)) return false
+    // "من 1 إلى 2 مليون" states the scale once, at the end, and means it for both ends.
+    // Reading them independently gave minPrice 1 and maxPrice 2,000,000, and the criteria
+    // line then told the user it was searching "من 1 ر.ق إلى 2,000,000 ر.ق".
+    const scale = multiplierOf(b)
+    if (scale && !multiplierOf(a)) lo *= (MULT_VALUES[scale] ?? 1)
     slots.minPrice = Math.min(lo, hi); slots.maxPrice = Math.max(lo, hi)
   })
   consume(state, `${MAX_WORDS}\\s*${AMOUNT}\\s*(?:${CURRENCY})?`, (a) => {
@@ -184,9 +224,28 @@ export function extractNumericSlots(normalizedText) {
     slots.maxPrice = v
   })
   // bare multiplier amount (مليون / مليونين / 2m / 800k…) → budget ceiling
-  consume(state, `((?:${NUM}\\s*)?${MULT}(?:\\s*${FRAC})?)`, (a) => {
+  consume(state, `((?:${FRAC_PRE}\\s*)?(?:${NUM}\\s*)?${MULT}(?:\\s*${FRAC})?)`, (a) => {
     const v = readAmount(a)
     if (!Number.isFinite(v) || v < 1000) return false
+    slots.maxPrice = v
+  })
+
+  // A BARE FIGURE, no comparator and no currency: "شقة للإيجار في لوسيل 8000".
+  //
+  // This is how most people type a rent, and until now it matched none of the rules above
+  // — the budget rule needs a budget word, the range rule needs من/بين, max/min need a
+  // comparator, the currency rule needs ريال, and the multiplier rule needs ألف or m. So
+  // the number was dropped and the assistant answered "وجدت لك 11 عقارًا مطابقًا" with
+  // units at any price, while the criteria line said nothing about a budget at all.
+  //
+  // Last on purpose. Area, bedrooms and bathrooms have already been consumed above, so a
+  // figure still standing here is not a room count or a square metre. Four digits or more
+  // (>= 1000) keeps it away from "3 غرف" leftovers and from a floor or building number.
+  // Only when no price was found any other way — an explicit budget always wins.
+  consume(state, '(?<![\\d.,])(\\d{4,})(?![\\d.,])', (n) => {
+    if (slots.maxPrice != null || slots.minPrice != null) return false
+    const v = wordOrNumber(n)
+    if (!Number.isFinite(v)) return false
     slots.maxPrice = v
   })
 

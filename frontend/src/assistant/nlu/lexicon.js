@@ -105,7 +105,14 @@ export const HELP = ['مساعده', 'ساعدني', 'اعمل ايه', 'بتع�
 export const RESET = ['ابدا من جديد', 'من الاول', 'بحث جديد', 'امسح الفلاتر', 'صفر الفلاتر', 'الغي كل حاجه', 'reset', 'start over', 'new search', 'clear filters', 'clear all']
 
 // Verbs that mean "drop this condition": «شيل شرط المسبح».
-export const REMOVE_VERBS = ['شيل شرط', 'شيل', 'الغي شرط', 'الغي', 'امسح شرط', 'امسح', 'استغني عن', 'بلاش شرط', 'بلاش', 'من غير شرط', 'من غير', 'بدون شرط', 'بدون', 'ما ابي', 'مش عايز شرط', 'remove the', 'remove', 'drop the', 'drop', 'without', 'no need for', 'forget the', 'forget']
+// Longest first: "من غير" has to be tried before "غير", or the longer phrase never fires.
+//
+// مش / غير / بلا were missing, and they are how people actually negate: "شقة مش مفروشة",
+// "فيلا غير مفروشة". Without them the negation was invisible to the removal pass, and the
+// amenity sweep then read "مفروشة" as a REQUIREMENT — so asking for an UNfurnished flat
+// returned the furnished ones. A verb only counts when a known concept follows it
+// immediately, so a bare "مش عارف" or "غير كده" still does nothing.
+export const REMOVE_VERBS = ['شيل شرط', 'شيل', 'الغي شرط', 'الغي', 'امسح شرط', 'امسح', 'استغني عن', 'بلاش شرط', 'بلاش', 'من غير شرط', 'من غير', 'بدون شرط', 'بدون', 'ما ابي', 'ما ابغي', 'ما اريد', 'لا اريد', 'مش عايز شرط', 'مش عايز', 'مش عاوز', 'مش', 'غير', 'بلا', 'remove the', 'remove', 'drop the', 'drop', 'without', 'no need for', 'not interested in', 'forget the', 'forget', 'no']
 
 // Availability questions — «هل عندك حاجة في West Bay؟» is a search, not small talk.
 export const AVAILABILITY = ['هل عندك', 'هل عندكم', 'عندك حاجه', 'عندكم حاجه', 'عندك شي', 'عندكم شي', 'في عندك', 'فيه عندك', 'ايش عندك', 'وش عندك', 'ايه عندك', 'do you have', 'anything in', 'got anything', 'is there anything', 'what do you have']
