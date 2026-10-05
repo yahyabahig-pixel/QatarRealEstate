@@ -75,6 +75,79 @@ function eatConcept(state, flat) {
   return null
 }
 
+// ---- a place the lexicon has never heard of -------------------------------------------------
+//
+// LOCATIONS is a hand-written list of 18. Qatar has many more — الدفنة, بن محمود, معيذر,
+// النجمة, الغرافة, الثمامة, عين خالد — and an agent can add a new area in the admin panel at
+// any time, which no hand-written list will ever know about. A place that was not in the list
+// used to be dropped in silence: the assistant searched everything else and reported the
+// result as "matching", so someone asking for الدفنة got listings in الخور and nothing
+// anywhere said the area had been ignored. That is the worst failure a search can have —
+// confidently answering a question nobody asked.
+//
+// The fix is to SEARCH for the place instead of announcing ignorance of it. The listing's own
+// title, description and city carry the area name as the agent typed it, so an unknown place
+// becomes a free-text condition (search.js turns it into `q` live / a text match in mock).
+// Either real listings in that area come back, or nothing does and the reply says so by name —
+// both honest, and neither pretends the area was understood when it was not.
+//
+// Deliberately conservative about WHAT counts as a place. The words below follow في in
+// ordinary sentences without naming anywhere, and inventing an area out of one of them would
+// send a perfectly good search to zero results.
+const NOT_A_PLACE = new Set([
+  'حدود', 'الحدود', 'اي', 'نفس', 'الدور', 'دور', 'الطابق', 'طابق', 'حاله', 'الغالب',
+  'المتوسط', 'خلال', 'اقرب', 'الاقرب', 'حدها', 'خدمتك', 'انتظارك', 'بالك', 'منطقه',
+  'المنطقه', 'مكان', 'المكان', 'حي', 'الحي', 'اقل', 'اكثر', 'ارخص', 'اغلي', 'متناول',
+  'غضون', 'اسرع', 'احسن', 'افضل', 'كل', 'بعض', 'هذه', 'هذا', 'الوقت', 'الحال', 'راسي',
+  'any', 'the', 'a', 'an', 'fact', 'general', 'mind', 'case', 'stock', 'budget', 'range',
+  'area', 'areas', 'place', 'somewhere', 'anywhere', 'good', 'nice', 'cheap', 'best',
+  'this', 'that', 'which', 'my', 'your', 'our', 'under', 'less', 'more', 'about', 'order',
+])
+
+// Place names that open with a short particle only make sense as two words: "بن محمود",
+// "أم صلال", "madinat khalifa". The opener on its own ("بن") is never an area.
+const PLACE_OPENERS = new Set([
+  'بن', 'ابو', 'بو', 'ام', 'عين', 'مدينه', 'فريج', 'راس', 'وادي', 'جزيره', 'شارع', 'برج',
+  'bin', 'abu', 'umm', 'ain', 'madinat', 'fereej', 'freej', 'ras', 'wadi', 'al', 'street',
+])
+
+// Returns the place as the user wrote it (normalized), or null.
+export function unknownPlaceIn(text) {
+  // Numbers are already consumed by this point, so "في حدود 8000" cannot reach here with its
+  // figure; the stop list covers the word that is left.
+  const m = / (?:في|بمنطقه|منطقه|in|at|near|around) ((?:[^\s]+)(?: [^\s]+)?) /.exec(text)
+  if (!m) return null
+  const words = m[1].trim().split(' ')
+  const first = words[0]
+  if (/^\d+$/.test(first) || NOT_A_PLACE.has(first)) return null
+  if (PLACE_OPENERS.has(first)) {
+    return words.length === 2 && !NOT_A_PLACE.has(words[1]) ? words.join(' ') : null
+  }
+  return first.length < 3 ? null : first
+}
+
+// A SQL LIKE pattern cannot normalize: the database holds "الدفنة" while normalize() gives
+// "الدفنه" (ة→ه). Searching the place's LONGEST word with a trailing ه/ي/ا dropped matches
+// both spellings — "الدفن" finds "الدفنة", and "بن محمود" searches "محمود", which finds
+// "فريج بن محمود" however the agent wrote the rest of it.
+export function placeSearchStem(phrase) {
+  const longest = String(phrase || '').split(' ').reduce((a, b) => (b.length > a.length ? b : a), '')
+  if (longest.length < 4) return String(phrase || '')
+  return /[هيا]$/.test(longest) ? longest.slice(0, -1) : longest
+}
+
+// The normalized form is for MATCHING. What goes back to the user is their own spelling, so
+// the reply says «الدفنة» and not «الدفنه».
+function asTyped(raw, normalized) {
+  const want = normalized.split(' ')
+  const words = String(raw ?? '').split(/\s+/)
+  for (let i = 0; i + want.length <= words.length; i++) {
+    const slice = words.slice(i, i + want.length)
+    if (normalize(slice.join(' ')) === normalized) return slice.join(' ')
+  }
+  return normalized
+}
+
 function eatConceptsAll(state, flat) {
   const found = []
   let hit = true
@@ -258,10 +331,19 @@ export function parseMessage(raw, { hasContext = false } = {}) {
 
   const generic = !!eatList(state, GENERIC_PROPERTY)
 
+  // Last, once every known concept has been eaten out of the text: whatever place is still
+  // sitting after «في» is one this project's lexicon does not know. Running this LAST is what
+  // keeps "في شقة مفروشة" from being read as an area called "شقة".
+  if (!location) {
+    const place = unknownPlaceIn(state.text)
+    if (place) result.slots.unknownPlace = { label: asTyped(raw, place), stem: placeSearchStem(place) }
+  }
+
   // ---- intent -------------------------------------------------------------------------------
   const s = result.slots
-  const hasSlots = !!(s.purpose || s.type || s.location || s.beds != null || s.baths != null
-    || s.minArea != null || s.maxArea != null || s.minPrice != null || s.maxPrice != null
+  const hasSlots = !!(s.purpose || s.type || s.location || s.unknownPlace || s.beds != null
+    || s.baths != null || s.minArea != null || s.maxArea != null
+    || s.minPrice != null || s.maxPrice != null
     || (s.amenities && s.amenities.length) || s.featured)
 
   if (result.reset && !hasSlots) result.intent = 'reset'

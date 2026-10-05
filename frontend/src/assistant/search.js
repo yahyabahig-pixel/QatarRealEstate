@@ -21,6 +21,7 @@
 import { MOCK_MODE } from '../api/client'
 import { publicApi } from '../api/realEstateApi'
 import { TYPES, LOCATIONS, AMENITIES } from './nlu/lexicon'
+import { normalize } from './nlu/normalize'
 
 const lc = (s) => String(s ?? '').toLowerCase()
 
@@ -60,6 +61,16 @@ function locationMatches(p, entry) {
   return hay.some((h) => h && h.includes(label))
 }
 
+// An area the lexicon never heard of (see unknownPlaceIn in nlu/parse.js). It is searched as
+// free text over the words a listing actually carries, because that is where an agent types
+// the area name when adding a property — never silently dropped.
+function unknownPlaceMatches(p, stem) {
+  const needle = normalize(stem)
+  if (!needle) return false
+  return [p.city, p.area, p.district, p.title, p.titleAr, p.description]
+    .some((h) => h && normalize(h).includes(needle))
+}
+
 // ------------------------------------------------------------------------------------------
 // MOCK: pure in-memory filtering over the seed shape (rich fields).
 // ------------------------------------------------------------------------------------------
@@ -70,6 +81,7 @@ function mockFilter(all, f, typeNames) {
     if (f.purpose && p.purpose !== (f.purpose === 'sale' ? 'buy' : 'rent')) return false
     if (typeNames.length && !typeNames.includes(p.type)) return false
     if (entry && !locationMatches(p, entry)) return false
+    if (!entry && f.unknownPlace && !unknownPlaceMatches(p, f.unknownPlace.stem)) return false
     if (f.beds != null && (f.bedsExact !== false ? (p.bedrooms ?? 0) !== f.beds : (p.bedrooms ?? 0) < f.beds)) return false
     if (f.baths != null && (p.bathrooms ?? 0) < f.baths) return false
     if (f.minArea != null && !((p.sizeSqm ?? 0) >= f.minArea)) return false
@@ -116,6 +128,10 @@ function liveParams(f, typeNames, typeIdByName) {
   if (entry) {
     if (entry.isCity) params.city = entry.label
     else params.q = entry.label // LIKE over title + city — the same free-text the site search uses
+  } else if (f.unknownPlace) {
+    // An area the lexicon does not know goes down the SAME free-text road, on the stem that
+    // survives Arabic spelling differences (see placeSearchStem in nlu/parse.js).
+    params.q = f.unknownPlace.stem
   }
   if (f.beds != null) params.minRooms = f.beds
   if (f.baths != null) params.minBathrooms = f.baths
@@ -127,13 +143,23 @@ function liveParams(f, typeNames, typeIdByName) {
   return params
 }
 
-async function liveFetch(f, typeNames, typeIdByName) {
+// Returns { items, total }: `items` is this page's rows, `total` is how many the SEARCH
+// matched. They are different numbers and conflating them is what made the assistant
+// announce "I found 60" for a search matching four hundred listings.
+export async function liveFetch(f, typeNames, typeIdByName) {
   const page = await publicApi.searchProperties(liveParams(f, typeNames, typeIdByName))
   let items = page?.items || []
+  let total = Number.isFinite(page?.totalCount) ? page.totalCount : items.length
+
+  const before = items.length
   if (f.beds != null && f.bedsExact !== false) items = items.filter((p) => (p.bedrooms ?? 0) === f.beds)
   if (f.featured) items = items.filter((p) => p.exclusive)
+  // Those two narrow the rows HERE, over one page, so the server's total stops describing
+  // them. Fall back to what was actually kept rather than overstating it.
+  if (items.length !== before) total = items.length
+
   if (f.sort === 'sizeDesc') items = [...items].sort((a, b) => (b.sizeSqm ?? 0) - (a.sizeSqm ?? 0))
-  return items
+  return { items, total }
 }
 
 // ------------------------------------------------------------------------------------------
@@ -146,6 +172,9 @@ function relaxations(f) {
   if (f.amenities?.length) out.push({ kind: 'amenities', apply: { amenities: [] } })
   if (f.type) out.push({ kind: 'type', apply: { type: null } })
   if (f.location) out.push({ kind: 'location', apply: { location: null } })
+  // An unrecognised area is the MOST likely reason a search came back empty, so dropping it
+  // is the suggestion worth offering — "nothing in الدفنة, but here is what there is".
+  if (!f.location && f.unknownPlace) out.push({ kind: 'location', apply: { unknownPlace: null } })
   return out
 }
 
@@ -162,18 +191,22 @@ export async function runSearch(filters, ctx) {
   const effective = notes.unknownType ? { ...filters, type: null } : filters
 
   const fetchOnce = async (f) => {
-    if (MOCK_MODE) return rank(mockFilter(properties, f, f.type ? matchTypeNames(f.type, propertyTypes) : []), f)
+    if (MOCK_MODE) {
+      const items = rank(mockFilter(properties, f, f.type ? matchTypeNames(f.type, propertyTypes) : []), f)
+      return { items, total: items.length }
+    }
     const liveF = notes.unverifiedAmenities.length ? { ...f, amenities: [] } : f
     return liveFetch(liveF, liveF.type ? matchTypeNames(liveF.type, propertyTypes) : [], typeIdByName)
   }
 
-  const items = await fetchOnce(effective)
+  const first = await fetchOnce(effective)
+  const items = first.items
   let relaxed = null
   if (!items.length) {
     for (const r of relaxations(effective)) {
       const alt = await fetchOnce({ ...effective, ...r.apply })
-      if (alt.length) { relaxed = { kind: r.kind, items: alt.slice(0, 3) }; break }
+      if (alt.items.length) { relaxed = { kind: r.kind, items: alt.items.slice(0, 3) }; break }
     }
   }
-  return { items, total: items.length, relaxed, notes }
+  return { items, total: first.total, relaxed, notes }
 }

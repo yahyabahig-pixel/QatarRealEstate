@@ -8,6 +8,16 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.2" />
+
+    <!-- Pinned to close GHSA-v5pm-xwqc-g5wc, a HIGH severity advisory.
+         Microsoft.AspNetCore.OpenApi 10.0.2 pulls Microsoft.OpenApi 2.0.0 transitively, and
+         every 2.x before 2.7.5 overflows the stack on an OpenAPI document containing a
+         circular schema reference — uncontrolled recursion, and the process dies. `dotnet
+         restore` has been printing NU1903 about it on every build.
+         An explicit reference wins over a transitive one, so this is what lifts the whole
+         graph onto the patched version. Remove this line only once the AspNetCore package
+         itself depends on 2.7.5 or later — and check `dotnet restore` stays quiet when you do. -->
+    <PackageReference Include="Microsoft.OpenApi" Version="2.7.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>

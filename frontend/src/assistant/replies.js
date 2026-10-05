@@ -198,6 +198,10 @@ export function summarize(f, lang) {
   parts.push(f.type ? typeLabel(f.type, lang) : (ar ? 'عقارات' : 'properties'))
   if (f.purpose) parts.push(f.purpose === 'sale' ? (ar ? 'للبيع' : 'for sale') : (ar ? 'للإيجار' : 'for rent'))
   if (f.location) parts.push((ar ? 'في ' : 'in ') + locLabel(f.location, lang))
+  // An area outside the lexicon is still shown by name: the search WAS limited to it, so the
+  // criteria line has to say so — otherwise a visitor reading «لا توجد نتائج» cannot tell
+  // whether the area was the reason.
+  else if (f.unknownPlace?.label) parts.push((ar ? 'في ' : 'in ') + f.unknownPlace.label)
   if (f.beds != null) parts.push(bedsPhrase(f, lang))
   if (f.baths != null) parts.push(ar ? `${f.baths}+ حمام` : `${f.baths}+ baths`)
   if (f.minArea != null && f.maxArea != null) parts.push(ar ? `${f.minArea}–${f.maxArea} م²` : `${f.minArea}–${f.maxArea} sqm`)

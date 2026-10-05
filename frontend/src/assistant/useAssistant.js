@@ -15,6 +15,7 @@ import { parseMessage } from './nlu/parse'
 import { runSearch, matchTypeNames } from './search'
 import { pick, summarize, countPhrase, removalPhrase, relaxedIntro, notesPhrase, SUGGESTIONS } from './replies'
 import { recordSearch } from './telemetry'
+import { hasAny, applyRemovals, mergeSlots } from './filters'
 
 const GREET_SHORT = {
   salam: { ar: 'وعليكم السلام ورحمة الله وبركاته!', en: 'Wa alaykum assalam!' },
@@ -29,44 +30,6 @@ const ERR_TEXT = {
 const NARROW_HINT = {
   ar: 'لو حددت عدد الغرف أو الميزانية أقدر أضيّق النتائج أكثر.',
   en: 'Tell me a bedroom count or a budget and I can narrow these down further.',
-}
-
-const hasAny = (f) => !!(f.purpose || f.type || f.location || f.beds != null || f.baths != null
-  || f.minArea != null || f.maxArea != null || f.minPrice != null || f.maxPrice != null
-  || (f.amenities && f.amenities.length) || f.featured)
-
-function applyRemovals(filters, removals) {
-  const f = { ...filters }
-  for (const r of removals) {
-    switch (r.kind) {
-      case 'amenity':
-        f.amenities = (f.amenities || []).filter((a) => a !== r.key)
-        if (!f.amenities.length) delete f.amenities
-        break
-      case 'location': delete f.location; break
-      case 'type': delete f.type; break
-      case 'price': delete f.minPrice; delete f.maxPrice; break
-      case 'beds': delete f.beds; delete f.bedsExact; break
-      case 'baths': delete f.baths; break
-      case 'size': delete f.minArea; delete f.maxArea; break
-      case 'featured': delete f.featured; break
-      default: break
-    }
-  }
-  return f
-}
-
-function mergeSlots(filters, slots) {
-  const f = { ...filters }
-  for (const [k, v] of Object.entries(slots)) {
-    if (v == null) continue
-    if (k === 'amenities') {
-      f.amenities = [...new Set([...(f.amenities || []), ...v])]
-    } else {
-      f[k] = v
-    }
-  }
-  return f
 }
 
 // The «عرض الكل» link hands the same criteria to the full listings page. That page's
