@@ -332,9 +332,9 @@ export default function Listings({ purpose, offMarket = false }) {
   })()
 
   return (
-    <div className="pt-16">
+    <div className="pt-nav">
       {/* top bar */}
-      <div className="border-b border-neutral-200 bg-white sticky top-16 z-30">
+      <div className="border-b border-neutral-200 bg-white sticky top-nav z-30">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-3 text-sm">
           {/* Off-market prices are blurred on the cards; a price pin would leak them. */}
           {!offMarket && (

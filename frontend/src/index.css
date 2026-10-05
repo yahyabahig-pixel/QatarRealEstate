@@ -42,6 +42,12 @@
   --color-error: #b91c1c;
   --color-info: #1d4ed8;
 
+  /* Height of the fixed header, and the offset every page under it needs. It used to be the
+     literal h-16 / pt-16 / top-16 repeated across Navbar, Listings and SupportPages, with
+     nothing connecting them — so resizing the bar silently left the listings filter bar
+     sticking to the wrong line. Change it here and the three move together. */
+  --spacing-nav: 5rem;
+
   /* Warm accent for hover glows only — champagne gold. Chosen over peach because peach
      sits too close to the brand red; muted gold reads premium next to ink + red and is
      never used at full strength (max ~28% alpha in shadows/rings). */

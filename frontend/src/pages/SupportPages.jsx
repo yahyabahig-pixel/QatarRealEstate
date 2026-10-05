@@ -171,7 +171,7 @@ export function ListProperty() {
 export function NotFound() {
   const { t } = useI18n()
   return (
-    <div className="min-h-[70vh] bg-ink text-white flex flex-col items-center justify-center text-center px-4 pt-16">
+    <div className="min-h-[70vh] bg-ink text-white flex flex-col items-center justify-center text-center px-4 pt-nav">
       <div className="h-serif text-8xl text-primary mb-4">404</div>
       <h1 className="h-serif text-3xl mb-3">{t('support.notFoundTitle')}</h1>
       <p className="text-neutral-400 mb-8">{t('support.notFoundBody')}</p>

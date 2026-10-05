@@ -59,11 +59,11 @@ export default function Navbar({ overHero = false }) {
 
   return (
     <header className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${solid ? 'bg-ink/95 backdrop-blur-md shadow-lg shadow-black/10' : 'bg-transparent'}`}>
-      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-16 text-white">
+      <div className="max-w-7xl mx-auto px-4 flex items-center justify-between h-nav text-white">
         {/* Company logo (knockout variant for the dark bar — public/brand/logo-nav.png).
             The full name lives in the alt text, so accessibility and SEO keep the brand. */}
         <Link to="/" className="flex items-center shrink-0">
-          <img src="/brand/logo-nav.png" alt={settings.siteName} className="h-11 w-auto" />
+          <img src="/brand/logo-nav.png" alt={settings.siteName} className="h-14 w-auto" />
         </Link>
 
         {/* desktop menu */}
