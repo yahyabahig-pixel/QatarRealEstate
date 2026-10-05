@@ -554,13 +554,17 @@ body[data-map-view] .qre-cta-band { display: none; }
 /* The one-time greeting: a larger mascot rises above the launcher, waves, holds, then
    drops back into the button and fades. One animation start to finish, so it cannot get
    stuck half-way if a re-render lands mid-flight. */
-.qre-greet { animation: qre-greet 5.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+.qre-greet {
+  animation: qre-greet 8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  transform-origin: 100% 100%;   /* grows out of the launcher corner, not its own middle */
+}
+[dir="rtl"] .qre-greet { transform-origin: 0 100%; }
 @keyframes qre-greet {
-  0%   { opacity: 0; transform: translateY(26px) scale(0.35); }
-  11%  { opacity: 1; transform: translateY(-8px) scale(1.08); }
-  19%  { opacity: 1; transform: translateY(0) scale(1); }
-  84%  { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(30px) scale(0.4); }
+  0%   { opacity: 0; transform: translateY(20px) scale(0.3); }
+  6%   { opacity: 1; transform: translateY(-6px) scale(1.04); }
+  10%  { opacity: 1; transform: translateY(0) scale(1); }
+  92%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(24px) scale(0.35); }
 }
 .qre-m-blink {
   transform-origin: 60px 62.5px;

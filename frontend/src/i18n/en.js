@@ -808,5 +808,9 @@ export default {
     viewAll: 'View all {n} results on the listings page',
     waIntro: 'Hello, I would like to ask about:',
     teaser: 'Hi! Ask me about any property',
+    greetTitle: 'Welcome — I am the AL-Madenah assistant',
+    greetBody: 'Tell me the type, the area and your budget and I will search our real listings.',
+    greetCta: 'Start the chat',
+    greetClose: 'Dismiss the welcome',
   },
 }

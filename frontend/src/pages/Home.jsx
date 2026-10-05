@@ -171,7 +171,8 @@ export default function Home() {
             {t('home.heroSubtitle')}
           </p>
 
-          <div className="bg-white text-neutral-900 shadow-2xl shadow-ink/40 rounded-2xl overflow-hidden text-start">
+          <div data-hero-search
+            className="bg-white text-neutral-900 shadow-2xl shadow-ink/40 rounded-2xl overflow-hidden text-start">
             <div className="flex gap-1 p-2 pb-0">
               {['rent', 'buy'].map(tab_ => (
                 <button key={tab_} onClick={() => setTab(tab_)} aria-pressed={tab === tab_}

@@ -4,7 +4,7 @@ import { useI18n } from '../i18n/I18nContext'
 import { useAssistant } from './useAssistant'
 import ChatPropertyCard from './ChatPropertyCard'
 import Mascot from './Mascot'
-import { IconX } from '../components/icons'
+import { IconArrowRight, IconX } from '../components/icons'
 
 // ---------------------------------------------------------------------------------------
 // The floating assistant: a launcher button (bottom end corner — the FloatingContact
@@ -39,6 +39,31 @@ const RestartIcon = ({ className = 'w-4 h-4' }) => (
 // — unguarded it would take the assistant down with it. Failing to remember is harmless: the
 // worst case is one extra wave.
 const GREETED_KEY = 'qre.assistantGreeted'
+
+// Heights of the two greeting shapes, each including its 12px margin: the card with the
+// welcome text, and the avatar on its own.
+const GREET_CARD_H = 170
+const GREET_AVATAR_H = 98
+// A few pixels of overlap land in the search panel's bottom padding and its shadow, not on
+// anything clickable, so they are allowed. Without this the card missed the common 1280x860
+// and 1440x900 desktops by a single pixel.
+const GREET_TOLERANCE = 14
+
+// How much of a greeting fits above the hero's search panel? That panel is the main thing a
+// visitor came for, and the greeting floats over the page — measured before this check, the
+// card covered the Search button by 57px at 1366x768 and by 121px on a phone.
+//   'card'   room for the welcome text and the avatar
+//   'avatar' room for the wave alone
+//   null     neither; the short bubble above the launcher is all that is shown
+const greetShape = () => {
+  const panel = document.querySelector('[data-hero-search]')
+  if (!panel) return 'card'                     // no hero form on this page at all
+  const launcherTop = window.innerHeight - 20 - 74    // bottom-5, and the 74px button
+  const floor = panel.getBoundingClientRect().bottom - GREET_TOLERANCE
+  if (launcherTop - GREET_CARD_H > floor) return 'card'
+  if (launcherTop - GREET_AVATAR_H > floor) return 'avatar'
+  return null
+}
 const alreadyGreeted = () => {
   try { return sessionStorage.getItem(GREETED_KEY) === '1' } catch { return false }
 }
@@ -110,15 +135,26 @@ export default function AssistantWidget() {
   useEffect(() => {
     if (open || seen) { setTeaser(false); setGreet(false); return undefined }
     const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
-    const wave = !still && !alreadyGreeted()
+    const shape = still || alreadyGreeted() ? null : greetShape()
+    const wave = !!shape
     const timers = []
     if (wave) {
       markGreeted()
-      timers.push(setTimeout(() => setGreet(true), 700))
-      timers.push(setTimeout(() => setGreet(false), 6300))
+      timers.push(setTimeout(() => setGreet(shape), 700))
+      // Longer than the wordless version was: there is a paragraph to read now, and five
+      // seconds is not enough time to read it, decide, and click.
+      timers.push(setTimeout(() => setGreet(false), 8600))
     }
-    timers.push(setTimeout(() => setTeaser(true), wave ? 6100 : 1200))
-    timers.push(setTimeout(() => setTeaser(false), wave ? 15000 : 11000))
+    // The card says everything the bubble says, so the bubble is for the visitors who do
+    // not get one: reduced motion, anyone already greeted this visit, and the screens too
+    // short to fit the card.
+    if (!wave) {
+      timers.push(setTimeout(() => setTeaser(true), 1200))
+      timers.push(setTimeout(() => setTeaser(false), 11000))
+    } else if (shape === 'avatar') {
+      timers.push(setTimeout(() => setTeaser(true), 8800))
+      timers.push(setTimeout(() => setTeaser(false), 18000))
+    }
     return () => timers.forEach(clearTimeout)
   }, [open, seen])
 
@@ -151,9 +187,28 @@ export default function AssistantWidget() {
       {/* launcher — the mascot, end corner; FloatingContact keeps the start corner */}
       <div className="fixed bottom-5 end-5 z-40 flex flex-col items-end">
         {greet && !open && (
-          <div aria-hidden
-            className="qre-greet pointer-events-none mb-3 me-1 w-[108px] h-[108px] rounded-full bg-white ring-1 ring-ink/5 shadow-2xl shadow-ink/25 flex items-center justify-center">
-            <Mascot wave className="w-[92px] h-[92px]" />
+          <div className="qre-greet mb-3 flex items-end gap-2.5 max-w-[min(21rem,calc(100vw-2.5rem))]">
+            {greet === 'card' && (
+            <div className="relative bg-white rounded-2xl rounded-ee-sm ring-1 ring-ink/5 shadow-2xl shadow-ink/25">
+              <button type="button" onClick={() => setGreet(false)} aria-label={t('assistant.greetClose')}
+                className="absolute top-1 end-1 w-6 h-6 rounded-full flex items-center justify-center text-neutral-400 hover:text-ink hover:bg-neutral-100 transition-colors">
+                <IconX className="w-3 h-3" />
+              </button>
+              <button type="button" onClick={() => { setGreet(false); setOpen(true) }}
+                className="text-start block p-3.5 pe-8">
+                <div className="font-bold text-[13px] text-ink leading-snug">{t('assistant.greetTitle')}</div>
+                <p dir="auto" className="mt-1.5 text-[12px] leading-relaxed text-neutral-600">{t('assistant.greetBody')}</p>
+                <span className="mt-2.5 inline-flex items-center gap-1 text-[12px] font-semibold text-primary">
+                  {t('assistant.greetCta')}
+                  <IconArrowRight className="w-3.5 h-3.5 rtl:-scale-x-100" />
+                </span>
+              </button>
+            </div>
+            )}
+            <div aria-hidden
+              className="shrink-0 w-[86px] h-[86px] rounded-full bg-white ring-1 ring-ink/5 shadow-2xl shadow-ink/25 flex items-center justify-center">
+              <Mascot wave className="w-[74px] h-[74px]" />
+            </div>
           </div>
         )}
         {teaser && !open && (
