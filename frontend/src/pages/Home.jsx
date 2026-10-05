@@ -34,13 +34,14 @@ const HERO_BLUR = '14px'
 // All four photographs, in order. They were already here as error fallbacks and never shown;
 // they are the rotation now, and a photograph that fails to load simply drops out of it.
 const HERO_SLIDES = [HERO, ...ALT_HEROES]
-const SLIDE_MS = 7000     // how long each photograph holds
-const FADE_MS = 2000      // how long the crossfade between two of them takes
+const SLIDE_MS = 6000     // how long each photograph holds
+const FADE_MS = 2200      // how long the crossfade between two of them takes
 
 // ---------------------------------------------------------------------------------------
 // The moving backdrop. Two things give it life: a slow crossfade between the four Qatar
-// photographs, and a continuous drift (see .qre-hero-slide in index.css) so the frame is
-// never completely still.
+// photographs, and a continuous drift (see .qre-hero-slide in index.css) that reverses
+// direction from one photograph to the next, so the frame is never completely still and
+// the movement stays readable instead of fading into the background.
 //
 // Three things it is careful about:
 //   • WEIGHT — these are 2400px photographs. Only the first is requested up front, with

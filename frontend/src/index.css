@@ -116,13 +116,22 @@ html[lang="ar"] .tracking-wider { letter-spacing: .04em !important; }
    hard-cut between photographs instead of fading, which is worse than not moving.
    ---------------------------------------------------------------------------------- */
 @keyframes qre-hero-drift {
-  from { transform: scale(1.15) translate3d(0, 0, 0); }
-  to   { transform: scale(1.26) translate3d(-2%, -1.5%, 0); }
+  from { transform: scale(1.16) translate3d(0, 0, 0); }
+  to   { transform: scale(1.38) translate3d(-3%, -2%, 0); }
+}
+/* Every second photograph travels the other way. The change of direction is most of what
+   makes the movement readable: a single direction at a constant rate stops registering
+   after a few seconds, while a reversal between photographs is noticed without ever being
+   fast enough to pull attention off the headline. */
+@keyframes qre-hero-drift-alt {
+  from { transform: scale(1.38) translate3d(3%, 2%, 0); }
+  to   { transform: scale(1.16) translate3d(0, 0, 0); }
 }
 .qre-hero-slide {
-  animation: qre-hero-drift 28s ease-in-out infinite alternate;
+  animation: qre-hero-drift 24s ease-in-out infinite alternate;
   will-change: transform;
 }
+.qre-hero-slide:nth-child(even) { animation-name: qre-hero-drift-alt; }
 
 @layer components {
   /* ---------------------------------------------------------------- typography */
