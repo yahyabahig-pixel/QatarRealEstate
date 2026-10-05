@@ -515,13 +515,52 @@ body[data-map-view] .qre-cta-band { display: none; }
 /* ---- assistant mascot: idle breathing/sway, periodic blink, badge pulse ---- */
 .qre-mascot { filter: drop-shadow(0 5px 10px rgb(43 45 66 / 0.28)); }
 .qre-mascot-bob {
-  animation: qre-m-bob 3.4s ease-in-out infinite;
-  transform-origin: 60px 72px;
+  animation: qre-m-bob 3s ease-in-out infinite;
+  transform-origin: 60px 74px;
 }
+/* Wider than it was. The old one moved 3px and tilted 2 degrees, which on a 74px button is
+   under two pixels of actual travel — present in the code, invisible on the screen. */
 @keyframes qre-m-bob {
   0%, 100% { transform: translateY(0) rotate(0deg); }
-  30%      { transform: translateY(-3px) rotate(-2deg); }
-  65%      { transform: translateY(-1px) rotate(1.7deg); }
+  22%      { transform: translateY(-5px) rotate(-3.4deg); }
+  48%      { transform: translateY(-1.5px) rotate(2.8deg); }
+  74%      { transform: translateY(-3.5px) rotate(-1.4deg); }
+}
+
+/* Every nine seconds the launcher gives a small double-nod. Continuous motion stops being
+   noticed; something that happens on a beat keeps catching the eye at the edge of vision,
+   and 9s is long enough that it never nags. */
+.qre-mascot-attn { animation: qre-m-attn 9s ease-in-out infinite; }
+@keyframes qre-m-attn {
+  0%, 72%, 100%  { transform: scale(1) rotate(0deg); }
+  77%            { transform: scale(1.1) rotate(-7deg); }
+  82%            { transform: scale(1.04) rotate(5deg); }
+  87%            { transform: scale(1.08) rotate(-4deg); }
+  93%            { transform: scale(1) rotate(0deg); }
+}
+
+/* The raised hand. It swings from the wrist, not the shoulder, so the forearm stays put. */
+.qre-m-wave {
+  transform-origin: 89px 76px;
+  animation: qre-m-wave 0.85s ease-in-out 0.45s 3 both;
+}
+@keyframes qre-m-wave {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(-24deg); }
+  50%      { transform: rotate(15deg); }
+  75%      { transform: rotate(-17deg); }
+}
+
+/* The one-time greeting: a larger mascot rises above the launcher, waves, holds, then
+   drops back into the button and fades. One animation start to finish, so it cannot get
+   stuck half-way if a re-render lands mid-flight. */
+.qre-greet { animation: qre-greet 5.6s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; }
+@keyframes qre-greet {
+  0%   { opacity: 0; transform: translateY(26px) scale(0.35); }
+  11%  { opacity: 1; transform: translateY(-8px) scale(1.08); }
+  19%  { opacity: 1; transform: translateY(0) scale(1); }
+  84%  { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(30px) scale(0.4); }
 }
 .qre-m-blink {
   transform-origin: 60px 62.5px;
@@ -537,7 +576,8 @@ body[data-map-view] .qre-cta-band { display: none; }
   60%      { box-shadow: 0 0 0 8px rgb(239 35 60 / 0); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .qre-mascot-bob, .qre-m-blink, .qre-badge-pulse { animation: none; }
+  .qre-mascot-bob, .qre-m-blink, .qre-badge-pulse,
+  .qre-mascot-attn, .qre-m-wave, .qre-greet { animation: none; }
 }
 
 /* ---- assistant chat canvas: quiet depth instead of flat gray — a faint brand-red

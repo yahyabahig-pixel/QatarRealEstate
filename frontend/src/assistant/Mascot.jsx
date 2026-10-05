@@ -1,12 +1,17 @@
 // ---------------------------------------------------------------------------------------
 // The assistant's mascot: a friendly Gulf gentleman in ghutra + agal, drawn as inline
 // SVG — no external image, so it ships with the bundle, stays razor sharp at any size,
-// and every part can animate. The idle life comes from two CSS animations in index.css:
-//   .qre-mascot-bob   gentle breathing bob + a small sway on the whole head
+// and every part can animate. The life comes from CSS animations in index.css:
+//   .qre-mascot-bob   breathing bob + sway on the whole head
 //   .qre-m-blink      periodic eye blink (scaleY on the eyes group)
+//   .qre-m-wave       the raised hand, only when `wave` is set
 // Colors stay in the site family: ink agal, white ghutra, warm friendly face.
+//
+// `wave` raises a hand beside the shoulder and waves it. It is off by default because the
+// launcher sits on the page all day and a hand waving at nobody is noise — it is for the
+// greeting that plays once, when someone arrives.
 // ---------------------------------------------------------------------------------------
-export default function Mascot({ className = 'w-16 h-16' }) {
+export default function Mascot({ className = 'w-16 h-16', wave = false }) {
   return (
     <svg viewBox="0 0 120 120" className={`qre-mascot ${className}`} aria-hidden focusable="false">
       <g className="qre-mascot-bob">
@@ -46,6 +51,25 @@ export default function Mascot({ className = 'w-16 h-16' }) {
         <path d="M53 78.8 Q 60 82.6, 67 78.8" stroke="#4A3423" strokeWidth="3" fill="none" strokeLinecap="round" />
         {/* smile */}
         <path d="M55 84 Q 60 88, 65 84" stroke="#8C4F2C" strokeWidth="2.2" fill="none" strokeLinecap="round" />
+        {wave && (
+          // Last inside the bob group on purpose: drawn after the ghutra so the hand is in
+          // FRONT of it, and moving with the head rather than hanging loose beside it. Kept
+          // well inside the 120 box — the round launcher crops the corners, and the first
+          // position put the hand half outside it.
+          <g className="qre-m-arm">
+            <path d="M92 112 C 95 98, 93 84, 89 76" stroke="#FCFCFD" strokeWidth="12"
+                  strokeLinecap="round" fill="none" />
+            <path d="M92 112 C 95 98, 93 84, 89 76" stroke="#E2E6EC" strokeWidth="12"
+                  strokeLinecap="round" fill="none" opacity="0.45" />
+            <g className="qre-m-wave">
+              <ellipse cx="88" cy="64" rx="8.6" ry="10" fill="#EDB48E" />
+              <ellipse cx="81.6" cy="68" rx="3.2" ry="4.6" fill="#E8A87F"
+                       transform="rotate(-24 81.6 68)" />
+              <path d="M84.5 57.5 L 84.5 61.5 M88.3 56.6 L 88.3 60.8 M92 57.6 L 92 61.6"
+                    stroke="#D18F62" strokeWidth="1.5" strokeLinecap="round" />
+            </g>
+          </g>
+        )}
       </g>
     </svg>
   )

@@ -34,6 +34,18 @@ const RestartIcon = ({ className = 'w-4 h-4' }) => (
   </svg>
 )
 
+// Has the mascot already waved during this visit? sessionStorage THROWS rather than
+// returning null in a private window or with site data blocked, and this runs on every page
+// — unguarded it would take the assistant down with it. Failing to remember is harmless: the
+// worst case is one extra wave.
+const GREETED_KEY = 'qre.assistantGreeted'
+const alreadyGreeted = () => {
+  try { return sessionStorage.getItem(GREETED_KEY) === '1' } catch { return false }
+}
+const markGreeted = () => {
+  try { sessionStorage.setItem(GREETED_KEY, '1') } catch { /* not remembered; it just waves again */ }
+}
+
 function Bubble({ msg, t }) {
   const isUser = msg.role === 'user'
   return (
@@ -79,15 +91,35 @@ export default function AssistantWidget() {
   const [draft, setDraft] = useState('')
   const [seen, setSeen] = useState(false)
   const [teaser, setTeaser] = useState(false)
+  const [greet, setGreet] = useState(false)
   const scrollRef = useRef(null)
   const inputRef = useRef(null)
 
-  // A small one-time greeting bubble over the mascot — appears briefly, never nags.
+  // Two things greet an arriving visitor, in order: the mascot rises above the launcher and
+  // waves, and once it has dropped back in, the text bubble appears.
+  //
+  // The wave plays ONCE PER VISIT, remembered in sessionStorage. Plain component state would
+  // have replayed the whole five-and-a-half seconds on every refresh and every hard
+  // navigation, which is how a greeting turns into a nag. sessionStorage and not
+  // localStorage, because someone coming back tomorrow is arriving again and should be
+  // greeted again; someone reloading the page mid-visit is not.
+  //
+  // Reduced motion skips the wave and goes straight to the bubble. The greeting is ALL
+  // movement; with transitions flattened it would be a large face appearing and vanishing
+  // without warning, which is the opposite of what that setting asks for.
   useEffect(() => {
-    if (open || seen) { setTeaser(false); return undefined }
-    const show = setTimeout(() => setTeaser(true), 1600)
-    const hide = setTimeout(() => setTeaser(false), 10000)
-    return () => { clearTimeout(show); clearTimeout(hide) }
+    if (open || seen) { setTeaser(false); setGreet(false); return undefined }
+    const still = window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches
+    const wave = !still && !alreadyGreeted()
+    const timers = []
+    if (wave) {
+      markGreeted()
+      timers.push(setTimeout(() => setGreet(true), 700))
+      timers.push(setTimeout(() => setGreet(false), 6300))
+    }
+    timers.push(setTimeout(() => setTeaser(true), wave ? 6100 : 1200))
+    timers.push(setTimeout(() => setTeaser(false), wave ? 15000 : 11000))
+    return () => timers.forEach(clearTimeout)
   }, [open, seen])
 
   useEffect(() => {
@@ -118,6 +150,12 @@ export default function AssistantWidget() {
     <>
       {/* launcher — the mascot, end corner; FloatingContact keeps the start corner */}
       <div className="fixed bottom-5 end-5 z-40 flex flex-col items-end">
+        {greet && !open && (
+          <div aria-hidden
+            className="qre-greet pointer-events-none mb-3 me-1 w-[108px] h-[108px] rounded-full bg-white ring-1 ring-ink/5 shadow-2xl shadow-ink/25 flex items-center justify-center">
+            <Mascot wave className="w-[92px] h-[92px]" />
+          </div>
+        )}
         {teaser && !open && (
           <button type="button" onClick={() => setOpen(true)}
             className="qre-bubble-in mb-2 me-2 bg-ink text-white text-[12px] font-semibold rounded-2xl rounded-ee-sm px-3.5 py-2 shadow-xl shadow-ink/30">
@@ -126,7 +164,8 @@ export default function AssistantWidget() {
         )}
         <button type="button" onClick={() => setOpen((o) => !o)}
           aria-label={open ? t('common.close') : t('assistant.open')} aria-expanded={open}
-          className="relative w-[74px] h-[74px] hover:scale-105 active:scale-95 transition-transform duration-200">
+          className={`relative w-[74px] h-[74px] hover:scale-105 active:scale-95 transition-transform duration-200 ${
+            !open && !seen ? 'qre-mascot-attn' : ''}`}>
           <Mascot className="w-full h-full" />
           <span aria-hidden
             className={`absolute bottom-0 end-0.5 w-6 h-6 rounded-full ring-2 ring-white flex items-center justify-center text-white shadow-md transition-colors ${open ? 'bg-ink' : `bg-primary ${!seen ? 'qre-badge-pulse' : ''}`}`}>
