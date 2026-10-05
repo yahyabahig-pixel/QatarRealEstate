@@ -30,7 +30,13 @@ ARG VITE_API_URL
 ARG VITE_MAPBOX_TOKEN
 # Absolute-URL base for SEO/OG tags in index.html (canonical, og:url, og:image).
 # Fed from PUBLIC_ORIGIN by docker-compose; swap the domain there and rebuild.
-ARG VITE_SITE_URL
+#
+# The default is documentation, not the safety net: vite.config.js normalizes this value
+# (see normalizeSiteUrl there) so EVERY way of building the app — here, CI, a plain
+# `npm run build` — survives it being missing. It used to be neither, and an unset value
+# made index.html's `href="%VITE_SITE_URL%/"` collapse to `href="/"`, which Vite reads as
+# an asset to bundle and dies on with "EISDIR: illegal operation on a directory".
+ARG VITE_SITE_URL=http://localhost
 ENV VITE_API_URL=$VITE_API_URL
 ENV VITE_MAPBOX_TOKEN=$VITE_MAPBOX_TOKEN
 ENV VITE_SITE_URL=$VITE_SITE_URL

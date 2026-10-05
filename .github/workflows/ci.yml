@@ -97,9 +97,12 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      # No build-args, so VITE_API_URL is empty and the resulting image would run in mock
-      # mode. That is fine here: this job asks "does the image build?", not "does it run?".
-      # The persistence job below is what exercises a real, configured stack.
+      # Built with the SAME build-args docker-compose passes. Leaving them out is what made
+      # this step fail on every single push: an empty VITE_SITE_URL turns index.html's
+      # `href="%VITE_SITE_URL%/"` into `href="/"`, Vite reads that as an asset to bundle and
+      # dies with "EISDIR: illegal operation on a directory". The image is still never run
+      # from here — the persistence job below exercises a real, configured stack — but a
+      # build that does not match the deployed one is not a check, it is a false alarm.
       - name: Frontend image
         uses: docker/build-push-action@v6
         with:
@@ -107,6 +110,9 @@ jobs:
           file: Dockerfile.frontend
           push: false
           tags: qre-frontend:ci
+          build-args: |
+            VITE_API_URL=/api
+            VITE_SITE_URL=http://localhost
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
