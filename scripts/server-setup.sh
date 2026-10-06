@@ -50,6 +50,40 @@ if [ -r /dev/tty ]; then exec 3</dev/tty; else
 fi
 
 # -----------------------------------------------------------------------------------------
+# 0.5 Is this server big enough?
+# -----------------------------------------------------------------------------------------
+# Checked here rather than discovered later: SQL Server refuses to start under ~2 GB, and the
+# frontend build is the real peak -- Vite compiling in a container will be OOM-killed on a
+# small box. Both failures land ten minutes in, after Docker is installed and the images are
+# pulled, and neither says "not enough memory" in a way anyone would recognise.
+step "Checking the server"
+
+RAM_MB=$(awk '/MemTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 0)
+SWAP_MB=$(awk '/SwapTotal/ {printf "%d", $2/1024}' /proc/meminfo 2>/dev/null || echo 0)
+CPUS=$(nproc 2>/dev/null || echo 1)
+DISK_GB=$(df -BG --output=avail / 2>/dev/null | tail -1 | tr -dc '0-9' || echo 0)
+
+echo "    memory : ${RAM_MB} MB${SWAP_MB:+ (+ ${SWAP_MB} MB swap)}"
+echo "    cpu    : ${CPUS} core(s)"
+echo "    disk   : ${DISK_GB} GB free"
+
+[ "${DISK_GB:-0}" -ge 15 ] 2>/dev/null || \
+  die "only ${DISK_GB} GB free on /. The images and the database need about 15 GB to be comfortable."
+
+TOTAL_MB=$((RAM_MB + SWAP_MB))
+if [ "$RAM_MB" -lt 1800 ]; then
+  die "this server has ${RAM_MB} MB of memory. SQL Server alone will not start below about 2 GB.
+
+    Resize the VPS to at least 4 GB and run this again. Nothing has been installed."
+elif [ "$TOTAL_MB" -lt 3500 ]; then
+  warn "${RAM_MB} MB of memory is tight. SQL Server will run, but the frontend build may be
+    killed partway through. If that happens, add swap and run this again:
+        fallocate -l 4G /swapfile && chmod 600 /swapfile && mkswap /swapfile && swapon /swapfile"
+else
+  echo "    enough for SQL Server and the build."
+fi
+
+# -----------------------------------------------------------------------------------------
 # 1. Docker
 # -----------------------------------------------------------------------------------------
 step "Docker"
