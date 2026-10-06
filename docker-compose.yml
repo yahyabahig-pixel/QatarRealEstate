@@ -1,11 +1,20 @@
 # =========================================================================================
-# The whole application, described as three containers.
+# The whole application, described as four containers.
 #
 #   sqlserver  - the database.  NOT reachable from the internet.
 #   backend    - the .NET API.  NOT reachable from the internet.
-#   frontend   - nginx serving React AND proxying /api to the backend.  The ONLY container
-#                that publishes a port (80), because the site runs on plain HTTP for now.
-#   caddy      - the TLS edge.  COMMENTED OUT until a domain exists; see the block below.
+#   frontend   - nginx serving React AND proxying /api to the backend.
+#   caddy      - the TLS edge.  Only starts when the "tls" profile is active.
+#
+# Two shapes, and .env alone decides which one you get - this file is never edited:
+#
+#   PLAIN HTTP (the default)   frontend publishes 0.0.0.0:80, caddy does not start.
+#                              Right for a laptop, and for a server with no domain yet.
+#
+#   HTTPS (COMPOSE_PROFILES=tls)  caddy publishes 80 + 443 and gets a free Let's Encrypt
+#                              certificate by itself; frontend retreats to 127.0.0.1:8080
+#                              where only caddy can reach it. Needs a real hostname
+#                              pointing at the server. Run scripts/enable-https.sh.
 #
 # Everything comes from the .env file that sits next to this file on the server. That file
 # is git-ignored and never leaves the VPS, which is why no password appears below.
@@ -144,15 +153,27 @@ services:
     image: qre-frontend:latest
     container_name: qre-frontend
 
-    # Plain HTTP on the bare IP while there is no domain. Let's Encrypt cannot issue a
-    # certificate for an IP address, and the only alternative - Caddy's self-signed local CA -
-    # shows every visitor a full-page security warning AND breaks the app, because the bundle
-    # is built against http://<ip> and the browser then blocks those calls as mixed content.
-    # A plain-HTTP site is the honest option until a hostname exists.
+    # WHERE nginx is published, driven entirely from .env so that turning HTTPS on never
+    # means editing this file:
     #
-    # To put Caddy back: swap this for `expose: ["80"]` and uncomment the caddy service below.
+    #   unset (the default)        -> 0.0.0.0:80. Plain HTTP straight from nginx. This is
+    #                                 right on a laptop, and right on a bare IP: Let's
+    #                                 Encrypt cannot issue a certificate for an IP, and
+    #                                 Caddy's self-signed CA would both warn every visitor
+    #                                 AND break the app (the bundle is built against
+    #                                 http://<ip>, so the browser blocks those calls as
+    #                                 mixed content). Plain HTTP is the honest option
+    #                                 until a hostname exists.
+    #
+    #   FRONTEND_BIND=127.0.0.1:8080 -> reachable only from inside the server, because
+    #                                 Caddy now owns 80 and 443 and proxies to it. Set
+    #                                 this together with COMPOSE_PROFILES=tls.
+    #
+    # scripts/enable-https.sh sets both for you. Note the bind address matters: without
+    # the 127.0.0.1 prefix Docker would publish nginx on every interface and bypass
+    # Caddy - and Docker writes its own iptables rules, so a firewall would not stop it.
     ports:
-      - "80:80"
+      - "${FRONTEND_BIND:-0.0.0.0:80}:80"
 
     depends_on:
       - backend
@@ -165,43 +186,52 @@ services:
   # Obtains and renews the certificate by itself - no certbot, no cron, no nginx reload.
   # See docker/caddy/Caddyfile for the two modes (self-signed vs Let's Encrypt).
   #
-  # DISABLED while the site runs on a bare IP - see the note on frontend's ports above.
-  # To re-enable, once DNS points a hostname at this server:
-  #   1. uncomment this whole block
-  #   2. change frontend's `ports: ["80:80"]` back to `expose: ["80"]`
-  #   3. set SITE_ADDRESS / CADDY_TLS / PUBLIC_ORIGIN in .env (see .env.example, mode C)
-  #   4. docker compose build frontend   <- PUBLIC_ORIGIN is baked into the JS bundle
-  #   5. docker compose up -d
+  # OFF BY DEFAULT, and not by being commented out: the `profiles` key below means Compose
+  # skips this service entirely unless the "tls" profile is active. So this stays a normal,
+  # validated part of the file - `docker compose config` checks it, CI builds it - while a
+  # laptop or a bare-IP server simply never starts it.
+  #
+  # To turn HTTPS on, once DNS points a hostname at this server, set these in .env:
+  #     COMPOSE_PROFILES=tls             <- starts this service
+  #     FRONTEND_BIND=127.0.0.1:8080     <- hands ports 80/443 over to Caddy
+  #     SITE_ADDRESS=www.yourdomain.com
+  #     CADDY_TLS=you@yourdomain.com     <- an email switches Caddy to Let's Encrypt
+  #     PUBLIC_ORIGIN=https://www.yourdomain.com
+  # then: docker compose build frontend && docker compose up -d
+  #       (the rebuild is NOT optional - Vite bakes PUBLIC_ORIGIN into the JS bundle)
+  #
+  # scripts/enable-https.sh does all of the above, and checks DNS first.
   # ---------------------------------------------------------------------------------------
-  # caddy:
-  #   image: caddy:2-alpine
-  #   container_name: qre-caddy
-  #   restart: unless-stopped
-  #
-  #   ports:
-  #     - "80:80"        # HTTP-01 validation + the redirect to HTTPS. Must stay open.
-  #     - "443:443"      # HTTPS
-  #     - "443:443/udp"  # HTTP/3 (QUIC). Harmless if your firewall drops UDP.
-  #
-  #   environment:
-  #     # All three come from .env. See docker/caddy/Caddyfile for what they accept.
-  #     SITE_ADDRESS: ${SITE_ADDRESS:-:443}
-  #     CADDY_TLS: ${CADDY_TLS:-internal}
-  #     # max-age=0 = no HSTS in force, and it also CLEARS a policy a browser cached
-  #     # earlier. The right default until a REAL certificate is being served; read the
-  #     # warning in the Caddyfile before raising it.
-  #     CADDY_HSTS: ${CADDY_HSTS:-max-age=0}
-  #
-  #   volumes:
-  #     - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
-  #     # caddy_data holds the issued certificates and the ACME account key. It MUST persist:
-  #     # losing it means re-requesting certificates on every restart, which will hit Let's
-  #     # Encrypt's rate limit (50 certs per domain per week) and then fail outright.
-  #     - caddy_data:/data
-  #     - caddy_config:/config
-  #
-  #   depends_on:
-  #     - frontend
+  caddy:
+    image: caddy:2-alpine
+    container_name: qre-caddy
+    restart: unless-stopped
+    profiles: ["tls"]
+
+    ports:
+      - "80:80"        # HTTP-01 validation + the redirect to HTTPS. Must stay open.
+      - "443:443"      # HTTPS
+      - "443:443/udp"  # HTTP/3 (QUIC). Harmless if your firewall drops UDP.
+
+    environment:
+      # All three come from .env. See docker/caddy/Caddyfile for what they accept.
+      SITE_ADDRESS: ${SITE_ADDRESS:-:443}
+      CADDY_TLS: ${CADDY_TLS:-internal}
+      # max-age=0 = no HSTS in force, and it also CLEARS a policy a browser cached
+      # earlier. The right default until a REAL certificate is being served; read the
+      # warning in the Caddyfile before raising it.
+      CADDY_HSTS: ${CADDY_HSTS:-max-age=0}
+
+    volumes:
+      - ./docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # caddy_data holds the issued certificates and the ACME account key. It MUST persist:
+      # losing it means re-requesting certificates on every restart, which will hit Let's
+      # Encrypt's rate limit (50 certs per domain per week) and then fail outright.
+      - caddy_data:/data
+      - caddy_config:/config
+
+    depends_on:
+      - frontend
 
 # -----------------------------------------------------------------------------------------
 # Named volumes, so state survives "docker compose down", image rebuilds, container
