@@ -36,10 +36,12 @@ export const COMPANY = {
   tagline: "Qatar's Most Exclusive Real Estate Portal",
 
   // Contact -------------------------------------------------------------------------
-  phone: '+974 4444 8800',
-  whatsapp: '97444448800',          // digits only — used to build https://wa.me/<number>
+  // Phone and whatsapp are the SAME number in two shapes: readable for a human,
+  // digits-only for the https://wa.me/<number> link. Change one and change the other.
+  phone: '+974 7006 6675',
+  whatsapp: '97470066675',          // digits only — used to build https://wa.me/<number>
   // FILL IN: the real inbox that should receive enquiries and job applications.
-  email: '',
+  email: 'Almadenah.realestate@yahoo.com',
 
   // Footer copy ---------------------------------------------------------------------
   about: 'AL-Madenah RealEstate is the country’s destination for exceptional homes — a curated portfolio across The Pearl, Lusail and West Bay, backed by a team that treats every transaction as a reference.',
