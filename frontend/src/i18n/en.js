@@ -316,7 +316,7 @@ export default {
   support: {
     aboutEyebrow: 'About us',
     aboutTitle: "The reference for Qatar's finest homes",
-    aboutP1: "{name} began with a simple observation: Qatar's property market deserved the same standard of service as its architecture. What started as a three-person office in West Bay is today the portal of record for the country's premium districts.",
+    aboutP1: "{name} began with a simple observation: Qatar's property market deserved the same standard of service as its architecture.",
     aboutP2: 'We verify before we list, we answer before you ask twice, and we treat every transaction — a studio lease or a beachfront estate — as a future reference.',
     trust: 'Trust',
     trustDesc: 'Verified listings, transparent data',
