@@ -508,3 +508,6 @@ _to_delete/
 .fuse_hidden*
 WATCH.command
 RUN-STEP.command
+
+# Local only: carries this deployment's server address, so it never goes to a public repo.
+/CONNECT-SERVER.command
