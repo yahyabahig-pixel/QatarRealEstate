@@ -310,6 +310,17 @@ else
   echo "    plain HTTP on the bare IP is closed — everything goes through Caddy now."
 fi
 
+# A valid certificate on a broken site is still a broken site. The page above proves Caddy
+# reaches nginx; this proves the whole chain -- caddy -> nginx -> the API -> the database --
+# answers over HTTPS, which is the thing that actually has to work.
+API="$(curl -s --max-time 20 --resolve "${DOMAIN}:443:127.0.0.1" \
+       "https://${DOMAIN}/api/properties?page=1&pageSize=1" 2>/dev/null || true)"
+case "$API" in
+  *totalCount*|*items*) echo "    the API answers over HTTPS." ;;
+  "")                   warn "the API returned nothing over HTTPS. Check: docker compose logs backend --tail 60" ;;
+  *)                    warn "the API answered over HTTPS but not with a listing page. Check it in a browser." ;;
+esac
+
 cat <<DONE
 
 $(bold "HTTPS is on.")
