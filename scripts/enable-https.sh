@@ -29,7 +29,7 @@ set -Eeuo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")/.."
 
-DOMAIN="${1:-}"
+DOMAIN_ARG="${1:-}"
 EMAIL="${2:-}"
 
 bold() { printf '\033[1m%s\033[0m\n' "$*"; }
@@ -39,24 +39,55 @@ die()  { printf '\n\033[1;31mfailed: %s\033[0m\n' "$*" >&2; exit 1; }
 
 usage() {
   cat >&2 <<USAGE
-usage: sudo ./scripts/enable-https.sh <hostname> <email>
+usage: sudo ./scripts/enable-https.sh <hostname>[,<hostname>...] <email>
 
   hostname   the name visitors will type, e.g. www.almadenah.qa
-             Use the exact host you created the DNS record for. "www.x.com" and "x.com"
-             are two different names and need two records.
+             "x.com" and "www.x.com" are two different names: each needs its own DNS
+             record, and each must be listed here or it will not be on the certificate.
+             List them comma-separated and they all go on ONE certificate:
+
+                 sudo ./scripts/enable-https.sh example.com,www.example.com me@example.com
+
+             The FIRST one is the canonical address — it becomes PUBLIC_ORIGIN, the
+             address the site builds its own links from. The others still work and still
+             serve HTTPS.
   email      Let's Encrypt uses it only to warn you if a renewal ever breaks.
 
 USAGE
   exit 2
 }
 
-[ -n "$DOMAIN" ] && [ -n "$EMAIL" ] || usage
-case "$DOMAIN" in
-  http://*|https://*) die "give the hostname on its own, with no http:// in front: ${DOMAIN#*://}" ;;
-  *[!a-zA-Z0-9.-]*)   die "'${DOMAIN}' is not a hostname." ;;
-  *.*)                : ;;
-  *)                  die "'${DOMAIN}' is not a full hostname." ;;
-esac
+[ -n "$DOMAIN_ARG" ] && [ -n "$EMAIL" ] || usage
+
+# Comma-separated into a list, trimming spaces so "a.com, www.a.com" works too.
+DOMAINS=""
+OLD_IFS="$IFS"; IFS=','
+for D in $DOMAIN_ARG; do
+  # Trim the ends only -- never whitespace in the MIDDLE. Stripping that would quietly
+  # turn a typo like "el madenah.com" into "elmadenah.com" and go off and certify a name
+  # nobody asked for; left in place, the character check below rejects it by name.
+  D="${D#"${D%%[![:space:]]*}"}"
+  D="${D%"${D##*[![:space:]]}"}"
+  [ -n "$D" ] || continue
+  case "$D" in
+    http://*|https://*) IFS="$OLD_IFS"; die "give the hostname on its own, with no http:// in front: ${D#*://}" ;;
+    *[!a-zA-Z0-9.-]*)   IFS="$OLD_IFS"; die "'${D}' is not a hostname." ;;
+    *.*)                : ;;
+    *)                  IFS="$OLD_IFS"; die "'${D}' is not a full hostname." ;;
+  esac
+  DOMAINS="${DOMAINS}${DOMAINS:+ }${D}"
+done
+IFS="$OLD_IFS"
+[ -n "$DOMAINS" ] || usage
+
+# The first is canonical: PUBLIC_ORIGIN, and the name every check below verifies against.
+DOMAIN="${DOMAINS%% *}"
+# Caddy takes several site addresses on one site block, comma-separated, and puts them all
+# on a single certificate. ", " with the space is the documented form, and the generated
+# config is validated below before anything is changed, so a wrong guess here cannot reach
+# the running site.
+SITE_LIST="$(printf '%s' "$DOMAINS" | sed 's/ /, /g')"
+
 case "$EMAIL" in *@*.*) : ;; *) die "'${EMAIL}' is not an email address." ;; esac
 
 [ "$(id -u)" = "0" ] || die "run this with sudo — it writes .env and binds ports 80 and 443."
@@ -66,33 +97,38 @@ command -v docker >/dev/null || die "docker is not installed."
 # -----------------------------------------------------------------------------------------
 # 1. Does that hostname point here?
 # -----------------------------------------------------------------------------------------
-step "Checking DNS for ${DOMAIN}"
+step "Checking DNS"
 
 MY_IP="${PUBLIC_IP:-$(curl -fsS --max-time 10 https://api.ipify.org 2>/dev/null || true)}"
-[ -n "$MY_IP" ] || die "could not work out this server's public IP. Pass it yourself: PUBLIC_IP=1.2.3.4 sudo ./scripts/enable-https.sh ${DOMAIN} ${EMAIL}"
+[ -n "$MY_IP" ] || die "could not work out this server's public IP. Pass it yourself: PUBLIC_IP=1.2.3.4 sudo ./scripts/enable-https.sh ${DOMAIN_ARG} ${EMAIL}"
 echo "    this server : ${MY_IP}"
 
 resolve() {
   if command -v getent >/dev/null; then getent ahostsv4 "$1" 2>/dev/null | awk '{print $1}' | sort -u; fi
 }
-RESOLVED="$(resolve "$DOMAIN")"
 
-if [ -z "$RESOLVED" ]; then
-  die "${DOMAIN} does not resolve to anything yet.
+# EVERY name is checked, not just the canonical one. Let's Encrypt validates each name on
+# the certificate separately, so one name pointing elsewhere fails the whole request --
+# and it spends the hourly allowance doing it.
+for D in $DOMAINS; do
+  RESOLVED="$(resolve "$D")"
+
+  if [ -z "$RESOLVED" ]; then
+    die "${D} does not resolve to anything yet.
 
     Add an A record at your registrar:
         type   A
-        name   ${DOMAIN%%.*}        (or @ for the bare domain)
+        name   $(case "$D" in *.*.*) printf '%s' "${D%%.*}" ;; *) printf '@' ;; esac)
         value  ${MY_IP}
     then wait for it to take effect and run this again.
 
-    Check it from anywhere with:  dig +short ${DOMAIN}"
-fi
+    Check it from anywhere with:  dig +short ${D}
 
-echo "    ${DOMAIN} -> $(printf '%s' "$RESOLVED" | tr '\n' ' ')"
+    Or drop it from the list and certify only the names that are ready."
+  fi
 
-if ! printf '%s\n' "$RESOLVED" | grep -qx "$MY_IP"; then
-  die "${DOMAIN} points somewhere else, not at this server.
+  if ! printf '%s\n' "$RESOLVED" | grep -qx "$MY_IP"; then
+    die "${D} points somewhere else, not at this server.
 
     it resolves to : $(printf '%s' "$RESOLVED" | tr '\n' ' ')
     this server is : ${MY_IP}
@@ -102,8 +138,11 @@ if ! printf '%s\n' "$RESOLVED" | grep -qx "$MY_IP"; then
     If you put the domain behind Cloudflare's proxy (the orange cloud), that is what
     you are seeing: turn the proxy off (grey cloud) while the certificate is issued,
     or let Cloudflare handle TLS instead of this script."
-fi
-echo "    correct — it points at this server."
+  fi
+
+  echo "    ${D} -> ${MY_IP}  ✓"
+done
+echo "    all $(printf '%s' "$DOMAINS" | wc -w | tr -d ' ') name(s) point at this server."
 
 # Port 80 has to be free for Let's Encrypt's HTTP-01 check, and Caddy is about to claim it
 # from nginx. Anything ELSE sitting on 80 or 443 (a stray apache, a host nginx) would make
@@ -120,6 +159,31 @@ if command -v ss >/dev/null; then
   done
 fi
 echo "    free (apart from this project's own containers)."
+
+# -----------------------------------------------------------------------------------------
+# 1.5 Does Caddy actually accept the config we are about to give it?
+# -----------------------------------------------------------------------------------------
+# `caddy validate` runs the real Caddyfile adapter against the real values in a throwaway
+# container, touching nothing. It is here because the alternative is finding out after the
+# rebuild, when the failure arrives as a container that will not start -- recoverable, but
+# only after several wasted minutes. A multi-name SITE_ADDRESS is the case worth catching.
+step "Checking the Caddy configuration"
+if docker run --rm \
+     -v "$PWD/docker/caddy/Caddyfile:/etc/caddy/Caddyfile:ro" \
+     -e SITE_ADDRESS="$SITE_LIST" -e CADDY_TLS="$EMAIL" -e CADDY_HSTS="max-age=0" \
+     caddy:2-alpine caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile \
+     >/tmp/qre-caddy-validate.log 2>&1; then
+  echo "    valid for: ${SITE_LIST}"
+else
+  echo
+  sed 's/^/        /' /tmp/qre-caddy-validate.log
+  rm -f /tmp/qre-caddy-validate.log
+  die "Caddy rejected that configuration. Nothing has been changed.
+
+    If you passed several hostnames, try one on its own first:
+        sudo ./scripts/enable-https.sh ${DOMAIN} ${EMAIL}"
+fi
+rm -f /tmp/qre-caddy-validate.log
 
 # -----------------------------------------------------------------------------------------
 # 2. .env
@@ -148,7 +212,7 @@ set_env() {
 
 set_env COMPOSE_PROFILES tls
 set_env FRONTEND_BIND    127.0.0.1:8080
-set_env SITE_ADDRESS     "$DOMAIN"
+set_env SITE_ADDRESS     "$SITE_LIST"
 set_env CADDY_TLS        "$EMAIL"
 set_env PUBLIC_ORIGIN    "https://${DOMAIN}"
 # Deliberately left at max-age=0 for now. HSTS tells browsers "never speak plain HTTP to
@@ -252,6 +316,7 @@ $(bold "HTTPS is on.")
 
     Site           https://${DOMAIN}
     Control panel  https://${DOMAIN}/admin/login
+    On the cert    ${SITE_LIST}
     Certificate    Let's Encrypt${EXPIRES:+, valid until ${EXPIRES}}
     Renewal        automatic, by Caddy. Nothing to schedule.
     .env backup    ${BACKUP}
@@ -259,10 +324,11 @@ $(bold "HTTPS is on.")
 $(bold "Worth knowing")
 
     - Open https://${DOMAIN} in a browser once and check the padlock.
-    - WhatsApp link previews and Google indexing work off PUBLIC_ORIGIN, which now points
-      at the domain, so they start working on their own.
-    - If you also want the bare domain (without www) to work, add an A record for it too
-      and re-run this with that name.
+    - WhatsApp link previews and Google indexing work off PUBLIC_ORIGIN, which is now
+      https://${DOMAIN}, so they start working on their own.
+    - Every name on the certificate serves HTTPS, but the site builds its own links from
+      the canonical one above. To add another name later, point its A record here and
+      re-run this with the full list, canonical name first.
     - HSTS is deliberately off for now. Once the site has been fine on HTTPS for a day or
       two, set CADDY_HSTS="max-age=31536000; includeSubDomains" in .env and run
       'docker compose up -d caddy'. Read the warning in docker/caddy/Caddyfile first.
