@@ -511,3 +511,7 @@ RUN-STEP.command
 
 # Local only: carries this deployment's server address, so it never goes to a public repo.
 /CONNECT-SERVER.command
+
+# Written by scripts/update.sh: which commit is actually built and serving on THIS
+# machine. Local state, never shared -- every deployment has its own.
+/.deployed-commit

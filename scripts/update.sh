@@ -48,8 +48,13 @@ git rev-parse --git-dir >/dev/null 2>&1 || die "this is not a git checkout, so t
 
 # Local edits would be destroyed by the rollback's `git reset --hard`, so refuse to start
 # rather than quietly take them away from whoever made them.
-if [ -n "$(git status --porcelain)" ]; then
-  git status --short | sed 's/^/    /'
+# .deployed-commit is excluded: this script writes it, and a script that trips over its own
+# state file refuses to run from the second time onwards. .gitignore covers it too, but not
+# on a checkout that predates that entry -- which is exactly the deployment this guard would
+# have locked out.
+DIRTY="$(git status --porcelain | grep -v '[[:space:]]\.deployed-commit$' || true)"
+if [ -n "$DIRTY" ]; then
+  printf '%s\n' "$DIRTY" | sed 's/^/    /'
   die "there are uncommitted changes in this directory.
 
     Updating would overwrite them, and a rollback would delete them for good.
@@ -89,15 +94,43 @@ step "Fetching the latest code"
 git fetch --quiet origin "$BRANCH" || die "could not reach the git remote. Check the server's network."
 
 BEHIND="$(git rev-list --count "HEAD..origin/${BRANCH}")"
-if [ "$BEHIND" = "0" ]; then
-  echo "    already up to date — nothing to do."
-  echo
-  bold "No change. The site was not touched."
-  exit 0
-fi
 
-echo "    ${BEHIND} new commit(s):"
-git log --format='      %h  %s' "HEAD..origin/${BRANCH}" | cut -c1-78
+# "No new commits" is NOT the same as "nothing to deploy", and treating them as the same
+# wasted a deploy. Running `git pull` before this script -- which the documented one-liner
+# literally told people to do, in order to pick up this script's own latest version --
+# advances the working tree while the containers carry on serving the previous build. This
+# then compared HEAD against the remote, found them equal, reported "already up to date" and
+# exited without building. Files updated, site unchanged, and nothing said so.
+#
+# So the question is not "is the checkout behind the remote" but "is what is RUNNING the same
+# as what is checked out". DEPLOYED records the commit of the last successful deploy, written
+# at the end of this script, which makes that comparison possible at all.
+DEPLOYED_FILE=".deployed-commit"
+DEPLOYED="$(cat "$DEPLOYED_FILE" 2>/dev/null || true)"
+
+if [ "$BEHIND" = "0" ]; then
+  if [ "${FORCE_REBUILD:-0}" = "1" ]; then
+    echo "    no new commits, but FORCE_REBUILD=1 — rebuilding anyway."
+  elif [ -z "$DEPLOYED" ]; then
+    # No record: either this is the first run of this version of the script, or someone
+    # deployed by hand. Build rather than assume -- a needless rebuild costs minutes, a
+    # skipped one leaves the site on code nobody can see is stale.
+    echo "    no new commits, but there is no record of what is deployed."
+    echo "    rebuilding so that what runs is certain to be what is checked out."
+  elif [ "$DEPLOYED" != "$(git rev-parse HEAD)" ]; then
+    echo "    no new commits, but the running site is on ${DEPLOYED:0:7} and the code is on"
+    echo "    $(git rev-parse --short HEAD) — someone pulled without deploying. Building that now."
+  else
+    echo "    already up to date, and ${DEPLOYED:0:7} is what is running."
+    echo
+    bold "No change. The site was not touched."
+    echo "    To rebuild anyway:  FORCE_REBUILD=1 sudo ./scripts/update.sh"
+    exit 0
+  fi
+else
+  echo "    ${BEHIND} new commit(s):"
+  git log --format='      %h  %s' "HEAD..origin/${BRANCH}" | cut -c1-78
+fi
 
 git merge --ff-only "origin/${BRANCH}" --quiet \
   || die "the branch has diverged from the remote, so this cannot fast-forward.
@@ -176,6 +209,7 @@ if [ "$OK" = "0" ]; then
 
   step "Rolling back to ${PREV:0:7}"
   git reset --hard "$PREV" --quiet
+  printf '%s\n' "$PREV" > "$DEPLOYED_FILE"
   if docker compose build >/dev/null 2>&1 && docker compose up -d >/dev/null 2>&1; then
     sleep 10
     if "${CURL_BASE[@]}" -o /dev/null "${ROOT}/" 2>/dev/null; then
@@ -206,6 +240,11 @@ fi
 # -----------------------------------------------------------------------------------------
 # 7. Done
 # -----------------------------------------------------------------------------------------
+# Written only now, after the checks passed: this file means "this commit is built, running
+# and answering", which is what the next run needs to know. Writing it before the checks
+# would have it claim a deploy that may have just been rolled back.
+printf '%s\n' "$(git rev-parse HEAD)" > "$DEPLOYED_FILE"
+
 cat <<DONE
 
 $(bold "Updated.")
