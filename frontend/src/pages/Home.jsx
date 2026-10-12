@@ -18,10 +18,16 @@ import { IconArrowRight, IconSearch } from '../components/icons'
 // ---------------------------------------------------------------------------------------
 const heroUrl = (id) => `https://images.unsplash.com/photo-${id}?auto=format&fit=crop&w=2400&q=85`
 
-const HERO = heroUrl('1646207795621-733fe1646f9b')   // Qatar flag, National Museum of Qatar, Doha
+// The first two are aerial views of Doha; the last two are the skyline from across the bay.
+// Every id below was read off its own Unsplash page rather than recalled, because an id that
+// does not resolve fails silently here: the error handler drops a dead photograph from the
+// rotation, so a wrong one costs you a slide with nothing on screen to say so.
+// All four are "free to use under the Unsplash License"; attribution is not required by it,
+// and the photographer is named here so it is possible to give anyway.
+const HERO = heroUrl('1647755453118-aad22e0f7cc0')   // The Pearl-Qatar from the air — Visit Qatar
 // Fallbacks, all Qatar, so a fallback can never substitute another city for the hero.
 const ALT_HEROES = [
-  heroUrl('1577717903315-1691ae25ab3f'),             // Doha / West Bay skyline
+  heroUrl('1602694489714-d8a41567d2a9'),             // Doha from the air — Kazuo Ota
   heroUrl('1507904139316-3c7422a97a49'),             // Doha skyline at blue hour
   heroUrl('1662050196100-6f8afc83d585'),             // Doha skyline across the bay
 ]
