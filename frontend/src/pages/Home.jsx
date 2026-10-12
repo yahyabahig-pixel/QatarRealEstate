@@ -26,13 +26,24 @@ const ALT_HEROES = [
   heroUrl('1662050196100-6f8afc83d585'),             // Doha skyline across the bay
 ]
 
-// The requested "blur 70%". CSS blur takes a length, not a percentage, so it is expressed here
-// as a single tunable constant: 70% of a 20px ceiling. Turn it down towards 0px to sharpen the
-// photograph, or up for a softer backdrop — nothing else needs touching.
-const HERO_BLUR = '14px'
+// How soft the backdrop photograph is. '0px' shows the photograph as taken, which is the
+// point of having chosen these four; raise it towards '14px' for a soft wash instead.
+//
+// It was 14px, which together with the dark overlays below meant the photographs were barely
+// readable as photographs at all. They are sharp now, and the overlays were cut back to match
+// (see the HERO SCRIM note in the markup) -- the two have to be tuned together, because
+// taking the blur off while leaving a heavy scrim just gives you a sharp photograph nobody
+// can see.
+const HERO_BLUR = '0px'
 
 // All four photographs, in order. They were already here as error fallbacks and never shown;
 // they are the rotation now, and a photograph that fails to load simply drops out of it.
+// Carried by each line of hero type so the scrim behind the photograph can stay light.
+// See the note where it is used for why it is not on their shared wrapper.
+const HERO_TEXT_SHADOW = {
+  textShadow: '0 2px 18px rgba(16,20,28,.55), 0 1px 3px rgba(16,20,28,.4)',
+}
+
 const HERO_SLIDES = [HERO, ...ALT_HEROES]
 const SLIDE_MS = 6000     // how long each photograph holds
 const FADE_MS = 2200      // how long the crossfade between two of them takes
@@ -154,20 +165,42 @@ export default function Home() {
       {/* HERO */}
       <section className="relative h-screen min-h-[680px] flex items-center justify-center overflow-hidden">
         <HeroBackdrop alt="The West Bay skyline across Doha Bay, Qatar" />
-        {/* indigo unifier — carries the brand dark and keeps white type legible on any crop */}
-        <div className="absolute inset-0 bg-gradient-to-b from-ink/80 via-ink/55 to-ink/90" />
+        {/* HERO SCRIM — the dial between "you can see the photograph" and "you can read the
+            headline". It was from-ink/80 via-ink/55 to-ink/90, which is a near-opaque wash:
+            with the 14px blur on top of it the four Qatar photographs were decoration nobody
+            could make out.
+
+            Now weighted instead of flat. The middle is where the white headline sits, so it
+            keeps the least cover it can and the type is given a shadow (below) to make up the
+            difference -- darkening the whole frame to protect a few lines of text costs the
+            photograph everywhere, for a problem that only exists behind the text. The ends
+            stay heavier: the top carries the transparent nav, the base grounds the section
+            and seats the white search card.
+
+            To show more photograph, lower the middle value first. If the headline starts to
+            swim on a bright frame, raise the text shadow before the scrim. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-ink/55 via-ink/40 to-ink/75" />
         {/* logo-red cast — a quiet full-bleed tint that pulls the backdrop toward the
-            brand red of the logo (stronger at the base, breathing at the top) */}
-        <div className="absolute inset-0 bg-gradient-to-b from-primary/15 via-primary/5 to-primary/25 pointer-events-none" />
+            brand red of the logo. Cleared out of the middle so it tints the frame, not the
+            subject of the photograph. */}
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/10 via-transparent to-primary/15 pointer-events-none" />
         {/* red blooms — tie the photograph to the primary accent without tinting faces */}
-        <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[56rem] h-80 rounded-full bg-primary/30 blur-3xl pointer-events-none" />
-        <div className="absolute -top-24 -end-24 w-[30rem] h-[30rem] rounded-full bg-primary/15 blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 left-1/2 -translate-x-1/2 w-[56rem] h-80 rounded-full bg-primary/20 blur-3xl pointer-events-none" />
+        <div className="absolute -top-24 -end-24 w-[30rem] h-[30rem] rounded-full bg-primary/10 blur-3xl pointer-events-none" />
         <div className="relative text-center text-white px-4 w-full max-w-3xl">
-          <div className="eyebrow !text-white/90 mb-4">{t('home.heroEyebrow')}</div>
-          <h1 className="h-serif text-4xl md:text-6xl leading-[1.08] mb-4">
+          {/* The shadow is what lets the scrim above stay light: it darkens only the few
+              pixels around each letter, so the headline holds on a bright sky without putting
+              a sheet of ink over the whole photograph. Raise it before reaching for the scrim.
+
+              Applied to each line of type, NOT to the wrapper -- text-shadow inherits, and on
+              the wrapper it would rain down on the dark text inside the white search card
+              below. */}
+          <div className="eyebrow !text-white/90 mb-4" style={HERO_TEXT_SHADOW}>{t('home.heroEyebrow')}</div>
+          <h1 className="h-serif text-4xl md:text-6xl leading-[1.08] mb-4" style={HERO_TEXT_SHADOW}>
             {t('home.heroTitle1')}<br />{t('home.heroTitle2')}
           </h1>
-          <p className="text-white/70 text-sm md:text-base mb-8 max-w-xl mx-auto">
+          {/* raised from white/70: at 70% over a lighter scrim the subtitle went muddy */}
+          <p className="text-white/85 text-sm md:text-base mb-8 max-w-xl mx-auto" style={HERO_TEXT_SHADOW}>
             {t('home.heroSubtitle')}
           </p>
 
