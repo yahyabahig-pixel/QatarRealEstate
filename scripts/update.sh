@@ -62,6 +62,13 @@ if [ -n "$DIRTY" ]; then
 fi
 
 PREV="$(git rev-parse HEAD)"
+
+# What was actually SERVING before this run, which is not always what was checked out: a
+# `git pull` run beforehand moves HEAD while the containers carry on with the old build.
+# Reported as "Was running", and used for the go-back hint at the end -- taking PREV there
+# printed the commit we just deployed, so the suggested rollback was a no-op dressed up as
+# an escape route. Filled in properly once .deployed-commit has been read, below.
+WAS_RUNNING="$PREV"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
 bold "Updating $(pwd) on branch ${BRANCH}"
 echo "    currently running: $(git log -1 --format='%h  %s' | cut -c1-72)"
@@ -109,6 +116,9 @@ BEHIND="$(git rev-list --count "HEAD..origin/${BRANCH}")"
 # at the end of this script, which makes that comparison possible at all.
 DEPLOYED_FILE=".deployed-commit"
 DEPLOYED="$(cat "$DEPLOYED_FILE" 2>/dev/null || true)"
+# The record beats the checkout: it is what is serving, which is the thing anyone reading
+# "Was running" or reaching for the rollback actually means.
+[ -n "$DEPLOYED" ] && WAS_RUNNING="$DEPLOYED"
 
 if [ "$BEHIND" = "0" ]; then
   if [ "${FORCE_REBUILD:-0}" = "1" ]; then
@@ -286,13 +296,13 @@ cat <<DONE
 $(bold "Updated.")
 
     Now running   $(git log -1 --format='%h  %s' | cut -c1-66)
-    Was running   ${PREV:0:7}
+    Was running   ${WAS_RUNNING:0:7}
     Site          ${ROOT}
     Backup        ./backups  (taken before the update)
 
 $(bold "If something looks wrong")
 
     Go back to the previous version:
-        git reset --hard ${PREV:0:7} && docker compose build && docker compose up -d
+        git reset --hard ${WAS_RUNNING:0:7} && docker compose build && docker compose up -d
 
 DONE
