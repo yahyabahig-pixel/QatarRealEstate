@@ -27,6 +27,19 @@ public sealed class SitemapController : ControllerBase
         "/off-market-opportunities", "/list-property", "/about-us", "/contact-us", "/careers",
     ];
 
+    // Category landing pages: /rent/offices, /buy/apartments and so on. These are the pages
+    // that can answer a search like "offices for rent in Qatar", so leaving them out of the
+    // sitemap would waste the reason they were built -- nothing on the site links to all of
+    // them, and the crawler cannot read the links it does have (empty HTML body, no SSR).
+    //
+    // KEEP IN SYNC with CATEGORY_TYPES in frontend/src/pages/CategoryPages.jsx. A slug here
+    // that the front end does not know redirects to the plain listings page, so a stale entry
+    // is untidy rather than broken -- but it still advertises a page that is not really there.
+    private static readonly string[] CategorySlugs =
+    [
+        "apartments", "villas", "townhouses", "penthouses", "studios", "offices", "shops",
+    ];
+
     private readonly ISitemapQueries _queries;
     private readonly IConfiguration _config;
 
@@ -41,8 +54,14 @@ public sealed class SitemapController : ControllerBase
     {
         var origin = ResolveOrigin();
 
+        var categoryPaths =
+            from purpose in new[] { "rent", "buy" }
+            from slug in CategorySlugs
+            select new SitemapEntry($"/{purpose}/{slug}", null);
+
         var urls = StaticPaths
             .Select(p => new SitemapEntry(p, null))
+            .Concat(categoryPaths)
             .Concat(await _queries.ListPublicPathsAsync(ct))
             .Select(e => new XElement(Ns + "url",
                 new XElement(Ns + "loc", origin + e.Path),

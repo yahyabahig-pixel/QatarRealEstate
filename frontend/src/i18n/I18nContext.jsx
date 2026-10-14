@@ -48,6 +48,10 @@ function readStoredLang() {
 export function I18nProvider({ children }) {
   const [lang, setLangState] = useState(readStoredLang)
 
+  // What the CURRENT page wants in the title and description, or null for the site default.
+  // Pages do not write document.title themselves -- see the note on the effect below.
+  const [pageMeta, setPageMeta] = useState(null)
+
   const setLang = useCallback((next) => {
     const value = next === 'ar' ? 'ar' : 'en'
     setLangState(value)
@@ -63,13 +67,28 @@ export function I18nProvider({ children }) {
   // The provider is the single writer of <html lang dir>, the document title and the
   // SEO description meta — Google renders JS, so Arabic visitors get the Arabic snippet.
   // (The static values in index.html stay as the crawler/scraper fallback.)
+  //
+  // Pages supply their own title through usePageMeta() rather than writing document.title,
+  // and the reason is ordering, not tidiness. React runs a child's effect BEFORE its
+  // parent's, so a page that wrote the title directly would have it overwritten by this
+  // effect the moment the language changed -- every page silently reverting to the site
+  // default, and only on language switch, which is the kind of bug nobody reproduces.
+  // Registering the intention as state instead means this effect always runs last and
+  // always has the current page's answer.
   useEffect(() => {
     const root = document.documentElement
     root.lang = lang
     root.dir = lang === 'ar' ? 'rtl' : 'ltr'
-    document.title = t('meta.title')
-    document.querySelector('meta[name="description"]')?.setAttribute('content', t('meta.description'))
-  }, [lang, t])
+
+    // A page gives the specific part; the brand is appended here so every page in the site
+    // ends the same way without each one remembering to.
+    document.title = pageMeta?.title
+      ? `${pageMeta.title} | ${t('meta.brand')}`
+      : t('meta.title')
+
+    document.querySelector('meta[name="description"]')
+      ?.setAttribute('content', pageMeta?.description || t('meta.description'))
+  }, [lang, t, pageMeta])
 
   // Display-only translation for catalog names (property types). The RAW name stays the
   // value used in filters/URLs/API calls — only what the user SEES is localized.
@@ -88,6 +107,7 @@ export function I18nProvider({ children }) {
     toggleLang: () => setLang(lang === 'ar' ? 'en' : 'ar'),
     t,
     typeLabel,
+    setPageMeta,
   }), [lang, setLang, t, typeLabel])
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>
@@ -97,4 +117,28 @@ export function useI18n() {
   const ctx = useContext(I18nContext)
   if (!ctx) throw new Error('useI18n must be used inside <I18nProvider>')
   return ctx
+}
+
+/**
+ * Give this page its own title and search-result description.
+ *
+ *   usePageMeta(
+ *     t('categories.officesForRent.title'),      // "مكاتب للإيجار في قطر"
+ *     t('categories.officesForRent.description'),
+ *   )
+ *
+ * The brand is appended to the title by the provider, so pass only the part that describes
+ * the page. Pass nothing (or undefined) and the site default applies — which is what every
+ * page did before, and why a search for anything on this site returned a page whose title
+ * said nothing about what was on it.
+ *
+ * Clears on unmount, so navigating away cannot leave the previous page's title behind.
+ */
+export function usePageMeta(title, description) {
+  const { setPageMeta } = useI18n()
+  useEffect(() => {
+    if (!title && !description) return undefined
+    setPageMeta({ title, description })
+    return () => setPageMeta(null)
+  }, [title, description, setPageMeta])
 }

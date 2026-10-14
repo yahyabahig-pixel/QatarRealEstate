@@ -10,6 +10,9 @@ export default {
     // kept to roughly 60 characters so it is not cut off mid-word.
     title: 'AL-Madenah RealEstate — property for sale and rent in Qatar',
     description: 'AL-Madenah Real Estate — find apartments, villas, penthouses, offices and shops for sale and rent in Qatar.',
+    // Appended to every page-specific title, so each page ends the same way without having
+    // to repeat the name. Kept short: the page's own part needs the room.
+    brand: 'AL-Madenah Real Estate',
   },
 
   common: {
@@ -767,6 +770,23 @@ export default {
     localNote: 'Saved in this browser.',
     emptyTitle: 'No favourites yet',
     emptyBody: 'Tap the heart on any property you like and it will be waiting for you here.',
+  },
+
+  // Titles and descriptions for the category landing pages (/rent/offices and friends).
+  // Plural on purpose: the page lists many, and the singular would read as the title of one
+  // listing rather than of a category.
+  categories: {
+    inQatar: 'in Qatar',
+    description: '{type} {action} {where} — browse what AL-Madenah Real Estate has available, with photos, prices and full details for every property.',
+    plural: {
+      'Apartment': 'Apartments',
+      'Villa': 'Villas',
+      'Townhouse': 'Townhouses',
+      'Penthouse': 'Penthouses',
+      'Studio': 'Studios',
+      'Office': 'Offices',
+      'Commercial Shop': 'Commercial Shops',
+    },
   },
 
   types: {

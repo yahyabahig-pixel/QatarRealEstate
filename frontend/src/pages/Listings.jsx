@@ -21,7 +21,11 @@ const FAQ_KEYS = [1, 2, 3, 4, 5, 6, 7, 8]
 // bounding box is the honest answer to "everything" here.
 const QATAR_BOUNDS = { minLat: 24.4, maxLat: 26.25, minLng: 50.65, maxLng: 51.75 }
 
-export default function Listings({ purpose, offMarket = false }) {
+// `fixedType` is the property type a category page is about — "Office" for /rent/offices.
+// It seeds the type filter instead of hard-coding it, so the visitor can still widen or
+// change it from the chips: the page is an entry point, not a cage. Anything in the URL
+// wins over it, which is what makes the chips keep working on these pages.
+export default function Listings({ purpose, offMarket = false, fixedType = '' }) {
   const { properties, propertyTypes, areas, features, featureIdByName, areaIdByName } = useData()
   const { t, typeLabel } = useI18n()
   const [params, setParams] = useSearchParams()
@@ -47,13 +51,16 @@ export default function Listings({ purpose, offMarket = false }) {
   // destroy and rebuild every marker (and re-run fitBounds) on every mouse move over a pin.
   const paramKey = params.toString()
   const f = useMemo(() => ({
-    q: params.get('q') || '', type: params.get('type') || '',
+    q: params.get('q') || '', type: params.get('type') || fixedType || '',
     beds: params.get('beds') || '', baths: params.get('baths') || '',
     minPrice: params.get('minPrice') || '', maxPrice: params.get('maxPrice') || '',
     minSize: params.get('minSize') || '', maxSize: params.get('maxSize') || '',
     furnishing: params.get('furnishing') || '', amenities: params.getAll('am'),
+  // fixedType belongs here with paramKey: moving from /rent/offices to /rent/shops changes
+  // nothing after the "?", so on paramKey alone this would hand the shops page the offices
+  // filter and keep it until something else touched the query string.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [paramKey])
+  }), [paramKey, fixedType])
   const setF = (k, v) => {
     const next = new URLSearchParams(params)
     if (v === '' || v == null) next.delete(k); else next.set(k, v)

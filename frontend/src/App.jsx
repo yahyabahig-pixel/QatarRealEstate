@@ -14,6 +14,7 @@ import AssistantWidget from './assistant/AssistantWidget'
 
 import Home from './pages/Home'
 import Listings from './pages/Listings'
+import CategoryListings from './pages/CategoryPages'
 import PropertyDetails from './pages/PropertyDetails'
 import { DevelopmentsIndex, DevelopmentDetail } from './pages/DevelopmentsPages'
 import { AreasIndex, AreaDetail } from './pages/AreasPages'
@@ -96,6 +97,13 @@ export default function App() {
                 <Route path="/" element={<Home />} />
                 <Route path="/rent" element={<Listings purpose="rent" />} />
                 <Route path="/buy" element={<Listings purpose="buy" />} />
+                {/* Category landing pages: /rent/offices, /buy/apartments, … Each is a real
+                    page with its own URL, title and description, because a search for
+                    "offices for rent in Qatar" can only find a page that says so. An
+                    unrecognised slug redirects to the plain listings page — see
+                    CategoryPages.jsx. */}
+                <Route path="/rent/:category" element={<CategoryListings purpose="rent" />} />
+                <Route path="/buy/:category" element={<CategoryListings purpose="buy" />} />
                 <Route path="/property/:purpose/:id" element={<PropertyDetails />} />
                 <Route path="/developments" element={<DevelopmentsIndex />} />
                 <Route path="/development/:slug" element={<DevelopmentDetail />} />
