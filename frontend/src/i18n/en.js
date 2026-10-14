@@ -776,6 +776,8 @@ export default {
   // Plural on purpose: the page lists many, and the singular would read as the title of one
   // listing rather than of a category.
   categories: {
+    elsewhere: '{type} in other districts',
+    allOfQatar: 'All of Qatar',
     inArea: 'in {area}',
     inQatar: 'in Qatar',
     description: '{type} {action} {where} — browse what AL-Madenah Real Estate has available, with photos, prices and full details for every property.',
