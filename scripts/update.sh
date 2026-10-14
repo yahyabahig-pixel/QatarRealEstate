@@ -72,7 +72,9 @@ echo "    currently running: $(git log -1 --format='%h  %s' | cut -c1-72)"
 # Before, not after. An update that corrupts data is rare; an update that is rolled back
 # while someone was adding a listing is not, and the backup is what makes that recoverable.
 step "Backing up the database first"
-if [ "${SKIP_BACKUP:-0}" = "1" ]; then
+if [ "${SELF_REEXECED:-0}" = "1" ]; then
+  echo "    already taken by the run that restarted this one — not repeating it."
+elif [ "${SKIP_BACKUP:-0}" = "1" ]; then
   warn "SKIP_BACKUP=1 — no backup is being taken. If this update goes wrong, there is
     nothing to restore from."
 elif [ ! -x ./scripts/backup-db.sh ]; then
@@ -137,6 +139,26 @@ git merge --ff-only "origin/${BRANCH}" --quiet \
     Sort the history out by hand; nothing has been changed and the site is still running."
 
 NEW="$(git rev-parse HEAD)"
+
+# ----------------------------------------------------------------------------------------
+# If the pull changed THIS script, start again as the new one.
+#
+# Without this the script can never deploy a fix to itself, and the failure is a loop rather
+# than an error. It begins as the old version, pulls the new one, and carries on running the
+# old logic to the end -- then, if it rolls back, `git reset --hard` deletes the very fix it
+# just fetched. The next run begins as the old version again. Forever.
+#
+# That is not hypothetical: a one-line fix to the checks below took three runs to land,
+# twice reporting a failure that the fix had already corrected.
+#
+# exec replaces this process, so nothing returns here. SELF_REEXECED stops a pair of
+# versions bouncing between each other if one ever disagrees about what changed.
+# ----------------------------------------------------------------------------------------
+if [ "${SELF_REEXECED:-0}" != "1" ] && ! git diff --quiet "$PREV" "$NEW" -- "$0"; then
+  echo
+  echo "    this script changed in that pull — restarting as the new version."
+  SELF_REEXECED=1 exec "$0" "$@"
+fi
 
 # -----------------------------------------------------------------------------------------
 # 3. Build
