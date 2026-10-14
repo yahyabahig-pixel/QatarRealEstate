@@ -11,6 +11,9 @@ export default {
     // is room for them and where they still help someone searching for one.
     title: 'AL-Madenah RealEstate — عقارات للبيع والإيجار في قطر',
     description: 'المدينة للعقارات — ابحث عن شقق وفلل وبنتهاوس ومكاتب ومحلات تجارية للبيع والإيجار في قطر.',
+    // Appended to every page-specific title, so each page ends the same way without having
+    // to repeat the name. Kept short: the page's own part needs the room.
+    brand: 'المدينة للعقارات',
   },
 
   common: {
@@ -769,6 +772,23 @@ export default {
     localNote: 'محفوظة في هذا المتصفح.',
     emptyTitle: 'لا توجد عقارات في المفضلة بعد',
     emptyBody: 'اضغط على القلب في أي عقار يعجبك وستجده بانتظارك هنا.',
+  },
+
+  // Titles and descriptions for the category landing pages (/rent/offices and friends).
+  // Plural on purpose: a page listing many offices reads as "مكاتب للإيجار في قطر", and
+  // "مكتب للإيجار في قطر" would be the title of one listing, not of a category.
+  categories: {
+    inQatar: 'في قطر',
+    description: '{type} {action} {where} — تصفح العروض المتاحة من المدينة للعقارات، بالصور والأسعار وتفاصيل كل عقار.',
+    plural: {
+      'Apartment': 'شقق',
+      'Villa': 'فلل',
+      'Townhouse': 'تاون هاوس',
+      'Penthouse': 'بنتهاوس',
+      'Studio': 'استوديوهات',
+      'Office': 'مكاتب',
+      'Commercial Shop': 'محلات تجارية',
+    },
   },
 
   types: {
