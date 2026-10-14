@@ -25,7 +25,10 @@ const QATAR_BOUNDS = { minLat: 24.4, maxLat: 26.25, minLng: 50.65, maxLng: 51.75
 // It seeds the type filter instead of hard-coding it, so the visitor can still widen or
 // change it from the chips: the page is an entry point, not a cage. Anything in the URL
 // wins over it, which is what makes the chips keep working on these pages.
-export default function Listings({ purpose, offMarket = false, fixedType = '' }) {
+// `fixedArea` is the area NAME a category page is about — "Umm Salal" for
+// /rent/shops/umm-salal. It seeds the same ?q= the area dropdown writes into, so the page
+// filters exactly as if the visitor had picked that area themselves, and can change it.
+export default function Listings({ purpose, offMarket = false, fixedType = '', fixedArea = '' }) {
   const { properties, propertyTypes, areas, features, featureIdByName, areaIdByName } = useData()
   const { t, typeLabel } = useI18n()
   const [params, setParams] = useSearchParams()
@@ -51,16 +54,17 @@ export default function Listings({ purpose, offMarket = false, fixedType = '' })
   // destroy and rebuild every marker (and re-run fitBounds) on every mouse move over a pin.
   const paramKey = params.toString()
   const f = useMemo(() => ({
-    q: params.get('q') || '', type: params.get('type') || fixedType || '',
+    q: params.get('q') || fixedArea || '', type: params.get('type') || fixedType || '',
     beds: params.get('beds') || '', baths: params.get('baths') || '',
     minPrice: params.get('minPrice') || '', maxPrice: params.get('maxPrice') || '',
     minSize: params.get('minSize') || '', maxSize: params.get('maxSize') || '',
     furnishing: params.get('furnishing') || '', amenities: params.getAll('am'),
-  // fixedType belongs here with paramKey: moving from /rent/offices to /rent/shops changes
-  // nothing after the "?", so on paramKey alone this would hand the shops page the offices
-  // filter and keep it until something else touched the query string.
+  // fixedType and fixedArea belong here with paramKey: moving from /rent/offices to
+  // /rent/shops, or between two areas, changes nothing after the "?", so on paramKey alone
+  // this would hand the new page the old page's filter and keep it until something else
+  // touched the query string.
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [paramKey, fixedType])
+  }), [paramKey, fixedType, fixedArea])
   const setF = (k, v) => {
     const next = new URLSearchParams(params)
     if (v === '' || v == null) next.delete(k); else next.set(k, v)

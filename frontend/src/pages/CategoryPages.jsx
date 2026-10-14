@@ -1,5 +1,6 @@
 import { useParams, Navigate } from 'react-router-dom'
 import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { useData } from '../store/DataContext'
 import Listings from './Listings'
 
 // ---------------------------------------------------------------------------------------
@@ -38,10 +39,19 @@ export const CATEGORY_TYPES = {
 export const CATEGORY_SLUGS = Object.keys(CATEGORY_TYPES)
 
 export default function CategoryListings({ purpose }) {
-  const { category } = useParams()
+  const { category, area: areaSlug } = useParams()
   const { t, typeLabel } = useI18n()
+  const { areas } = useData()
 
   const type = CATEGORY_TYPES[category]
+
+  // The area half is driven entirely by the database, not by a list in this file. The
+  // company owns buildings in named districts -- Umm Salal, Muaither, Old Airport -- and
+  // "shops for rent in Umm Salal" is both the search it can realistically win and a search
+  // it has the stock to answer. Adding an area in the admin panel therefore creates its
+  // landing pages, with no code change and nothing here to keep in sync.
+  const area = areaSlug ? (areas || []).find(a => a.slug === areaSlug) : null
+  const areaMissing = Boolean(areaSlug) && (areas || []).length > 0 && !area
 
   // An unknown slug is a 404 in spirit, but sending it to the plain listings page is kinder
   // and keeps whatever link brought them here useful. Done before the hooks below would be
@@ -58,7 +68,12 @@ export default function CategoryListings({ purpose }) {
     ? (plural === `categories.plural.${type}` ? typeLabel(type) : plural)
     : ''
   const action = purpose === 'rent' ? t('common.forRent') : t('common.forSale')
-  const where = t('categories.inQatar')
+
+  // "in Umm Salal" when there is one, "in Qatar" otherwise. The district is the specific
+  // half of the title and the reason the page can rank at all, so it replaces the country
+  // rather than being added after it: "Shops for rent in Umm Salal in Qatar" reads as
+  // machine output, and the extra words push the useful ones past where Google truncates.
+  const where = area ? t('categories.inArea', { area: area.name }) : t('categories.inQatar')
 
   const title = known ? `${label} ${action} ${where}` : ''
   const description = known
@@ -69,5 +84,13 @@ export default function CategoryListings({ purpose }) {
 
   if (!known) return <Navigate to={purpose === 'rent' ? '/rent' : '/buy'} replace />
 
-  return <Listings purpose={purpose} fixedType={type} />
+  // An area slug that no longer exists — renamed, or a stale link — drops to the type page
+  // rather than showing an empty list under a heading naming a district that is not there.
+  // Guarded on areas having loaded, so the first render does not redirect before the
+  // catalog arrives.
+  if (areaMissing) {
+    return <Navigate to={`/${purpose === 'rent' ? 'rent' : 'buy'}/${category}`} replace />
+  }
+
+  return <Listings purpose={purpose} fixedType={type} fixedArea={area?.name || ''} />
 }

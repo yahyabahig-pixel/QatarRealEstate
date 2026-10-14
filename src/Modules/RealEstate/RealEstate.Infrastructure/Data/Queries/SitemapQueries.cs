@@ -40,6 +40,25 @@ public sealed class SitemapQueries : ISitemapQueries
             .Select(a => new { a.Slug, a.LastModifiedUtc }).ToListAsync(ct);
         entries.AddRange(areas.Select(a => new SitemapEntry("/areas/" + a.Slug, a.LastModifiedUtc)));
 
+        // Category pages narrowed to a district: /rent/shops/umm-salal and the rest. Built
+        // from the areas table rather than a list in code, so adding an area in the admin
+        // panel puts its pages in the sitemap on the next request with nothing to remember.
+        //
+        // These are the pages worth having. "shops for rent in Qatar" is contested by portals
+        // with tens of thousands of listings; "shops for rent in Umm Salal" is a search this
+        // company has both little competition for and the stock to answer.
+        //
+        // Every combination is listed, including ones with nothing in them today. A page with
+        // no results is a thin page, and a crawler that meets enough of them visits less
+        // often -- so this is worth revisiting if the area list grows much faster than the
+        // listings do. At the present scale the risk of advertising an empty page is smaller
+        // than the cost of a real one going undiscovered.
+        entries.AddRange(
+            from purpose in SitemapPaths.Purposes
+            from slug in SitemapPaths.CategorySlugs
+            from a in areas
+            select new SitemapEntry($"/{purpose}/{slug}/{a.Slug}", null));
+
         var developments = await _db.Developments.AsNoTracking()
             .Select(d => new { d.Slug, d.LastModifiedUtc }).ToListAsync(ct);
         entries.AddRange(developments.Select(d => new SitemapEntry("/development/" + d.Slug, d.LastModifiedUtc)));
