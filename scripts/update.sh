@@ -193,10 +193,24 @@ done
 # The API, which is the half that talks to the database. A static page would load fine with
 # the backend down, so checking the page alone proves very little.
 printf '    the API       '
-API="$("${CURL_BASE[@]}" "${ROOT}/api/properties?page=1&pageSize=1" 2>/dev/null || true)"
+# Retried on the same budget as the page above, and the reason is that the two come up at
+# very different speeds. nginx is serving static files, so it answers seconds after the
+# container starts; the API has to wait for SQL Server to accept connections and then do its
+# own startup. Asking it once, immediately after a restart, times the question to arrive
+# while it is still booting.
+#
+# This asked once. It rolled back a deployment that was fine -- a false alarm that costs a
+# good release and sends someone hunting a failure that never happened, which is worse than
+# the missing check was, because it looks like evidence.
+API=""
+for i in $(seq 1 30); do
+  API="$("${CURL_BASE[@]}" "${ROOT}/api/properties?page=1&pageSize=1" 2>/dev/null || true)"
+  case "$API" in *totalCount*|*items*) break ;; esac
+  sleep 3
+done
 case "$API" in
   *totalCount*|*items*) echo "answers" ;;
-  "")                   echo "NO RESPONSE"; OK=0 ;;
+  "")                   echo "NO RESPONSE after 90s"; OK=0 ;;
   *)                    echo "answered, but not with a listing page"; OK=0 ;;
 esac
 
