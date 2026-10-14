@@ -1,4 +1,4 @@
-import { useParams, Navigate } from 'react-router-dom'
+import { useParams, Navigate, Link } from 'react-router-dom'
 import { useI18n, usePageMeta } from '../i18n/I18nContext'
 import { useData } from '../store/DataContext'
 import Listings from './Listings'
@@ -92,5 +92,54 @@ export default function CategoryListings({ purpose }) {
     return <Navigate to={`/${purpose === 'rent' ? 'rent' : 'buy'}/${category}`} replace />
   }
 
-  return <Listings purpose={purpose} fixedType={type} fixedArea={area?.name || ''} />
+  return (
+    <>
+      <Listings
+        purpose={purpose}
+        fixedType={type}
+        fixedArea={area?.name || ''}
+        heading={title}
+      />
+      <AreaLinks purpose={purpose} category={category} label={label} current={area?.slug} areas={areas} />
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------------------
+// Links from one category page to the same type in every other district.
+//
+// Two jobs, and both matter. For a visitor: "no shops in Umm Salal right now — there are
+// some in Muaither" is the obvious next question, and answering it on the page keeps
+// someone who would otherwise leave.
+//
+// For search: without these, all hundred-odd category pages are orphans. Nothing on the
+// site links to them, so the sitemap is their only route in -- and a page nothing links to
+// is a page search engines treat as unimportant, because on the evidence of the site
+// itself, it is. These links make each one part of the site rather than an address that
+// happens to resolve.
+// ---------------------------------------------------------------------------------------
+function AreaLinks({ purpose, category, label, current, areas }) {
+  const { t } = useI18n()
+  const others = (areas || []).filter(a => a.slug && a.slug !== current)
+  if (others.length === 0) return null
+
+  return (
+    <nav className="max-w-7xl mx-auto px-4 pb-14" aria-label={t('categories.elsewhere', { type: label })}>
+      <h2 className="h-serif text-xl mb-4">{t('categories.elsewhere', { type: label })}</h2>
+      <div className="flex flex-wrap gap-2">
+        {current && (
+          <Link to={`/${purpose}/${category}`}
+            className="px-3 py-1.5 rounded-full border border-neutral-300 text-sm hover:border-primary hover:text-primary transition-colors">
+            {t('categories.allOfQatar')}
+          </Link>
+        )}
+        {others.map(a => (
+          <Link key={a.slug} to={`/${purpose}/${category}/${a.slug}`}
+            className="px-3 py-1.5 rounded-full border border-neutral-300 text-sm hover:border-primary hover:text-primary transition-colors">
+            {a.name}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  )
 }

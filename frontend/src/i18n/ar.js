@@ -778,6 +778,8 @@ export default {
   // Plural on purpose: a page listing many offices reads as "مكاتب للإيجار في قطر", and
   // "مكتب للإيجار في قطر" would be the title of one listing, not of a category.
   categories: {
+    elsewhere: '{type} في مناطق أخرى',
+    allOfQatar: 'كل قطر',
     inArea: 'في {area}',
     inQatar: 'في قطر',
     description: '{type} {action} {where} — تصفح العروض المتاحة من المدينة للعقارات، بالصور والأسعار وتفاصيل كل عقار.',

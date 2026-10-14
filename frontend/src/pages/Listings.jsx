@@ -28,7 +28,11 @@ const QATAR_BOUNDS = { minLat: 24.4, maxLat: 26.25, minLng: 50.65, maxLng: 51.75
 // `fixedArea` is the area NAME a category page is about — "Umm Salal" for
 // /rent/shops/umm-salal. It seeds the same ?q= the area dropdown writes into, so the page
 // filters exactly as if the visitor had picked that area themselves, and can change it.
-export default function Listings({ purpose, offMarket = false, fixedType = '', fixedArea = '' }) {
+// `heading` replaces the generic "N properties for rent" on a category page. Without it the
+// browser tab said "Shops for rent in Umm Salal" while the page itself said "12 properties
+// for rent": a visitor arriving from that search gets no confirmation they landed right, and
+// the page's own <h1> contradicts the title it was ranked on.
+export default function Listings({ purpose, offMarket = false, fixedType = '', fixedArea = '', heading = '' }) {
   const { properties, propertyTypes, areas, features, featureIdByName, areaIdByName } = useData()
   const { t, typeLabel } = useI18n()
   const [params, setParams] = useSearchParams()
@@ -328,9 +332,12 @@ export default function Listings({ purpose, offMarket = false, fixedType = '', f
   useEffect(() => { if (page > pages) setPage(pages) }, [page, pages])
 
   const shownCount = showMap ? mapItems.length : totalCount
-  const title = offMarket
+  const countTitle = offMarket
     ? t('listings.titleOffMarket', { n: results.length })
     : t(purpose === 'rent' ? 'listings.titleRentCount' : 'listings.titleSaleCount', { n: shownCount.toLocaleString() })
+  // A category page says what it is; everything else keeps the running count, which is the
+  // more useful headline when the page is a search rather than a destination.
+  const title = heading || countTitle
 
   // The pager used to render one button per page. That is fine for 8 listings and absurd
   // for 8,000: a window around the current page keeps it to at most seven buttons.
@@ -476,8 +483,13 @@ export default function Listings({ purpose, offMarket = false, fixedType = '', f
       ) : (
         <>
           <div className="max-w-7xl mx-auto px-4 py-8">
-            <Breadcrumb items={[{ label: t('common.home'), to: '/' }, { label: purpose === 'rent' ? t('common.rent') : t('common.buy'), to: `/${purpose}` }, { label: t('common.qatar') }]} />
+            {/* The trail's last step names the district on a category page, not "Qatar" —
+                it is where the visitor actually is, and it keeps the breadcrumb agreeing
+                with the heading and the title rather than contradicting both. */}
+            <Breadcrumb items={[{ label: t('common.home'), to: '/' }, { label: purpose === 'rent' ? t('common.rent') : t('common.buy'), to: `/${purpose}` }, { label: fixedArea || t('common.qatar') }]} />
             <h1 className="h-serif text-3xl md:text-4xl mt-3 mb-6">{title}</h1>
+            {/* The count still earns its place, just demoted below the heading it replaced. */}
+            {heading && <p className="-mt-4 mb-6 text-neutral-500 text-sm">{countTitle}</p>}
 
             {offMarket && (
               <p className="max-w-2xl text-neutral-600 mb-6 text-sm">
