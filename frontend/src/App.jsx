@@ -104,6 +104,13 @@ export default function App() {
                     CategoryPages.jsx. */}
                 <Route path="/rent/:category" element={<CategoryListings purpose="rent" />} />
                 <Route path="/buy/:category" element={<CategoryListings purpose="buy" />} />
+                {/* …and the same narrowed to a district: /rent/shops/umm-salal. These are
+                    the pages this company can actually win — it owns buildings in named
+                    districts, so "shops for rent in Umm Salal" is both a search with little
+                    competition and one it has the stock to answer. The area half comes from
+                    the database, so adding an area in the admin panel creates its pages. */}
+                <Route path="/rent/:category/:area" element={<CategoryListings purpose="rent" />} />
+                <Route path="/buy/:category/:area" element={<CategoryListings purpose="buy" />} />
                 <Route path="/property/:purpose/:id" element={<PropertyDetails />} />
                 <Route path="/developments" element={<DevelopmentsIndex />} />
                 <Route path="/development/:slug" element={<DevelopmentDetail />} />
