@@ -26,5 +26,6 @@
 
   <Folder Name="/tests/">
     <Project Path="tests/RealEstate.Domain.Tests/RealEstate.Domain.Tests.csproj" />
+    <Project Path="tests/Host.Tests/Host.Tests.csproj" />
   </Folder>
 </Solution>

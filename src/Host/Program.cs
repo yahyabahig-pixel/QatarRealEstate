@@ -176,46 +176,13 @@ builder.Services.AddCors(options =>
 // ---- forwarded headers ----------------------------------------------------------------
 // nginx (and Caddy in front of it) terminate the connection, so without this every request
 // looks like it came from the proxy container: rate limiting would bucket the whole internet
-// together and the logs would record one address forever. KnownNetworks/KnownProxies are
-// cleared because the proxy's address inside a Docker network is not known in advance; the
-// container ports are not published, so only the proxy can reach Kestrel anyway.
-builder.Services.Configure<ForwardedHeadersOptions>(options =>
-{
-    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-
-    // TWO, and the number matters more than anything else on this page.
-    //
-    // ForwardLimit is how many entries are taken off the RIGHT of X-Forwarded-For, and it
-    // defaults to 1. The live chain is  internet -> caddy -> nginx -> kestrel , and nginx
-    // appends with $proxy_add_x_forwarded_for, so what arrives here reads
-    //
-    //     X-Forwarded-For: <the visitor>, <caddy>
-    //
-    // At the default of 1 the middleware takes <caddy> and stops. RemoteIpAddress becomes
-    // Caddy's container address — THE SAME ADDRESS FOR EVERY VISITOR ON EARTH. Which is
-    // exactly what the comment above this block says the block exists to prevent, and it
-    // was true right up until the day Caddy was put in front for HTTPS and quietly added a
-    // hop. Both rate limiters then stopped being per-visitor and became per-site: thirty
-    // writes in five minutes for the entire internet, shared with the view counter, after
-    // which every contact form on the site answers 429 — to the visitor a form that fails
-    // for no reason, to us a day with no enquiries and nothing in the log to explain it.
-    // Ten login attempts site-wide, too, so one bot probing the login page locks the real
-    // admin out of their own panel.
-    //
-    // Two is also the ceiling, not just the floor. A visitor can put anything in the header
-    // themselves; Caddy appends their real address after it, nginx appends Caddy's, so a
-    // forged entry is always further left than the two we read and can never be reached.
-    // Raising this to 3 would hand every visitor the ability to choose their own identity
-    // and, with it, everyone else's rate limit.
-    //
-    // Without Caddy (plain HTTP, the tls profile off) the header is one entry long, the
-    // middleware runs out after the first, and the answer is still the visitor. So this
-    // value is correct in both deployment modes and needs no .env switch.
-    options.ForwardLimit = 2;
-
-    options.KnownNetworks.Clear();
-    options.KnownProxies.Clear();
-});
+// together and the logs would record one address forever.
+//
+// The configuration itself lives in ProxyHeadersStartupExtensions, with the reasoning for
+// the hop count, and is covered by Host.Tests/ForwardedHeadersTests — a wrong number here
+// throws nothing and logs nothing, it just quietly turns every visitor into the same
+// person, so it is worth a test that runs the real middleware against the real settings.
+builder.Services.AddProxyHeaders();
 
 // ---- the safety net -------------------------------------------------------------------
 builder.Services.AddProblemDetails();

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <RootNamespace>Host.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="xunit" Version="2.9.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="2.8.2" />
+  </ItemGroup>
+
+  <!-- The ASP.NET Core shared framework, for ForwardedHeadersMiddleware itself. A
+       FrameworkReference rather than a package: the middleware under test ships with the
+       runtime, and the test must run the same one the app does. -->
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <!-- Host is referenced so the test exercises the REAL configuration method rather than a
+       copy of its values, which is the only way the test can still be true a year from now. -->
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Host\Host.csproj" />
+  </ItemGroup>
+
+</Project>
