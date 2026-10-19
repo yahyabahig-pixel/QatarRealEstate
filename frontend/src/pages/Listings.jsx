@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
 import PropertyCard from '../components/PropertyCard'
 import MapListingCard from '../components/MapListingCard'
 import ListingsMap from '../components/ListingsMap'
@@ -40,6 +40,20 @@ export default function Listings({ purpose, offMarket = false, fixedType = '', f
   const [sort, setSort] = useState('newest')
   const [page, setPage] = useState(1)
   const perPage = 6
+
+  // /rent, /buy and the off-market page title themselves. A category page
+  // (/rent/offices/umm-salal) renders this very component and sets its own, more specific
+  // meta from the parent — so when it hands down a heading, this one stays quiet instead of
+  // the two of them writing over each other on every render.
+  //
+  // The title here is deliberately fixed rather than the running count above: "1,284
+  // properties for rent" changes with the catalogue, and a title that moves is a title
+  // Google re-evaluates instead of trusting.
+  const metaKey = offMarket ? 'offMarket' : (purpose === 'rent' ? 'rent' : 'buy')
+  usePageMeta(
+    heading ? undefined : t(`pageMeta.${metaKey}.title`),
+    heading ? undefined : t(`pageMeta.${metaKey}.description`),
+  )
 
   // ---- split-view state ---------------------------------------------------
   const [showMap, setShowMap] = useState(!offMarket)   // booking-style: map-first on buy/rent

@@ -27,9 +27,18 @@
     <meta property="og:description" content="تملّك واستأجر الشقق والفلل والبنتهاوس والمكاتب في أرقى عناوين قطر — اللؤلؤة، لوسيل، الخليج الغربي. Buy & rent Qatar's finest properties." />
     <meta property="og:url" content="%VITE_SITE_URL%/" />
     <meta property="og:image" content="%VITE_SITE_URL%/brand/og-cover.png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="AL-Madenah Real Estate — المدينة للعقارات" />
+    <!-- og:image:width/height deliberately absent. They are optional hints, and once the
+         running app swaps og:image for the photo of the listing being shared (I18nContext),
+         a fixed 1200x630 would be a claim about that photo that is simply untrue. Without
+         them a scraper fetches the image and learns its real size. -->
+
+    <!-- The cover above, repeated where the app will never overwrite it. I18nContext reads
+         THIS to know what to restore when a page has no picture of its own; reading og:image
+         itself would, after a hot reload while sitting on a listing, capture that listing's
+         photo as the site-wide default for the rest of the session. -->
+    <meta name="qre:default-og-image" content="%VITE_SITE_URL%/brand/og-cover.png" />
+    <meta name="qre:default-og-image-alt" content="AL-Madenah Real Estate — المدينة للعقارات" />
     <meta property="og:locale" content="ar_QA" />
     <meta property="og:locale:alternate" content="en_US" />
     <meta name="twitter:card" content="summary_large_image" />

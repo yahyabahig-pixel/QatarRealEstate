@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { whatsAppHref } from '../lib/contact'
+import { listingWhatsApp, whatsAppHref } from '../lib/contact'
 import { isRoomless } from '../lib/propertyDisplay'
 import { useI18n } from '../i18n/I18nContext'
 import { fmtPrice, useFavourite, WhatsAppIcon } from './ui'
@@ -25,6 +25,10 @@ export default function PropertyCard({ p, wide = false, blurPrice = false }) {
   // Agent strip renders only when the record is resolvable — live search cards
   // are thin DTOs, so the row simply doesn't appear there. Never a broken avatar.
   const agent = p.agent || agents.find(a => a.id === p.agentId) || null
+
+  // null when neither the consultant nor the company has a number, so the button below
+  // can be left out rather than rendered dead.
+  const cardWa = whatsAppHref(listingWhatsApp(agent, settings.whatsapp), t('property.waCardMessage', { ref: p.referenceNo }))
 
   const Carousel = (
     <div className={`relative overflow-hidden group/img ${wide ? 'md:w-[38%] shrink-0' : 'aspect-[4/3]'}`}>
@@ -90,10 +94,17 @@ export default function PropertyCard({ p, wide = false, blurPrice = false }) {
         {blurPrice && <p className="text-xs text-mist">{t('property.offMarketNote')} <Link to="/contact-us" className="text-primary font-medium">{t('property.offMarketContact')}</Link> {t('property.offMarketDetails')}</p>}
         <div className="flex gap-2 pt-1.5">
           <Link to={to} className="btn-dark flex-1 !py-2">{t('common.viewDetails')}</Link>
-          <a href={whatsAppHref(settings.whatsapp, t('property.waCardMessage', { ref: p.referenceNo }))} target="_blank" rel="noreferrer"
-            className="bg-[#25d366] hover:bg-[#1fb958] text-white w-10 rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:shadow-[#25d366]/25" aria-label={t('common.whatsapp')}>
-            <WhatsAppIcon />
-          </a>
+          {/* The consultant whose face is on this card, not the company switchboard — see
+              listingWhatsApp. The reference number stays in the message either way: it is
+              what tells whoever answers which of their listings this is about.
+              Rendered only when there is a number behind it: an <a> with href={null} is a
+              green button that looks live, cannot be clicked and cannot be tabbed to. */}
+          {cardWa && (
+            <a href={cardWa} target="_blank" rel="noreferrer"
+              className="bg-[#25d366] hover:bg-[#1fb958] text-white w-10 rounded-lg flex items-center justify-center transition-all duration-200 hover:-translate-y-px hover:shadow-lg hover:shadow-[#25d366]/25" aria-label={t('common.whatsapp')}>
+              <WhatsAppIcon />
+            </a>
+          )}
         </div>
       </div>
     </article>

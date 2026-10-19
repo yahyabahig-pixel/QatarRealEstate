@@ -2,7 +2,8 @@ import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { usePropertySearch } from '../lib/usePropertySearch'
 import { telHref, whatsAppHref, mailHref } from '../lib/contact'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { metaSnippet } from '../lib/pageMeta'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, Star, WhatsAppIcon } from '../components/ui'
 import { IconMail, IconPhone } from '../components/icons'
@@ -11,6 +12,7 @@ import { InquiryForm } from '../components/misc'
 export function AgentsIndex() {
   const { agents } = useData()
   const { t } = useI18n()
+  usePageMeta(t('pageMeta.agents.title'), t('pageMeta.agents.description'))
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
       <div className="eyebrow mb-2">{t('agents.eyebrow')}</div>
@@ -52,6 +54,17 @@ export function AgentProfile() {
       enabled: !!a?.id,
       mockFallback: properties.filter(p => p.agentId === a?.id && p.status === 'available'),
     })
+
+  // A consultant's own page: searched by name by people who already met them, and the page
+  // that has to come up first when they do. The bio is the description where there is one.
+  // Above the early return, because a hook cannot be called conditionally.
+  usePageMeta(
+    a?.name,
+    // The generic job title rather than an empty string: "Omar Haddad —  at AL-Madenah"
+    // is a hole a visitor reads in the search result.
+    a?.name ? (metaSnippet(a.bio) || t('pageMeta.agent.description', { name: a.name, title: a.title || t('property.consultant') })) : undefined,
+    a?.photo,
+  )
 
   if (!a) {
     return storeLoading

@@ -15,6 +15,67 @@ export default {
     brand: 'AL-Madenah Real Estate',
   },
 
+  // See the note on the Arabic side: the title and description for every page that is not a
+  // category landing page. Titles under ~60 characters, descriptions under ~155; the brand
+  // is appended by the provider, so these carry only the specific half.
+  pageMeta: {
+    rent: {
+      title: 'Property for rent in Qatar',
+      description: 'Apartments, villas, offices and shops for rent in Qatar — browse listings with photos, prices and locations on the map.',
+    },
+    buy: {
+      title: 'Property for sale in Qatar',
+      description: 'Apartments, villas, penthouses and land for sale in Qatar — browse listings with photos, prices and locations on the map.',
+    },
+    offMarket: {
+      title: 'Off-market opportunities',
+      description: 'A private selection of properties our sellers prefer to keep off the open market — prices on request.',
+    },
+    // The owner writes the listing title; the district is appended so that two listings both
+    // called "Apartment for rent" are still two different pages to a search engine.
+    property: { title: '{title} — {area}' },
+    areas: {
+      title: 'Districts in Qatar',
+      description: 'Browse property by district in Qatar — apartments, commercial shops and offices in each one.',
+    },
+    area: {
+      title: 'Property in {area}',
+      description: 'Property for rent and for sale in {area} — apartments, commercial shops and offices from AL-Madenah Real Estate.',
+    },
+    agents: {
+      title: 'Our consultants',
+      description: 'Meet the AL-Madenah Real Estate consultants in Qatar and contact them directly.',
+    },
+    agent: { description: '{name} — {title} at AL-Madenah Real Estate. Get in touch directly about property in Qatar.' },
+    developments: {
+      title: 'Developments in Qatar',
+      description: 'New and off-plan developments in Qatar — locations, payment plans and handover dates.',
+    },
+    development: {
+      description: '{name} — a development in {area}. Available units, prices and the payment plan.',
+      // Used when the record carries no location yet; the version above would otherwise
+      // render "a development in ." — a hole a visitor reads in the search result.
+      descriptionNoArea: '{name} — a development in Qatar. Available units, prices and the payment plan.',
+    },
+    about: {
+      title: 'About us',
+      description: 'AL-Madenah Real Estate — a Qatar property company letting, selling and managing residential and commercial property.',
+    },
+    contact: {
+      title: 'Contact us',
+      description: 'Get in touch with AL-Madenah Real Estate — phone, WhatsApp, email and the office location.',
+    },
+    listProperty: {
+      title: 'List your property',
+      description: 'List your property for rent or sale with AL-Madenah Real Estate — send the details and we will get back to you.',
+    },
+    careers: {
+      title: 'Careers',
+      description: 'Current openings at AL-Madenah Real Estate in Qatar.',
+    },
+    favourites: { title: 'Saved properties' },
+  },
+
   common: {
     forRent: 'For Rent',
     forSale: 'For Sale',
@@ -644,6 +705,7 @@ export default {
       fArea: 'Area (from the Areas catalog)', noArea: 'No area', noAreasYet: 'No areas defined yet — add them under Areas first.',
       fStreet: 'Street (auto-filled from the map)',
       fAgent: 'Assigned agent', noAgent: 'No agent assigned',
+      noAgentHint: 'With no agent, calls and WhatsApp for this listing reach the company number.',
       fBedrooms: 'Bedrooms (number of beds)', fBathrooms: 'Bathrooms', fSize: 'Size (m²)',
       fPrice: 'Price', fCurrency: 'Currency', fStatus: 'Status',
       sDraft: 'Draft (hidden)', sAvailable: 'Available (published)', sSold: 'Sold', sRented: 'Rented',

@@ -1,13 +1,15 @@
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { usePropertySearch } from '../lib/usePropertySearch'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { metaSnippet } from '../lib/pageMeta'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, EmptyState } from '../components/ui'
 
 export function AreasIndex() {
   const { areas, areaCount } = useData()
   const { t } = useI18n()
+  usePageMeta(t('pageMeta.areas.title'), t('pageMeta.areas.description'))
   return (
     <div className="pt-24 max-w-7xl mx-auto px-4 pb-20">
       <div className="eyebrow mb-2">{t('areas.eyebrow')}</div>
@@ -43,6 +45,16 @@ export function AreaDetail() {
       enabled: !!a?.id,
       mockFallback: properties.filter(p => p.area === a?.name && p.status === 'available'),
     })
+
+  // The district is the half of a property search this company can realistically win —
+  // "عقارات في أم صلال" is a search with an answer it actually stocks. The area's own intro
+  // is the description when the admin has written one; the generic line covers the rest.
+  // Above the early return below, because a hook cannot be called conditionally.
+  usePageMeta(
+    a?.name ? t('pageMeta.area.title', { area: a.name }) : undefined,
+    a?.name ? (metaSnippet(a.intro) || t('pageMeta.area.description', { area: a.name })) : undefined,
+    a?.photo,
+  )
 
   // Distinguish "still loading" from "genuinely none": the page used to render its
   // not-found state during the first paint, before the areas had arrived.

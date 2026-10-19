@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { mailHref, telHref, whatsAppHref } from '../contact'
+import { listingWhatsApp, mailHref, telHref, whatsAppHref } from '../contact'
 
 // The property page built its dial link with the WhatsApp helper, which strips the "+".
 // "tel:97455123456" dials as a LOCAL number, so the call never connected from abroad. And
@@ -46,5 +46,44 @@ describe('mailHref', () => {
 
   it.each([null, undefined, '', '   ', 'not-an-email'])('refuses %o', (value) => {
     expect(mailHref(value)).toBeNull()
+  })
+})
+
+// The card in the search results, and the one the assistant shows in chat, both displayed
+// an agent's photo and name and then sent the WhatsApp message to the company's single
+// number. In a market where listings move over WhatsApp all day, that was most of the
+// conversations arriving at the wrong phone.
+describe('listingWhatsApp', () => {
+  const COMPANY = '97470066675'
+
+  it('reaches the consultant who holds the listing', () => {
+    expect(listingWhatsApp({ whatsapp: '97455501001', phone: '+974 5550 1001' }, COMPANY))
+      .toBe('97455501001')
+  })
+
+  // A consultant who filled in only one of the two fields still owns the conversation.
+  it('uses the phone when no WhatsApp number was saved', () => {
+    expect(listingWhatsApp({ whatsapp: '', phone: '+974 5550 1002' }, COMPANY))
+      .toBe('+974 5550 1002')
+  })
+
+  // A lead received by the office beats a dead green button on every card he owns.
+  it('falls back to the company when the consultant has neither', () => {
+    expect(listingWhatsApp({ name: 'Omar' }, COMPANY)).toBe(COMPANY)
+    expect(listingWhatsApp(null, COMPANY)).toBe(COMPANY)
+    expect(listingWhatsApp(undefined, COMPANY)).toBe(COMPANY)
+  })
+
+  // Nothing at all must stay null so the caller hides the button rather than rendering
+  // wa.me/null — the exact failure telHref and whatsAppHref were written to stop.
+  it('returns null when there is no number anywhere', () => {
+    expect(listingWhatsApp(null, '')).toBeNull()
+    expect(listingWhatsApp({ whatsapp: '' }, undefined)).toBeNull()
+  })
+
+  it('composes into a real link, or into none', () => {
+    expect(whatsAppHref(listingWhatsApp({ whatsapp: '+974 5550 1001' }, COMPANY)))
+      .toBe('https://wa.me/97455501001')
+    expect(whatsAppHref(listingWhatsApp(null, null))).toBeNull()
   })
 })

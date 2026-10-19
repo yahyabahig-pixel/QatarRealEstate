@@ -1,6 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import en from './en'
 import ar from './ar'
+import { applyPageMetaTags, pageMetaTags, readSiteOrigin } from '../lib/pageMeta'
 
 // ---------------------------------------------------------------------------------------
 // Lightweight localization, mirroring the approach sketched in docs/ROADMAP.md
@@ -24,6 +26,32 @@ import ar from './ar'
 
 const DICTS = { en, ar }
 const STORAGE_KEY = 'qre.lang'
+
+// Read ONCE, here at module load, which runs on import — before React has rendered anything
+// and so before the effect below has rewritten anything.
+//
+//   SITE_ORIGIN    the configured domain, taken from the canonical link Vite stamped into
+//                  index.html, so the domain stays set in one place (PUBLIC_ORIGIN).
+//   FALLBACK_IMAGE the company cover, restored on every page that has no picture of its
+//                  own — otherwise a villa's photo would follow the visitor onto the
+//                  careers page and be the card WhatsApp shows for it.
+//
+// FALLBACK_IMAGE comes from qre:default-og-image, a tag that exists only so this module can
+// read it, rather than from og:image, which this module rewrites. With og:image, a hot
+// reload while sitting on a listing re-runs this line, captures THAT listing's photo as the
+// site-wide default, and every page after it "restores" the villa.
+//
+// All guard on `document` because the test run is a node environment with no DOM.
+const meta = (name) => (typeof document === 'undefined'
+  ? ''
+  : document.querySelector(`meta[name="${name}"]`)?.getAttribute('content') || '')
+
+const SITE_ORIGIN = typeof document === 'undefined'
+  ? ''
+  : readSiteOrigin(document, typeof window === 'undefined' ? null : window.location)
+
+const FALLBACK_IMAGE = meta('qre:default-og-image')
+const FALLBACK_IMAGE_ALT = meta('qre:default-og-image-alt')
 
 const I18nContext = createContext(null)
 
@@ -51,6 +79,16 @@ export function I18nProvider({ children }) {
   // What the CURRENT page wants in the title and description, or null for the site default.
   // Pages do not write document.title themselves -- see the note on the effect below.
   const [pageMeta, setPageMeta] = useState(null)
+
+  // The address bar, as the router knows it, because the canonical tag has to follow
+  // navigation and pageMeta alone cannot carry that: moving between two pages that set no
+  // meta of their own never changes this state, so the effect would not re-run and the
+  // second page would go on claiming the first one's address.
+  //
+  // Reading it here costs nothing downstream — `pathname` is deliberately NOT in the
+  // memo below, so the context value stays identical across a navigation and no consumer
+  // re-renders because of it.
+  const { pathname } = useLocation()
 
   const setLang = useCallback((next) => {
     const value = next === 'ar' ? 'ar' : 'en'
@@ -82,13 +120,26 @@ export function I18nProvider({ children }) {
 
     // A page gives the specific part; the brand is appended here so every page in the site
     // ends the same way without each one remembering to.
-    document.title = pageMeta?.title
+    const title = pageMeta?.title
       ? `${pageMeta.title} | ${t('meta.brand')}`
       : t('meta.title')
+    const description = pageMeta?.description || t('meta.description')
 
-    document.querySelector('meta[name="description"]')
-      ?.setAttribute('content', pageMeta?.description || t('meta.description'))
-  }, [lang, t, pageMeta])
+    document.title = title
+
+    // The same answer goes to the search result, the shared link's card and the canonical
+    // tag, so a page says one thing about itself everywhere. Only the picture needs a
+    // fallback: the title and description already resolve to the site defaults above.
+    applyPageMetaTags(document, pageMetaTags({
+      origin: SITE_ORIGIN,
+      path: pathname,
+      title,
+      description,
+      image: pageMeta?.image,
+      robots: pageMeta?.robots,
+      fallback: { image: FALLBACK_IMAGE, imageAlt: FALLBACK_IMAGE_ALT },
+    }))
+  }, [lang, t, pageMeta, pathname])
 
   // Display-only translation for catalog names (property types). The RAW name stays the
   // value used in filters/URLs/API calls — only what the user SEES is localized.
@@ -120,11 +171,12 @@ export function useI18n() {
 }
 
 /**
- * Give this page its own title and search-result description.
+ * Give this page its own title, search-result description and shared-link picture.
  *
  *   usePageMeta(
  *     t('categories.officesForRent.title'),      // "مكاتب للإيجار في قطر"
  *     t('categories.officesForRent.description'),
+ *     p.images?.[0],                             // optional: the card WhatsApp shows
  *   )
  *
  * The brand is appended to the title by the provider, so pass only the part that describes
@@ -132,13 +184,25 @@ export function useI18n() {
  * page did before, and why a search for anything on this site returned a page whose title
  * said nothing about what was on it.
  *
+ * `image` may be relative ("/api/media/images/{id}"); the provider makes it absolute, which
+ * it has to be for a scraper that never loaded the page.
+ *
+ * `robots` is for a page that exists but should not be in the index — pass NOINDEX from
+ * lib/pageMeta. It defaults back to index,follow on every other page, so one noindex page
+ * cannot close the next one.
+ *
  * Clears on unmount, so navigating away cannot leave the previous page's title behind.
+ *
+ * WORTH KNOWING: Google runs JavaScript, so it sees everything this sets. WhatsApp and
+ * Facebook do NOT — they read the raw HTML and nothing more, so the card they draw is
+ * still the static one in index.html. Giving them the real per-page values needs the
+ * SERVER to write the tags before the page is sent, which is a separate piece of work.
  */
-export function usePageMeta(title, description) {
+export function usePageMeta(title, description, image, robots) {
   const { setPageMeta } = useI18n()
   useEffect(() => {
-    if (!title && !description) return undefined
-    setPageMeta({ title, description })
+    if (!title && !description && !image && !robots) return undefined
+    setPageMeta({ title, description, image, robots })
     return () => setPageMeta(null)
-  }, [title, description, setPageMeta])
+  }, [title, description, image, robots, setPageMeta])
 }

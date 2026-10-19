@@ -40,3 +40,25 @@ export const mailHref = (email) => {
   // Not full validation — just enough to refuse "mailto:null" and "mailto:".
   return e && e.includes('@') ? `mailto:${e}` : null
 }
+
+/**
+ * Which number a message ABOUT A LISTING should reach.
+ *
+ * The consultant who holds that listing. He is the one who can answer "is it still
+ * available", "can I see it Thursday", "is the price negotiable" — and he is the one whose
+ * face and name the visitor is looking at on the card while deciding to tap.
+ *
+ * This existed only on the property page. The card in the search results, and the one the
+ * assistant shows in chat, both reached past the agent they were displaying and sent the
+ * message to the company's single number instead. In a market where listings move over
+ * WhatsApp all day, that is most of the conversations arriving at the wrong phone.
+ *
+ * The company number stays as the FALLBACK, which is the part worth keeping: a consultant
+ * saved without a WhatsApp number would otherwise leave a dead green button on every card
+ * he owns, and a lead nobody receives is worse than a lead received by the office.
+ *
+ * `phone` before the company number because a consultant who filled in only one of the two
+ * fields still owns the conversation; whatsAppHref strips the formatting either way.
+ */
+export const listingWhatsApp = (agent, companyNumber) =>
+  agent?.whatsapp || agent?.phone || companyNumber || null

@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
-import { whatsAppHref } from '../lib/contact'
+import { listingWhatsApp, whatsAppHref } from '../lib/contact'
 import { fmtPrice, WhatsAppIcon } from '../components/ui'
 import { IconArea, IconBath, IconBed, IconPin } from '../components/icons'
 
@@ -12,10 +12,16 @@ import { IconArea, IconBath, IconBed, IconPin } from '../components/icons'
 // data-driven, never invented.
 // ---------------------------------------------------------------------------------------
 export default function ChatPropertyCard({ p }) {
-  const { settings } = useData()
+  const { settings, agents } = useData()
   const { t } = useI18n()
   const to = `/property/${p.purpose}/${p.id}`
-  const wa = whatsAppHref(settings.whatsapp, `${t('assistant.waIntro')} ${p.title} (${p.referenceNo || p.id})`)
+
+  // Same rule as the site's own card: the message goes to the consultant who holds this
+  // listing, and only falls back to the company number when he has none. Resolved the same
+  // two ways too — the live details DTO carries the agent, the thin search row carries an
+  // id to look up.
+  const agent = p.agent || agents.find(a => a.id === p.agentId) || null
+  const wa = whatsAppHref(listingWhatsApp(agent, settings.whatsapp), `${t('assistant.waIntro')} ${p.title} (${p.referenceNo || p.id})`)
 
   return (
     <div className="qre-bubble-in flex gap-2.5 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm hover:border-primary/40 hover:shadow-md transition-all">
@@ -45,10 +51,14 @@ export default function ChatPropertyCard({ p }) {
           <Link to={to} className="text-[11px] font-semibold text-ink border border-neutral-300 rounded-full px-2.5 py-[3px] hover:border-primary hover:text-primary transition-colors">
             {t('assistant.details')}
           </Link>
-          <a href={wa} target="_blank" rel="noreferrer" aria-label={t('common.whatsapp')}
-            className="w-6 h-6 rounded-full bg-[#25D366]/10 text-[#128C4A] flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-colors">
-            <WhatsAppIcon className="w-3.5 h-3.5" />
-          </a>
+          {/* Only when there is a number behind it — href={null} renders a button that
+              looks live, cannot be clicked and cannot be tabbed to. */}
+          {wa && (
+            <a href={wa} target="_blank" rel="noreferrer" aria-label={t('common.whatsapp')}
+              className="w-6 h-6 rounded-full bg-[#25D366]/10 text-[#128C4A] flex items-center justify-center hover:bg-[#25D366] hover:text-white transition-colors">
+              <WhatsAppIcon className="w-3.5 h-3.5" />
+            </a>
+          )}
         </div>
       </div>
     </div>

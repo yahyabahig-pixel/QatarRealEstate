@@ -1,6 +1,7 @@
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { metaSnippet } from '../lib/pageMeta'
 import PropertyCard from '../components/PropertyCard'
 import { SectionHeading, EmptyState } from '../components/ui'
 import { InquiryForm } from '../components/misc'
@@ -12,6 +13,8 @@ export function DevelopmentsIndex() {
   const { t } = useI18n()
   const [params, setParams] = useSearchParams()
   const areasList = [...new Set(developments.map(d => d.area))]
+
+  usePageMeta(t('pageMeta.developments.title'), t('pageMeta.developments.description'))
 
   // The chip label is the full location string the API returns ("The Pearl, Doha"), while a
   // link can only reasonably carry the district ("The Pearl"). So resolve ?area= to the first
@@ -77,6 +80,20 @@ export function DevelopmentDetail() {
   const { developments, properties, loading } = useData()
   const { t } = useI18n()
   const d = developments.find(x => x.slug === slug)
+
+  // Off-plan buyers search a development by name, so the name IS the title. Its own
+  // description is the snippet where there is one. Above the early return below, because a
+  // hook cannot be called conditionally.
+  usePageMeta(
+    d?.name,
+    d?.name
+      ? (metaSnippet(d.description) || (d.area
+        ? t('pageMeta.development.description', { name: d.name, area: d.area })
+        : t('pageMeta.development.descriptionNoArea', { name: d.name })))
+      : undefined,
+    d?.coverImage,
+  )
+
   // "Not found" and "not loaded yet" are different answers. The store fetches its slices
   // after the first paint, so this page used to flash "Project not found" on every visit —
   // and a visitor who arrived on a slow connection saw nothing else.
