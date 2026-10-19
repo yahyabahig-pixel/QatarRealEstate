@@ -1,3 +1,4 @@
+using BuildingBlocks.Api;
 using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Api.Errors;
 using Microsoft.AspNetCore.Mvc;
@@ -13,7 +14,7 @@ namespace RealEstate.Api.Controllers;
 // Rate limited per client address: every request here writes a row, so without a limit a
 // twenty-line script fills the sales team's inbox with thousands of invented enquiries and
 // buries the real ones.
-[EnableRateLimiting("public-write")]
+[EnableRateLimiting(RateLimitPolicies.PublicWrite)]
 [Route("api/leads")]
 public sealed class LeadsController : ApiControllerBase
 {

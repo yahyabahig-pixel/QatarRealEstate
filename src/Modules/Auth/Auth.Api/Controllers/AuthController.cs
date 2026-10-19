@@ -1,6 +1,7 @@
 using Auth.Application.Authentication.GetCurrentAdmin;
 using Auth.Application.Authentication.Login;
 using Auth.Contracts.Requests;
+using BuildingBlocks.Api;
 using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Api.Errors;
 using Microsoft.AspNetCore.Authorization;
@@ -21,7 +22,7 @@ public sealed class AuthController : ApiControllerBase
     // the lockout being used as the attack.
     [HttpPost("login")]
     [AllowAnonymous]
-    [EnableRateLimiting("login")]
+    [EnableRateLimiting(RateLimitPolicies.Login)]
     public async Task<IActionResult> Login([FromBody] LoginRequest body, CancellationToken ct)
         => (await Sender.Send(new LoginCommand(body.Email, body.Password), ct)).ToOk();
 
