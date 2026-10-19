@@ -158,7 +158,7 @@ public class ForwardedHeadersTests
         // not recognise and forward nothing at all — the same silent failure by a different
         // route, which is why it is pinned here too.
         Assert.Empty(options.KnownProxies);
-        Assert.Empty(options.KnownNetworks);
+        Assert.Empty(options.KnownIPNetworks);
     }
 
     [Fact]

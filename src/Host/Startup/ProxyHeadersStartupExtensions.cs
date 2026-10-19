@@ -48,7 +48,12 @@ public static class ProxyHeadersStartupExtensions
         // would stop at the first address it did not recognise and forward nothing. Safe
         // here because the container ports are not published: nothing but the proxy in
         // front can open a connection to Kestrel at all.
-        options.KnownNetworks.Clear();
+        //
+        // KnownIPNetworks, not the older KnownNetworks, which .NET now marks obsolete in
+        // favour of it. ForwardedHeadersTests asserts the list really is empty afterwards,
+        // so if the two ever stop being the same underlying set, that test says so rather
+        // than the site quietly going back to seeing one visitor.
+        options.KnownIPNetworks.Clear();
         options.KnownProxies.Clear();
     }
 
