@@ -320,8 +320,13 @@ export default {
     consultant: 'مستشار عقاري',
     recentEyebrow: 'واصل الاستكشاف',
     recentTitle: 'عقارات شاهدتها مؤخرًا',
-    waMessage: 'مرحبًا {name}، أنا مهتم بهذا العقار: {title}.',
-    waCardMessage: 'أنا مهتم بالعقار {ref}',
+    // One message for every WhatsApp button on the site: the card in the search results,
+    // the property page, and the assistant's card. It carries the name of the property and
+    // a link that opens it, not just a reference code — the consultant should know which of
+    // his listings this is without looking anything up, and the person sending it should be
+    // able to see what they just asked about.
+    waIntro: 'مرحبًا، أنا مهتم بهذا العقار:',
+    waRef: 'رقم العقار:',
   },
 
   areas: {

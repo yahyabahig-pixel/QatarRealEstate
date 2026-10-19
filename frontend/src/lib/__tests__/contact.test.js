@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { listingWhatsApp, mailHref, telHref, whatsAppHref } from '../contact'
+import { listingMessage, listingUrl, listingWhatsApp, mailHref, telHref, whatsAppHref } from '../contact'
 
 // The property page built its dial link with the WhatsApp helper, which strips the "+".
 // "tel:97455123456" dials as a LOCAL number, so the call never connected from abroad. And
@@ -85,5 +85,63 @@ describe('listingWhatsApp', () => {
     expect(whatsAppHref(listingWhatsApp({ whatsapp: '+974 5550 1001' }, COMPANY)))
       .toBe('https://wa.me/97455501001')
     expect(whatsAppHref(listingWhatsApp(null, null))).toBeNull()
+  })
+})
+
+// The message used to be the reference code and nothing else — "I'm interested in
+// AS-004341". The consultant had to look the code up before he knew which of his listings
+// was being asked about, and the person sending it could not see what they had just asked
+// about either: they tapped a photo, and a string of characters left their phone.
+describe('listingUrl', () => {
+  const p = { id: 'abc123', purpose: 'rent' }
+
+  it('builds the public address of the listing', () => {
+    expect(listingUrl(p, 'https://elmadenah.com')).toBe('https://elmadenah.com/property/rent/abc123')
+  })
+
+  it('does not double the slash', () => {
+    expect(listingUrl(p, 'https://elmadenah.com/')).toBe('https://elmadenah.com/property/rent/abc123')
+  })
+
+  it('returns null for a record it cannot address', () => {
+    expect(listingUrl({ id: 'abc' }, 'https://x.com')).toBeNull()
+    expect(listingUrl(null, 'https://x.com')).toBeNull()
+  })
+})
+
+describe('listingMessage', () => {
+  const full = {
+    intro: "Hello, I'm interested in this property:",
+    title: 'Corner shop, Umm Salal',
+    url: 'https://elmadenah.com/property/rent/abc123',
+    refLabel: 'Ref:',
+    ref: 'AS-004341',
+  }
+
+  it('names the property, links to it, and keeps the reference', () => {
+    expect(listingMessage(full)).toBe(
+      "Hello, I'm interested in this property:\nCorner shop, Umm Salal\nhttps://elmadenah.com/property/rent/abc123\nRef: AS-004341")
+  })
+
+  // A listing off the thin search DTO carries no reference number. A single template string
+  // would send "Ref: undefined" at exactly the moment someone decided to get in touch.
+  it('drops the reference line rather than sending an empty one', () => {
+    const out = listingMessage({ ...full, ref: undefined })
+    expect(out).not.toMatch(/Ref:/)
+    expect(out).not.toMatch(/undefined/)
+    expect(out.split('\n')).toHaveLength(3)
+  })
+
+  it('drops any line it has nothing for', () => {
+    expect(listingMessage({ intro: 'Hi', title: '', url: null, ref: null })).toBe('Hi')
+    expect(listingMessage({})).toBe('')
+  })
+
+  // It travels as a URL query parameter, so the newlines must survive encoding.
+  it('survives being put into a wa.me link', () => {
+    const href = whatsAppHref('97455501001', listingMessage(full))
+    expect(href).toContain('%0A')                       // the line breaks
+    expect(decodeURIComponent(href)).toContain('Corner shop, Umm Salal')
+    expect(decodeURIComponent(href)).toContain('https://elmadenah.com/property/rent/abc123')
   })
 })

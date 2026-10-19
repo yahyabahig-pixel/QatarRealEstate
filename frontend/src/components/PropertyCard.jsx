@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { listingWhatsApp, whatsAppHref } from '../lib/contact'
+import { listingMessage, listingUrl, listingWhatsApp, whatsAppHref } from '../lib/contact'
+import { SITE_ORIGIN } from '../lib/pageMeta'
 import { isRoomless } from '../lib/propertyDisplay'
 import { useI18n } from '../i18n/I18nContext'
 import { fmtPrice, useFavourite, WhatsAppIcon } from './ui'
@@ -27,8 +28,18 @@ export default function PropertyCard({ p, wide = false, blurPrice = false }) {
   const agent = p.agent || agents.find(a => a.id === p.agentId) || null
 
   // null when neither the consultant nor the company has a number, so the button below
-  // can be left out rather than rendered dead.
-  const cardWa = whatsAppHref(listingWhatsApp(agent, settings.whatsapp), t('property.waCardMessage', { ref: p.referenceNo }))
+  // can be left out rather than rendered dead. The message names the property and links to
+  // it: a bare reference code tells neither end of the conversation what it is about.
+  const cardWa = whatsAppHref(
+    listingWhatsApp(agent, settings.whatsapp),
+    listingMessage({
+      intro: t('property.waIntro'),
+      title: p.title,
+      url: listingUrl(p, SITE_ORIGIN),
+      refLabel: t('property.waRef'),
+      ref: p.referenceNo,
+    }),
+  )
 
   const Carousel = (
     <div className={`relative overflow-hidden group/img ${wide ? 'md:w-[38%] shrink-0' : 'aspect-[4/3]'}`}>

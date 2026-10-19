@@ -155,6 +155,22 @@ export function readSiteOrigin(doc, loc) {
   return loc?.origin || ''
 }
 
+/**
+ * The site's own origin, resolved once.
+ *
+ * Exported because the canonical tag is not the only thing that needs it: a WhatsApp
+ * message about a listing carries a link to that listing, and a link a person receives on
+ * their phone has to be absolute and has to carry the real domain, not whatever host the
+ * sender happened to be browsing.
+ *
+ * Captured at module load, before anything here rewrites the canonical tag. Re-reading it
+ * later would be harmless for the ORIGIN specifically — a rewritten canonical still carries
+ * the same domain — but there is no reason to.
+ */
+export const SITE_ORIGIN = typeof document === 'undefined'
+  ? ''
+  : readSiteOrigin(document, typeof window === 'undefined' ? null : window.location)
+
 /** Write the tags. Kept apart from the deciding above so that stays testable. */
 export function applyPageMetaTags(doc, tags) {
   for (const { selector, attribute, value } of tags) {
