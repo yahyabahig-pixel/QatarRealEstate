@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
 import { mailHref } from '../lib/contact'
 import { EmptyState } from '../components/ui'
 
@@ -18,6 +18,8 @@ export default function Careers() {
   const departments = [ALL, ...jobDepartments]
   const [dept, setDept] = useState(ALL)
   const visible = jobs.filter(j => j.active && (dept === ALL || j.department === dept))
+
+  usePageMeta(t('pageMeta.careers.title'), t('pageMeta.careers.description'))
 
   return (
     <div className="pt-24 pb-20">

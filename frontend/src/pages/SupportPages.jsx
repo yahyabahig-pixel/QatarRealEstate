@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useState } from 'react'
 import { useData } from '../store/DataContext'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { NOINDEX } from '../lib/pageMeta'
 import { telHref, whatsAppHref, mailHref } from '../lib/contact'
 import { useToast } from '../components/Toast'
 import { InquiryForm, LogoMarquee } from '../components/misc'
@@ -15,6 +16,7 @@ const OFFICE = 'https://images.unsplash.com/photo-1497366811353-6870744d04b2?aut
 export function AboutUs() {
   const { settings } = useData()
   const { t } = useI18n()
+  usePageMeta(t('pageMeta.about.title'), t('pageMeta.about.description'))
   return (
     <div>
       <section className="relative h-[50vh] min-h-[360px] flex items-end">
@@ -49,6 +51,7 @@ export function AboutUs() {
 export function ContactUs() {
   const { settings } = useData()
   const { t } = useI18n()
+  usePageMeta(t('pageMeta.contact.title'), t('pageMeta.contact.description'))
   return (
     <div className="pt-24 pb-20 max-w-7xl mx-auto px-4">
       <div className="eyebrow mb-2">{t('support.contactEyebrow')}</div>
@@ -85,6 +88,7 @@ export function ListProperty() {
   const { addInquiry } = useData()
   const { t, typeLabel } = useI18n()
   const toast = useToast()
+  usePageMeta(t('pageMeta.listProperty.title'), t('pageMeta.listProperty.description'))
   const [f, setF] = useState({
     name: '', phone: '', email: '', type: 'Apartment', purpose: 'buy', message: '',
     city: '', street: '', locCountry: 'Qatar', locState: '', locDescription: '', x: '', y: '',
@@ -170,6 +174,13 @@ export function ListProperty() {
 
 export function NotFound() {
   const { t } = useI18n()
+
+  // nginx answers 200 for every path, so this page IS what a crawler gets for a mistyped
+  // URL, a link to an address from some older version of the site, or anything a scraper
+  // invented. Without this it would claim itself as canonical under the site's default
+  // title and be indexed as a thin duplicate of the home page.
+  usePageMeta(t('support.notFoundTitle'), undefined, undefined, NOINDEX)
+
   return (
     <div className="min-h-[70vh] bg-ink text-white flex flex-col items-center justify-center text-center px-4 pt-nav">
       <div className="h-serif text-8xl text-primary mb-4">404</div>

@@ -141,12 +141,23 @@ export function ImageUpload({ value = '', onChange, onBusy, maxMb = 8 }) {
   )
 }
 
-export function Field({ label, children }) {
+/**
+ * A labelled form field.
+ *
+ * `hint` sits OUTSIDE the <label> on purpose. Anything inside a label becomes part of the
+ * control's accessible name, so a hint rendered as a child is read out as though it were
+ * the field's title — and a hint that appears and disappears with the field's value
+ * (see the agent picker) changes that name every time the admin touches the control.
+ */
+export function Field({ label, hint, children }) {
   return (
-    <label className="block text-sm">
-      <span className="text-neutral-400 text-xs uppercase tracking-wider block mb-1">{label}</span>
-      {children}
-    </label>
+    <div className="block text-sm">
+      <label className="block">
+        <span className="text-neutral-400 text-xs uppercase tracking-wider block mb-1">{label}</span>
+        {children}
+      </label>
+      {hint}
+    </div>
   )
 }
 

@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { useI18n } from '../i18n/I18nContext'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { NOINDEX } from '../lib/pageMeta'
 import PropertyCard from '../components/PropertyCard'
 import { readFavouriteIds, FAVS_CHANGED_EVENT } from '../components/ui'
 import { IconHeart } from '../components/icons'
@@ -20,6 +21,12 @@ export default function Favourites() {
   const { properties } = useData()
   const { t } = useI18n()
   const [ids, setIds] = useState(() => readFavouriteIds())
+
+  // Title only, and kept out of the index: this page is one visitor's own saved list, held
+  // in their browser. It is linked from the navbar on every page but deliberately absent
+  // from the sitemap, and to anyone but its owner it is an empty page — nothing a search
+  // result should ever land on.
+  usePageMeta(t('pageMeta.favourites.title'), undefined, undefined, NOINDEX)
 
   useEffect(() => {
     const refresh = () => setIds(readFavouriteIds())

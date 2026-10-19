@@ -16,6 +16,74 @@ export default {
     brand: 'المدينة للعقارات',
   },
 
+  // ---------------------------------------------------------------------------------------
+  // The title and description for every page that is NOT a category landing page.
+  //
+  // The machinery for this shipped with the category pages and reached only them, so every
+  // listing, every district and every agent on the site went out under the one `meta.title`
+  // above — a thousand pages telling Google the same thing about themselves. Titles stay
+  // under ~60 characters and descriptions under ~155, past which a search result cuts them
+  // off mid-word. The brand is appended by the provider, so these carry only the specific
+  // half.
+  // ---------------------------------------------------------------------------------------
+  pageMeta: {
+    rent: {
+      title: 'عقارات للإيجار في قطر',
+      description: 'شقق وفلل ومكاتب ومحلات تجارية للإيجار في قطر — تصفّح العروض بالصور والأسعار والمواقع على الخريطة.',
+    },
+    buy: {
+      title: 'عقارات للبيع في قطر',
+      description: 'شقق وفلل وبنتهاوس وأراضٍ للبيع في قطر — تصفّح العروض بالصور والأسعار والمواقع على الخريطة.',
+    },
+    offMarket: {
+      title: 'فرص خارج السوق',
+      description: 'مجموعة خاصة من العقارات يفضّل ملّاكها إبقاءها بعيدًا عن السوق المفتوح — الأسعار عند الطلب.',
+    },
+    // The owner writes the listing title; the district is appended so that two listings both
+    // called "شقة للإيجار" are still two different pages to a search engine.
+    property: { title: '{title} — {area}' },
+    areas: {
+      title: 'مناطق قطر',
+      description: 'تصفّح العقارات حسب المنطقة في قطر — الشقق والمحلات التجارية والمكاتب الإدارية في كل منطقة.',
+    },
+    area: {
+      title: 'عقارات في {area}',
+      description: 'عقارات للإيجار والبيع في {area} — شقق ومحلات تجارية ومكاتب إدارية من المدينة للعقارات.',
+    },
+    agents: {
+      title: 'فريق المدينة للعقارات',
+      description: 'تعرّف على مستشاري المدينة للعقارات في قطر وتواصل معهم مباشرة.',
+    },
+    agent: { description: '{name} — {title} في المدينة للعقارات. تواصل معه مباشرة بخصوص العقارات في قطر.' },
+    developments: {
+      title: 'المشاريع العقارية في قطر',
+      description: 'مشاريع عقارية جديدة وعلى الخارطة في قطر — المواقع وخطط السداد ومواعيد التسليم.',
+    },
+    development: {
+      description: '{name} — مشروع عقاري في {area}. الوحدات المتاحة والأسعار وخطة السداد.',
+      // Used when the record carries no location yet; the version above would otherwise
+      // render "مشروع عقاري في ." — a hole a visitor reads in the search result.
+      descriptionNoArea: '{name} — مشروع عقاري في قطر. الوحدات المتاحة والأسعار وخطة السداد.',
+    },
+    about: {
+      title: 'من نحن',
+      description: 'المدينة للعقارات — شركة عقارية في قطر تؤجّر وتبيع وتدير العقارات السكنية والتجارية.',
+    },
+    contact: {
+      title: 'تواصل معنا',
+      description: 'تواصل مع المدينة للعقارات — الهاتف والواتساب والبريد الإلكتروني وموقع المكتب.',
+    },
+    listProperty: {
+      title: 'اعرض عقارك',
+      description: 'اعرض عقارك للإيجار أو البيع مع المدينة للعقارات — أرسل التفاصيل ونتواصل معك.',
+    },
+    careers: {
+      title: 'وظائف',
+      description: 'الوظائف المتاحة حالياً في المدينة للعقارات في قطر.',
+    },
+    favourites: { title: 'المفضلة' },
+  },
+
   common: {
     forRent: 'للإيجار',
     forSale: 'للبيع',
@@ -646,6 +714,7 @@ export default {
       fArea: 'المنطقة (من كتالوج المناطق)', noArea: 'بدون منطقة', noAreasYet: 'لا توجد مناطق معرّفة بعد — أضفها من قسم المناطق أولًا.',
       fStreet: 'الشارع (يُملأ تلقائيًا من الخريطة)',
       fAgent: 'الوكيل المعيّن', noAgent: 'بدون وكيل',
+      noAgentHint: 'بدون وكيل: الاتصال والواتساب على هذا العقار هيروحوا على رقم الشركة.',
       fBedrooms: 'غرف النوم', fBathrooms: 'الحمّامات', fSize: 'المساحة (م²)',
       fPrice: 'السعر', fCurrency: 'العملة', fStatus: 'الحالة',
       sDraft: 'مسودة (مخفي)', sAvailable: 'متاح (منشور)', sSold: 'مُباع', sRented: 'مؤجَّر',

@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { telHref, whatsAppHref } from '../lib/contact'
-import { useI18n } from '../i18n/I18nContext'
+import { listingWhatsApp, telHref, whatsAppHref } from '../lib/contact'
+import { useI18n, usePageMeta } from '../i18n/I18nContext'
+import { metaSnippet } from '../lib/pageMeta'
 import PropertyCard from '../components/PropertyCard'
 import { Breadcrumb, SectionHeading, fmtPrice, WhatsAppIcon, Star } from '../components/ui'
 import { InquiryForm, RecentlyViewed } from '../components/misc'
@@ -21,16 +22,19 @@ import { publicApi } from '../api/realEstateApi'
 // The dial link is a DIFFERENT shape and used to be built with the WhatsApp helper, which
 // strips the "+". "tel:97455123456" dials as a local number, so the call failed from
 // abroad; telHref keeps the country-code plus.
-const waHref = (agent, p, t) => {
+// The company number is the fallback here for the same reason it is on the card: a
+// consultant saved without a WhatsApp number should not leave the one listing page a
+// visitor actually reached with no way to send a message from it.
+const waHref = (agent, p, t, companyNumber) => {
   if (!p) return null
   const firstName = String(agent?.name || '').trim().split(/\s+/)[0]
   const text = t('property.waMessage', { name: firstName, title: p.title })
-  return whatsAppHref(agent?.whatsapp || agent?.phone, text)
+  return whatsAppHref(listingWhatsApp(agent, companyNumber), text)
 }
 
 export default function PropertyDetails() {
   const { id } = useParams()
-  const { properties, agents, areas, areaCount, trackView, features: featureCatalog } = useData()
+  const { properties, agents, areas, areaCount, trackView, features: featureCatalog, settings } = useData()
   const { t, typeLabel } = useI18n()
   const [lightbox, setLightbox] = useState(null)
   const [showAllAmenities, setShowAllAmenities] = useState(false)
@@ -69,6 +73,25 @@ export default function PropertyDetails() {
     : related,
     [properties, id, p?.area, related])
 
+  // ---- what this listing tells Google and a shared link ---------------------
+  //
+  // Every property on the site used to go out under the one site-wide title, so a thousand
+  // listings arrived at Google as the same page repeated, and a link pasted into WhatsApp
+  // showed the company cover whichever villa it pointed at.
+  //
+  // The district is appended because the owner writes the listing titles, and two of them
+  // called "شقة للإيجار" have to be two different pages. The description is the owner's own
+  // words, which sell the place better than anything assembled from its fields.
+  //
+  // Computed HERE, above the early returns below, because a hook cannot be called
+  // conditionally. While the record is still loading these are all undefined, which leaves
+  // the site default in place rather than writing a half-filled card.
+  usePageMeta(
+    p?.title ? (p.area ? t('pageMeta.property.title', { title: p.title, area: p.area }) : p.title) : undefined,
+    metaSnippet(p?.description),
+    p?.images?.[0],
+  )
+
   if (!MOCK_MODE && loadState === 'loading') return (
     <div className="pt-20 max-w-7xl mx-auto px-4">
       <div className="grid md:grid-cols-[2fr_1fr] gap-2">
@@ -94,6 +117,11 @@ export default function PropertyDetails() {
       <Link to="/buy" className="btn-primary">{t('property.browse')}</Link>
     </div>
   )
+
+  // Built once and reused by both the sidebar and the mobile bar below, which between them
+  // were asking the same two questions six times per render.
+  const callLink = telHref(agent?.phone)
+  const waLink = waHref(agent, p, t, settings?.whatsapp)
 
   const allAmenities = p.amenities || []
   const amenities = showAllAmenities ? allAmenities : allAmenities.slice(0, 6)
@@ -236,15 +264,16 @@ export default function PropertyDetails() {
                 </div>
               </div>
             )}
-            {/* Contact buttons render ONLY when the agent actually has that channel —
-                never a broken tel:/wa.me link to nowhere. */}
-            {agent && (telHref(agent.phone) || waHref(agent, p, t)) && (
-              <div className={`grid gap-2 ${telHref(agent.phone) && waHref(agent, p, t) ? 'grid-cols-2' : 'grid-cols-1'}`}>
-                {telHref(agent.phone) && (
-                  <a href={telHref(agent.phone)} className="btn-dark !py-2"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
+            {/* Contact buttons render ONLY when there is actually a number behind them —
+                never a broken tel:/wa.me link to nowhere. Both computed once: they were
+                being rebuilt four times per render to answer the same question. */}
+            {agent && (callLink || waLink) && (
+              <div className={`grid gap-2 ${callLink && waLink ? 'grid-cols-2' : 'grid-cols-1'}`}>
+                {callLink && (
+                  <a href={callLink} className="btn-dark !py-2"><IconPhone className="w-4 h-4" /> {t('common.call')}</a>
                 )}
-                {waHref(agent, p, t) && (
-                  <a href={waHref(agent, p, t)} target="_blank" rel="noreferrer"
+                {waLink && (
+                  <a href={waLink} target="_blank" rel="noreferrer"
                     className="bg-[#25d366] hover:bg-[#1fb958] text-white rounded-lg flex items-center justify-center gap-2 text-sm font-semibold py-2 transition-colors">
                     <WhatsAppIcon /> {t('common.whatsapp')}
                   </a>
@@ -261,9 +290,9 @@ export default function PropertyDetails() {
       <div className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-ink text-white flex items-center justify-between px-4 py-3">
         <span className="text-primary font-semibold text-sm">{fmtPrice(p)}</span>
         <div className="flex gap-2">
-          {telHref(agent?.phone) && <a href={telHref(agent.phone)} className="btn-primary !py-1.5 text-xs">{t('common.call')}</a>}
-          {waHref(agent, p, t) && (
-            <a href={waHref(agent, p, t)} target="_blank" rel="noreferrer"
+          {callLink && <a href={callLink} className="btn-primary !py-1.5 text-xs">{t('common.call')}</a>}
+          {waLink && (
+            <a href={waLink} target="_blank" rel="noreferrer"
               className="bg-[#25d366] rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5">
               <WhatsAppIcon /> {t('common.whatsapp')}
             </a>

@@ -177,9 +177,15 @@ export default function PropertiesAdmin() {
   const open = async (row) => {
     if (!row) {
       setEditing({})
-      // Type starts EMPTY so the "Select a type…" placeholder is what the admin sees —
-      // pre-picking the first type silently decides a required field on their behalf.
-      setForm({ ...EMPTY, type: '', agentId: agents[0]?.id || '' })
+      // Type AND agent start empty, for the same reason: pre-picking silently decides a
+      // field on the admin's behalf.
+      //
+      // The agent one had teeth. It defaulted to agents[0] — whoever happens to sort first
+      // in the catalogue — so a listing saved without touching that dropdown went live
+      // carrying that consultant's name, face and phone number. The card in the search
+      // results shows all three, and the WhatsApp and call buttons now reach him, so every
+      // enquiry about the listing went to a colleague who had never seen it.
+      setForm({ ...EMPTY, type: '', agentId: '' })
       return
     }
     if (MOCK_MODE) { setEditing(row); setForm({ ...EMPTY, ...row, ...withCoords(row) }); return }
@@ -438,8 +444,18 @@ export default function PropertiesAdmin() {
             </div>
             {/* Agents come from the Agents catalog, never a hardcoded list. The blank option
                 mirrors "No area": the backend accepts a null AgentId, and without an option
-                for it an unassigned listing would display someone else's name. */}
-            <Field label={t('admin.props.fAgent')}><select className="field-dark" value={form.agentId} onChange={set('agentId')}><option value="">{t('admin.props.noAgent')}</option>{agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></Field>
+                for it an unassigned listing would display someone else's name.
+                Left optional, because a unit the office handles itself genuinely has no
+                consultant — but what that costs is now said on the field rather than
+                discovered later, when the calls do not arrive. */}
+            <Field
+              label={t('admin.props.fAgent')}
+              hint={!form.agentId && <p className="mt-1 text-xs text-amber-300/80">{t('admin.props.noAgentHint')}</p>}>
+              <select className="field-dark" value={form.agentId} onChange={set('agentId')}>
+                <option value="">{t('admin.props.noAgent')}</option>
+                {agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+              </select>
+            </Field>
             <Field label={t('admin.props.fBedrooms')}><input type="number" min="0" className="field-dark" value={form.bedrooms} onChange={set('bedrooms')} /></Field>
             <Field label={t('admin.props.fBathrooms')}><input type="number" min="0" className="field-dark" value={form.bathrooms} onChange={set('bathrooms')} /></Field>
             <Field label={t('admin.props.fSize')}><input type="number" min="0" step="0.01" className="field-dark" value={form.sizeSqm} onChange={set('sizeSqm')} /></Field>
