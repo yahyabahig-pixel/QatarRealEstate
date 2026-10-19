@@ -1,7 +1,8 @@
 import { Link } from 'react-router-dom'
 import { useData } from '../store/DataContext'
 import { useI18n } from '../i18n/I18nContext'
-import { listingWhatsApp, whatsAppHref } from '../lib/contact'
+import { listingMessage, listingUrl, listingWhatsApp, whatsAppHref } from '../lib/contact'
+import { SITE_ORIGIN } from '../lib/pageMeta'
 import { fmtPrice, WhatsAppIcon } from '../components/ui'
 import { IconArea, IconBath, IconBed, IconPin } from '../components/icons'
 
@@ -21,7 +22,16 @@ export default function ChatPropertyCard({ p }) {
   // two ways too — the live details DTO carries the agent, the thin search row carries an
   // id to look up.
   const agent = p.agent || agents.find(a => a.id === p.agentId) || null
-  const wa = whatsAppHref(listingWhatsApp(agent, settings.whatsapp), `${t('assistant.waIntro')} ${p.title} (${p.referenceNo || p.id})`)
+  const wa = whatsAppHref(
+    listingWhatsApp(agent, settings.whatsapp),
+    listingMessage({
+      intro: t('property.waIntro'),
+      title: p.title,
+      url: listingUrl(p, SITE_ORIGIN),
+      refLabel: t('property.waRef'),
+      ref: p.referenceNo,
+    }),
+  )
 
   return (
     <div className="qre-bubble-in flex gap-2.5 rounded-xl border border-neutral-200 bg-white p-2 shadow-sm hover:border-primary/40 hover:shadow-md transition-all">

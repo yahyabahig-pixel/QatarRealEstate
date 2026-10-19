@@ -62,3 +62,31 @@ export const mailHref = (email) => {
  */
 export const listingWhatsApp = (agent, companyNumber) =>
   agent?.whatsapp || agent?.phone || companyNumber || null
+
+/** The public address of a listing, absolute, for pasting into a message. */
+export const listingUrl = (p, origin) => {
+  if (!p?.id || !p?.purpose) return null
+  const base = String(origin ?? '').replace(/\/+$/, '')
+  return `${base}/property/${p.purpose}/${p.id}`
+}
+
+/**
+ * The message that goes out when someone taps WhatsApp about a listing.
+ *
+ * It used to be the reference number and nothing else — "I'm interested in AS-004341".
+ * That fails both ends of the conversation. The consultant has to go and look the code up
+ * before he knows which of his listings is being asked about, and the person sending it
+ * cannot see what they just asked about either: they tapped a photo, and what left their
+ * phone was a string of characters.
+ *
+ * So: the name of the property, a link that opens it, and the reference kept for whoever
+ * files it. Assembled line by line rather than from one template string, because a listing
+ * off the thin search DTO may carry no reference number, and a template would then send
+ * "Ref: undefined" — the kind of hole that makes a company look careless at exactly the
+ * moment someone decided to get in touch.
+ */
+export const listingMessage = ({ intro, title, url, refLabel, ref }) =>
+  [intro, title, url, ref ? `${refLabel} ${ref}`.trim() : null]
+    .map(line => (line == null ? null : String(line).trim()))
+    .filter(Boolean)
+    .join('\n')

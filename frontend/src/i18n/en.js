@@ -310,8 +310,10 @@ export default {
     consultant: 'Property Consultant',
     recentEyebrow: 'Keep exploring',
     recentTitle: 'Recently Viewed Properties',
-    waMessage: 'Hello {name}, I am interested in this property: {title}.',
-    waCardMessage: "I'm interested in {ref}",
+    // See the note on the Arabic side: one message for every WhatsApp button on the site,
+    // carrying the property's name and a link to it rather than a bare reference code.
+    waIntro: "Hello, I'm interested in this property:",
+    waRef: 'Ref:',
   },
 
   areas: {

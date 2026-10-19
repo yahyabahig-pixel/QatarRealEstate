@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useData } from '../store/DataContext'
-import { listingWhatsApp, telHref, whatsAppHref } from '../lib/contact'
+import { listingMessage, listingUrl, listingWhatsApp, telHref, whatsAppHref } from '../lib/contact'
 import { useI18n, usePageMeta } from '../i18n/I18nContext'
-import { metaSnippet } from '../lib/pageMeta'
+import { metaSnippet, SITE_ORIGIN } from '../lib/pageMeta'
 import PropertyCard from '../components/PropertyCard'
 import { Breadcrumb, SectionHeading, fmtPrice, WhatsAppIcon, Star } from '../components/ui'
 import { InquiryForm, RecentlyViewed } from '../components/misc'
@@ -25,10 +25,19 @@ import { publicApi } from '../api/realEstateApi'
 // The company number is the fallback here for the same reason it is on the card: a
 // consultant saved without a WhatsApp number should not leave the one listing page a
 // visitor actually reached with no way to send a message from it.
+// Same message as the card and the assistant's card, from the same builder: whichever
+// button a visitor taps, the consultant receives the property's name and a link to it.
+// The agent's first name used to open it, and is gone on purpose — when the consultant has
+// no number the message goes to the office, and greeting it by his name would be wrong.
 const waHref = (agent, p, t, companyNumber) => {
   if (!p) return null
-  const firstName = String(agent?.name || '').trim().split(/\s+/)[0]
-  const text = t('property.waMessage', { name: firstName, title: p.title })
+  const text = listingMessage({
+    intro: t('property.waIntro'),
+    title: p.title,
+    url: listingUrl(p, SITE_ORIGIN),
+    refLabel: t('property.waRef'),
+    ref: p.referenceNo,
+  })
   return whatsAppHref(listingWhatsApp(agent, companyNumber), text)
 }
 
