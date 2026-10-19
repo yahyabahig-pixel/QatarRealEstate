@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using Auth.Api;
 using Auth.Application;
 using Auth.Infrastructure;
+using BuildingBlocks.Api;
 using BuildingBlocks.Application.Behaviors;
 using BuildingBlocks.Authorization;
 using Host.ErrorHandling;
@@ -82,8 +83,14 @@ builder.Services.AddPermissionAuthorization();
 // Partitioned by client IP, which is only correct behind nginx because UseForwardedHeaders
 // runs first (below) — without it every visitor shares the proxy's address and one abuser
 // would rate-limit the whole site.
-const string LoginRateLimit = "login";
-const string PublicWriteRateLimit = "public-write";
+//
+// The names live in BuildingBlocks.Api.RateLimitPolicies so the controllers that carry
+// [EnableRateLimiting] refer to the same symbols. A policy name that does not match a
+// registration is not caught at startup — it throws on the first request that reaches the
+// endpoint, which is the worst place to find out.
+const string LoginRateLimit = RateLimitPolicies.Login;
+const string PublicWriteRateLimit = RateLimitPolicies.PublicWrite;
+const string ViewCounterRateLimit = RateLimitPolicies.ViewCounter;
 
 builder.Services.AddRateLimiter(options =>
 {
@@ -99,11 +106,34 @@ builder.Services.AddRateLimiter(options =>
             QueueLimit = 0,
         }));
 
+    // The lead forms. 30 submissions in five minutes from one address is far past anything
+    // a person does and well short of what a script wants.
     options.AddPolicy(PublicWriteRateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
         partitionKey: ClientKey(context),
         factory: _ => new FixedWindowRateLimiterOptions
         {
             PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(5),
+            QueueLimit = 0,
+        }));
+
+    // The view counter, on a bucket of its OWN.
+    //
+    // It used to share the one above, and that is a trap: opening a listing is a READ to the
+    // visitor and a write to us, so a serious buyer working through a shortlist spends the
+    // allowance meant for the contact form and is then refused when they finally fill it in
+    // — silently, because recordView swallows its own errors and the form shows a generic
+    // failure. The whole point of the site is that form; nothing the counter feeds is worth
+    // one lost enquiry.
+    //
+    // Still capped, because the counter decides the "most viewed" list the team reads: a
+    // loop in one tab could put any listing at the top of it. 120 in five minutes is a
+    // listing opened every 2.5 seconds without pause, which is a script, not a shortlist.
+    options.AddPolicy(ViewCounterRateLimit, context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: ClientKey(context),
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 120,
             Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0,
         }));
@@ -152,6 +182,37 @@ builder.Services.AddCors(options =>
 builder.Services.Configure<ForwardedHeadersOptions>(options =>
 {
     options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+
+    // TWO, and the number matters more than anything else on this page.
+    //
+    // ForwardLimit is how many entries are taken off the RIGHT of X-Forwarded-For, and it
+    // defaults to 1. The live chain is  internet -> caddy -> nginx -> kestrel , and nginx
+    // appends with $proxy_add_x_forwarded_for, so what arrives here reads
+    //
+    //     X-Forwarded-For: <the visitor>, <caddy>
+    //
+    // At the default of 1 the middleware takes <caddy> and stops. RemoteIpAddress becomes
+    // Caddy's container address — THE SAME ADDRESS FOR EVERY VISITOR ON EARTH. Which is
+    // exactly what the comment above this block says the block exists to prevent, and it
+    // was true right up until the day Caddy was put in front for HTTPS and quietly added a
+    // hop. Both rate limiters then stopped being per-visitor and became per-site: thirty
+    // writes in five minutes for the entire internet, shared with the view counter, after
+    // which every contact form on the site answers 429 — to the visitor a form that fails
+    // for no reason, to us a day with no enquiries and nothing in the log to explain it.
+    // Ten login attempts site-wide, too, so one bot probing the login page locks the real
+    // admin out of their own panel.
+    //
+    // Two is also the ceiling, not just the floor. A visitor can put anything in the header
+    // themselves; Caddy appends their real address after it, nginx appends Caddy's, so a
+    // forged entry is always further left than the two we read and can never be reached.
+    // Raising this to 3 would hand every visitor the ability to choose their own identity
+    // and, with it, everyone else's rate limit.
+    //
+    // Without Caddy (plain HTTP, the tls profile off) the header is one entry long, the
+    // middleware runs out after the first, and the answer is still the visitor. So this
+    // value is correct in both deployment modes and needs no .env switch.
+    options.ForwardLimit = 2;
+
     options.KnownNetworks.Clear();
     options.KnownProxies.Clear();
 });

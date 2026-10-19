@@ -2,6 +2,7 @@
 
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
+using BuildingBlocks.Api;
 using BuildingBlocks.Api.Controllers;
 using BuildingBlocks.Api.Errors;
 using RealEstate.Application.Properties.User.Command.RecordPropertyView;
@@ -52,8 +53,13 @@ public sealed class PropertiesController : ApiControllerBase
     // Anonymous and it writes, so it is rate limited per address: the counter feeds the
     // "Most viewed" dashboard the team makes decisions from, and a loop in a browser tab
     // could otherwise put any listing at the top of it.
+    //
+    // On its OWN bucket, not the lead forms'. Opening a listing is a read to the visitor
+    // and a write to us, so sharing one allowance meant a buyer working through a shortlist
+    // spent the contact form's budget and was refused when they finally filled it in — and
+    // silently, because this call swallows its own errors. See Program.cs.
     [HttpPost("{id:guid}/views")]
-    [EnableRateLimiting("public-write")]
+    [EnableRateLimiting(RateLimitPolicies.ViewCounter)]
     public async Task<IActionResult> RecordView(Guid id, CancellationToken ct)
         => (await Sender.Send(new RecordPropertyViewCommand(id), ct)).ToNoContent();
 }

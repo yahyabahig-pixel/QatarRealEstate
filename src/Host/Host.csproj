@@ -28,6 +28,7 @@
     <!-- Explicit rather than transitive: Program.cs registers the shared pipeline behaviour
          from this assembly by name, so the dependency is real and should be stated. -->
     <ProjectReference Include="..\BuildingBlocks\BuildingBlocks.Application\BuildingBlocks.Application.csproj" />
+    <ProjectReference Include="..\BuildingBlocks\BuildingBlocks.Api\BuildingBlocks.Api.csproj" />
     <ProjectReference Include="..\Modules\RealEstate\RealEstate.Api\RealEstate.Api.csproj" />
     <ProjectReference Include="..\Modules\RealEstate\RealEstate.Infrastructure\RealEstate.Infrastructure.csproj" />
     <ProjectReference Include="..\Modules\Auth\Auth.Api\Auth.Api.csproj" />
