@@ -8,40 +8,85 @@ namespace RealEstate.Domain.Tests;
 /// </summary>
 public class PropertyStatusRulesTests
 {
-    // ---- a closed deal cannot be laundered through the archive --------------------------
-    // Sold and Rented were already non-publishable, but Archive had no such rule. So
-    // Sold -> Archive -> Publish was two legal steps that together put a sold property back
-    // on the market, which is exactly what the single rule forbids.
+    // ---- a unit can be let, and let again, and again -------------------------------------
+    //
+    //  These two used to assert the opposite. Sold and Rented were terminal: a flat could be
+    //  let exactly once in its life, and archiving it first was blocked too so the two steps
+    //  could not be used to get around that.
+    //
+    //  Right for an agency selling a flat once. Wrong for this company, which owns its
+    //  buildings and re-lets the same units every year — the day a tenant moved out, the
+    //  listing was finished, and the same flat had to be entered again from nothing. The
+    //  rule is reversed, and these hold it reversed.
 
     [Fact]
-    public void A_sold_listing_cannot_be_republished_by_archiving_it_first()
+    public void A_rented_unit_goes_back_on_the_market_when_the_tenant_leaves()
     {
-        var property = TestData.PublishedProperty(ListingKind.Sale);
-        Assert.True(property.MarkAsSold().IsSuccess);
-        Assert.True(property.Archive().IsSuccess);
+        var property = TestData.PublishedProperty(ListingKind.Rent);
+        Assert.True(property.MarkAsRented().IsSuccess);
 
-        var result = property.Publish();
-
-        Assert.True(result.IsError);
-        Assert.Equal("Property.ClosedDealNotPublishable", result.TopError.Code);
-        Assert.Equal(PropertyStatus.Archived, property.Status);
+        Assert.True(property.Publish().IsSuccess);
+        Assert.Equal(PropertyStatus.Published, property.Status);
     }
 
     [Fact]
-    public void A_rented_listing_cannot_be_republished_by_archiving_it_first()
+    public void A_sold_listing_can_be_put_back_up()
+    {
+        var property = TestData.PublishedProperty(ListingKind.Sale);
+        Assert.True(property.MarkAsSold().IsSuccess);
+
+        Assert.True(property.Publish().IsSuccess);
+        Assert.Equal(PropertyStatus.Published, property.Status);
+    }
+
+    [Fact]
+    public void A_closed_listing_can_be_restored_through_the_archive_too()
     {
         var property = TestData.PublishedProperty(ListingKind.Rent);
         Assert.True(property.MarkAsRented().IsSuccess);
         Assert.True(property.Archive().IsSuccess);
 
-        Assert.Equal("Property.ClosedDealNotPublishable", property.Publish().TopError.Code);
+        Assert.True(property.Publish().IsSuccess);
+        Assert.Equal(PropertyStatus.Published, property.Status);
+        Assert.Null(property.StatusBeforeArchive);
+    }
+
+    /// <summary>
+    /// The whole point: the same flat round the cycle twice, with nothing re-entered.
+    /// </summary>
+    [Fact]
+    public void The_same_unit_survives_more_than_one_tenancy()
+    {
+        var property = TestData.PublishedProperty(ListingKind.Rent);
+
+        for (var tenancy = 0; tenancy < 3; tenancy++)
+        {
+            Assert.True(property.MarkAsRented().IsSuccess);
+            Assert.Equal(PropertyStatus.Rented, property.Status);
+
+            Assert.True(property.Publish().IsSuccess);
+            Assert.Equal(PropertyStatus.Published, property.Status);
+        }
+    }
+
+    /// <summary>
+    /// Pausing a closed listing without putting it back on the site — the owner's other
+    /// route. Unpublish used to require the listing to be Published, so a rented unit could
+    /// not even become a draft.
+    /// </summary>
+    [Fact]
+    public void A_rented_unit_can_be_parked_as_a_draft()
+    {
+        var property = TestData.PublishedProperty(ListingKind.Rent);
+        Assert.True(property.MarkAsRented().IsSuccess);
+
+        Assert.True(property.Unpublish().IsSuccess);
+        Assert.Equal(PropertyStatus.Draft, property.Status);
     }
 
     [Fact]
     public void An_archived_draft_can_still_be_restored()
     {
-        // The rule above must not break the admin console's "Restore (Publish)" button for
-        // ordinary listings: only CLOSED deals are blocked, not everything archived.
         var property = TestData.Property();
         Assert.True(property.Archive().IsSuccess);
 
@@ -58,6 +103,49 @@ public class PropertyStatusRulesTests
 
         Assert.True(property.Publish().IsSuccess);
         Assert.Equal(PropertyStatus.Published, property.Status);
+    }
+
+    // ---- what a transition still refuses -------------------------------------------------
+    // Only being asked for the state it is already in, which is a mis-click and not a
+    // decision. Every refusal below leaves the status untouched.
+
+    [Fact]
+    public void Asking_for_the_state_it_is_already_in_is_refused()
+    {
+        var published = TestData.PublishedProperty();
+        Assert.Equal("Property.AlreadyPublished", published.Publish().TopError.Code);
+        Assert.Equal(PropertyStatus.Published, published.Status);
+
+        var draft = TestData.Property();
+        Assert.Equal("Property.AlreadyDraft", draft.Unpublish().TopError.Code);
+        Assert.Equal(PropertyStatus.Draft, draft.Status);
+
+        var archived = TestData.PublishedProperty();
+        Assert.True(archived.Archive().IsSuccess);
+        Assert.Equal("Property.AlreadyArchived", archived.Archive().TopError.Code);
+
+        var rented = TestData.PublishedProperty(ListingKind.Rent);
+        Assert.True(rented.MarkAsRented().IsSuccess);
+        Assert.Equal("Property.AlreadyRented", rented.MarkAsRented().TopError.Code);
+        Assert.Equal(PropertyStatus.Rented, rented.Status);
+
+        var sold = TestData.PublishedProperty(ListingKind.Sale);
+        Assert.True(sold.MarkAsSold().IsSuccess);
+        Assert.Equal("Property.AlreadySold", sold.MarkAsSold().TopError.Code);
+    }
+
+    /// <summary>
+    /// An outcome can be recorded from any state now, not only from Published — a draft that
+    /// was let before anyone got round to publishing it still has to be markable.
+    /// </summary>
+    [Fact]
+    public void An_outcome_can_be_recorded_without_publishing_first()
+    {
+        var draft = TestData.Property(ListingKind.Rent);
+        Assert.Equal(PropertyStatus.Draft, draft.Status);
+
+        Assert.True(draft.MarkAsRented().IsSuccess);
+        Assert.Equal(PropertyStatus.Rented, draft.Status);
     }
 
     // ---- the outcome has to match the listing kind ---------------------------------------

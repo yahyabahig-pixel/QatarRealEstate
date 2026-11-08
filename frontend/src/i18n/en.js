@@ -674,6 +674,16 @@ export default {
       noListings: 'No listings yet.',
       draft: 'Draft',
     },
+    // See the Arabic side: what a refused status change says, in terms of what to do next.
+    statusError: {
+      outcomeMismatch: 'This listing is for rent, so it can be marked rented but not sold (and the other way round for a sale). To sell it, change the listing kind and price under Edit first, then mark it sold.',
+      alreadyPublished: 'This property is already published.',
+      alreadyDraft: 'This property is already a draft.',
+      alreadyArchived: 'This property is already archived.',
+      alreadySold: 'This property is already marked sold.',
+      alreadyRented: 'This property is already marked rented.',
+    },
+
     props: {
       title: 'Properties',
       addProperty: '+ Add Property',
