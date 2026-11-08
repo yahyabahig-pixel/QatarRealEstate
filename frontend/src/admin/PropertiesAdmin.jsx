@@ -6,6 +6,7 @@ import { IconCheck, IconChevronDown, IconChevronLeft, IconChevronRight, IconEye,
 import { useToast } from '../components/Toast'
 import { PageTitle, Modal, useConfirm, Field, Toggle, StatusBadge, CenterNotice, Spinner } from './adminUi'
 import { MOCK_MODE, describeApiError } from '../api/client'
+import { describeStatusError } from '../lib/statusErrors'
 import { NAMED_FEATURES, imagesAdminApi, imageUrl, mapAdminPropertyRow, propertiesAdminApi } from '../api/realEstateApi'
 import LocationPicker from '../components/LocationPicker'
 import { resolveFeatureIcon } from '../lib/featureIcons'
@@ -84,9 +85,12 @@ export default function PropertiesAdmin() {
   }, [properties])   // eslint-disable-line react-hooks/exhaustive-deps
   const viewsOf = (p) => p.viewsCount ?? 0
 
-  // Status changes ride the EXISTING publication/archive commands — the backend's domain
-  // rules decide whether a transition is legal (e.g. only Published can become Sold) and
-  // an illegal one surfaces as the real error, with nothing changed locally.
+  // Status changes ride the EXISTING publication/archive commands. Every status now reaches
+  // every other one — a unit that was let goes straight back on the market when the tenant
+  // leaves, which is the whole point for a company that owns its buildings. The backend
+  // still refuses two things: the state it is already in, and closing a rental as "sold"
+  // (the price would be a month's rent filed as a sale). Those come back as error CODES,
+  // which is why they are translated below rather than shown in the server's English.
   const STATUS_OPTIONS = [['available', t('admin.status.Published')], ['draft', t('admin.status.Draft')], ['archived', t('admin.status.Archived')], ['sold', t('admin.status.Sold')], ['rented', t('admin.status.Rented')]]
   const applyStatus = async (p, status) => {
     setStatusMenuFor(null)
@@ -97,7 +101,7 @@ export default function PropertiesAdmin() {
       toast(t('admin.props.statusUpdated'))
       await reloadProperties()
     } catch (err) {
-      setNotice({ kind: 'error', message: describeApiError(err) })
+      setNotice({ kind: 'error', message: describeStatusError(err, t) })
     }
   }
 

@@ -417,35 +417,42 @@ public sealed class Property : AuditableEntity
         return Result.Updated;
     }
 
+    // ---- status ------------------------------------------------------------------------
+    //
+    //  Every status reaches every other status. That is a deliberate reversal.
+    //
+    //  The rules used to run one way only: once a listing was Sold or Rented it could never
+    //  be published again, and archiving it first was blocked too so the two steps could not
+    //  be used to get around the first. Sensible for an agency selling a flat once. Wrong
+    //  for this company, which OWNS its buildings in Umm Salal, Muaither, Old Airport and the
+    //  rest and re-lets the same units every year: the day a tenant moved out, the listing
+    //  was finished. The owner had to build it again from nothing -- photos, reference
+    //  number, view count -- for a flat that had not changed.
+    //
+    //  So the only thing a transition refuses now is being asked for the state it is already
+    //  in, which is a mis-click rather than a decision. The single exception is the outcome
+    //  pair below, and that one is about the price being in the right place, not about
+    //  policy -- see OutcomeDoesNotMatchListingKind.
+    // --------------------------------------------------------------------------------------
+
     public Result<Updated> Publish()
     {
         if (Status == PropertyStatus.Published)
             return PropertyErrors.AlreadyPublished;
 
-        // Sold and Rented stay non-publishable: re-listing a closed deal is a business
-        // decision, not a status flip. ARCHIVED is different — the admin console offers
-        // "Restore (Publish)" on archived listings, so the domain must allow it; without
-        // this an archived listing was permanently stuck (no transition out at all).
-        //
-        // But archiving must not LAUNDER a closed deal. Sold -> Archive -> Publish was two
-        // legal steps that together did what the rule above forbids, and put a sold property
-        // back on the market. _statusBeforeArchive remembers where it came from.
-        if (Status == PropertyStatus.Sold || Status == PropertyStatus.Rented)
-            return PropertyErrors.NotPublishable;
-
-        if (Status == PropertyStatus.Archived &&
-            _statusBeforeArchive is PropertyStatus.Sold or PropertyStatus.Rented)
-            return PropertyErrors.ClosedDealNotPublishable;
-
         Status = PropertyStatus.Published;
+
+        // The unit is on the market again, so where it sat before it was archived is no
+        // longer anything anyone needs to know.
         _statusBeforeArchive = null;
         return Result.Updated;
     }
 
+    /// <summary>Take it off the site without closing it — the normal way to pause a listing.</summary>
     public Result<Updated> Unpublish()
     {
-        if (Status != PropertyStatus.Published)
-            return PropertyErrors.NotPublished;
+        if (Status == PropertyStatus.Draft)
+            return PropertyErrors.AlreadyDraft;
 
         Status = PropertyStatus.Draft;
 
@@ -453,6 +460,7 @@ public sealed class Property : AuditableEntity
         // drop the flag as well — otherwise the invariant holds on the way in and not on the
         // way out, and a draft sits in the database marked as an "Exclusive".
         IsFeatured = false;
+        _statusBeforeArchive = null;
         return Result.Updated;
     }
 
@@ -461,6 +469,9 @@ public sealed class Property : AuditableEntity
         if (Status == PropertyStatus.Archived)
             return PropertyErrors.AlreadyArchived;
 
+        // Still recorded, but now only as a note of where the listing came from. It used to
+        // be the gate that stopped an archived-then-published listing from coming back, and
+        // that gate is gone.
         _statusBeforeArchive = Status;
         Status = PropertyStatus.Archived;
 
@@ -473,30 +484,35 @@ public sealed class Property : AuditableEntity
 
     public Result<Updated> MarkAsSold()
     {
-        if (Status != PropertyStatus.Published)
-            return PropertyErrors.NotPublished;
+        if (Status == PropertyStatus.Sold)
+            return PropertyErrors.AlreadySold;
 
-        // A rental is not sold and a sale is not rented. The two outcomes were interchangeable
-        // before, so a rental could be closed as "Sold" — which is then what the dashboard
-        // counts and what the card says.
+        // A rental is not sold and a sale is not rented. This is the one transition that can
+        // still refuse, and the reason is the money: the price lives in SaleTerms or in
+        // RentTerms, never both. Closing a rental as "sold" would file a monthly rent of
+        // 4,000 as a sale of 4,000, and the dashboard would count a sale whose figure is a
+        // month's rent. Changing the listing kind on the edit form sets the right price with
+        // it, which is why that is the way round.
         if (ListingKind != ListingKind.Sale)
             return PropertyErrors.OutcomeDoesNotMatchListingKind;
 
         Status = PropertyStatus.Sold;
         IsFeatured = false;
+        _statusBeforeArchive = null;
         return Result.Updated;
     }
 
     public Result<Updated> MarkAsRented()
     {
-        if (Status != PropertyStatus.Published)
-            return PropertyErrors.NotPublished;
+        if (Status == PropertyStatus.Rented)
+            return PropertyErrors.AlreadyRented;
 
         if (ListingKind != ListingKind.Rent)
             return PropertyErrors.OutcomeDoesNotMatchListingKind;
 
         Status = PropertyStatus.Rented;
         IsFeatured = false;
+        _statusBeforeArchive = null;
         return Result.Updated;
     }
 

@@ -88,6 +88,11 @@ public static class PropertyErrors
     public static Error InvalidNumberOfBathrooms =>
         Error.Validation("Property.NumberOfBathrooms.Invalid", "Number of bathrooms must be greater than 0.");
 
+    // Kept for the API contract, but nothing raises it any more: a listing used to be
+    // unpublishable once it was sold or rented, which meant a flat could be let exactly
+    // once in its life. This company owns its buildings and re-lets the same units every
+    // year, so that rule cost a new listing -- new photos, new reference, view count back
+    // to zero -- every time a tenant moved out.
     public static Error NotPublishable =>
         Error.Validation("Property.NotPublishable", "The property cannot be published in its current state.");
 
@@ -103,9 +108,24 @@ public static class PropertyErrors
             "This listing was sold or rented before it was archived, so it cannot be published " +
             "again. Create a new listing for a new deal.");
 
+    public static Error AlreadySold =>
+        Error.Conflict("Property.AlreadySold", "The property is already marked sold.");
+
+    public static Error AlreadyRented =>
+        Error.Conflict("Property.AlreadyRented", "The property is already marked rented.");
+
+    public static Error AlreadyDraft =>
+        Error.Conflict("Property.AlreadyDraft", "The property is already a draft.");
+
+    // The one rule that stays, and not out of caution: the price lives in RentTerms or in
+    // SaleTerms, never both. Closing a rental as "sold" would file a monthly rent of 4,000
+    // as a sale of 4,000 -- the dashboard would count a sale, and the figure it counted
+    // would be a month's rent. To sell a unit that is listed for rent, change the listing
+    // kind and the price on the edit form first; the outcome then matches.
     public static Error OutcomeDoesNotMatchListingKind =>
         Error.Validation("Property.OutcomeDoesNotMatchListingKind",
-            "A listing for sale can only be marked sold, and a listing for rent can only be " +
-            "marked rented.");
+            "This listing is for rent, so it can be marked rented but not sold (and the other " +
+            "way round for a sale). Change the listing kind and its price on the edit form " +
+            "first, then mark the outcome.");
 
 }

@@ -686,6 +686,18 @@ export default {
       noListings: 'لا توجد عقارات بعد.',
       draft: 'مسودة',
     },
+    // What a refused status change says. The backend answers in English and says what
+    // happened rather than what to do; for the one refusal that still exists, what to do is
+    // the only part that matters.
+    statusError: {
+      outcomeMismatch: 'العقار ده معروض للإيجار، فينفع تعلّمه «مؤجر» بس مش «مباع» (والعكس للبيع). لو عايز تبيعه، غيّر نوع العرض والسعر من «تعديل» الأول، وبعدين علّمه مباع.',
+      alreadyPublished: 'العقار منشور بالفعل.',
+      alreadyDraft: 'العقار مسودة بالفعل.',
+      alreadyArchived: 'العقار مؤرشف بالفعل.',
+      alreadySold: 'العقار معلّم «مباع» بالفعل.',
+      alreadyRented: 'العقار معلّم «مؤجر» بالفعل.',
+    },
+
     props: {
       title: 'العقارات',
       addProperty: '+ إضافة عقار',
